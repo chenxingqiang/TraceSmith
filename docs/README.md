@@ -21,6 +21,7 @@ Complete documentation for the TraceSmith GPU Profiling & Replay System.
 
 ### Reference
 - **[GPU Profiling Projects](GPU%20Profiling%20与调用栈采集（Callstack）方向的开源项目.md)** - Survey of related open source projects
+- **[Integration Recommendations](INTEGRATION_RECOMMENDATIONS.md)** - Strategic recommendations for integrating open source components
 
 ## 🚀 Quick Links
 
