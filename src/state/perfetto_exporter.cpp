@@ -114,7 +114,7 @@ void PerfettoExporter::writeFooter(std::ostream& out) {
     out << "\n  ],\n";
     out << "  \"displayTimeUnit\": \"ns\",\n";
     out << "  \"otherData\": {\n";
-    out << "    \"version\": \"TraceSmith v0.1\"\n";
+    out << "    \"version\": \"TraceSmith v0.1.1\"\n";
     out << "  }\n";
     out << "}\n";
 }

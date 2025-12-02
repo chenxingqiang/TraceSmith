@@ -13,6 +13,7 @@
 - **Multi-Platform Support**: NVIDIA CUDA (via CUPTI), AMD ROCm, Apple Metal (planned)
 - **Multi-GPU & Multi-Stream**: Full support for complex GPU topologies and async execution
 - **Enhanced Perfetto Export**: GPU-specific tracks, flow events, and rich metadata for superior visualization
+- **Kineto-Compatible Schema**: PyTorch profiler compatibility with thread tracking, flexible metadata, and structured flows
 - **CLI Tools**: Easy-to-use command-line interface for recording and viewing traces
 - **Simulation Mode**: Test and develop without GPU hardware
 
