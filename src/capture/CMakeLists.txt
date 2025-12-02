@@ -16,11 +16,12 @@ set_target_properties(tracesmith-capture PROPERTIES
 )
 
 # Platform-specific profiler implementations
-if(TRACESMITH_ENABLE_CUDA)
-    # TODO: Add CUPTI profiler
-    # target_sources(tracesmith-capture PRIVATE cupti_profiler.cpp)
-    # find_package(CUDA REQUIRED)
-    # target_link_libraries(tracesmith-capture PRIVATE ${CUDA_LIBRARIES} cupti)
+if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
+    message(STATUS "Building CUPTI profiler")
+    target_sources(tracesmith-capture PRIVATE cupti_profiler.cpp)
+    target_include_directories(tracesmith-capture PRIVATE ${CUPTI_INCLUDE_DIRS})
+    target_link_libraries(tracesmith-capture PRIVATE CUPTI::cupti)
+    target_compile_definitions(tracesmith-capture PRIVATE TRACESMITH_ENABLE_CUDA)
 endif()
 
 if(TRACESMITH_ENABLE_ROCM)
@@ -28,5 +29,16 @@ if(TRACESMITH_ENABLE_ROCM)
 endif()
 
 if(TRACESMITH_ENABLE_METAL)
-    # TODO: Add Metal profiler
+    message(STATUS "Building Metal profiler")
+    # Objective-C++ source file
+    target_sources(tracesmith-capture PRIVATE metal_profiler.mm)
+    target_link_libraries(tracesmith-capture PRIVATE 
+        "-framework Metal" 
+        "-framework Foundation"
+    )
+    target_compile_definitions(tracesmith-capture PRIVATE TRACESMITH_ENABLE_METAL)
+    # Enable Objective-C++ for .mm files
+    set_source_files_properties(metal_profiler.mm PROPERTIES
+        COMPILE_FLAGS "-fobjc-arc"  # Enable ARC
+    )
 endif()

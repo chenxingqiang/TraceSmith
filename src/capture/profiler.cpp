@@ -1,5 +1,11 @@
 #include "tracesmith/profiler.hpp"
 #include "tracesmith/stack_capture.hpp"
+#ifdef TRACESMITH_ENABLE_CUDA
+#include "tracesmith/cupti_profiler.hpp"
+#endif
+#ifdef TRACESMITH_ENABLE_METAL
+#include "tracesmith/metal_profiler.hpp"
+#endif
 #include <chrono>
 #include <random>
 
@@ -342,8 +348,15 @@ std::unique_ptr<IPlatformProfiler> createProfiler(PlatformType type) {
             return std::make_unique<SimulationProfiler>();
         
         case PlatformType::CUDA:
-            // TODO: Implement CUPTIProfiler
-            // For now, fall back to simulation
+#ifdef TRACESMITH_ENABLE_CUDA
+            {
+                auto profiler = std::make_unique<CUPTIProfiler>();
+                if (profiler->isAvailable()) {
+                    return profiler;
+                }
+            }
+#endif
+            // Fall back to simulation if CUDA not available
             return std::make_unique<SimulationProfiler>();
         
         case PlatformType::ROCm:
@@ -351,7 +364,15 @@ std::unique_ptr<IPlatformProfiler> createProfiler(PlatformType type) {
             return std::make_unique<SimulationProfiler>();
         
         case PlatformType::Metal:
-            // TODO: Implement MetalProfiler
+#ifdef TRACESMITH_ENABLE_METAL
+            {
+                auto profiler = std::make_unique<MetalProfiler>();
+                if (profiler->isAvailable()) {
+                    return profiler;
+                }
+            }
+#endif
+            // Fall back to simulation if Metal not available
             return std::make_unique<SimulationProfiler>();
         
         default:
@@ -360,17 +381,22 @@ std::unique_ptr<IPlatformProfiler> createProfiler(PlatformType type) {
 }
 
 PlatformType detectPlatform() {
-    // TODO: Actually detect available platforms
-    // For now, always return Simulation
-    
+#ifdef TRACESMITH_ENABLE_CUDA
     // Check for CUDA
-    // if (isCUDAAvailable()) return PlatformType::CUDA;
+    if (isCUDAAvailable()) {
+        return PlatformType::CUDA;
+    }
+#endif
     
-    // Check for ROCm
+#ifdef TRACESMITH_ENABLE_METAL
+    // Check for Metal (macOS/iOS)
+    if (isMetalAvailable()) {
+        return PlatformType::Metal;
+    }
+#endif
+    
+    // TODO: Check for ROCm
     // if (isROCmAvailable()) return PlatformType::ROCm;
-    
-    // Check for Metal (macOS)
-    // if (isMetalAvailable()) return PlatformType::Metal;
     
     return PlatformType::Simulation;
 }
