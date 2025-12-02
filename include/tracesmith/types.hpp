@@ -5,6 +5,7 @@
 #include <vector>
 #include <chrono>
 #include <optional>
+#include <map>
 
 namespace tracesmith {
 
@@ -120,17 +121,41 @@ inline Timestamp getCurrentTimestamp() {
         now.time_since_epoch()).count();
 }
 
-/// A single trace event
+/// Flow types for dependency tracking (Kineto-compatible)
+enum class FlowType : uint8_t {
+    None = 0,
+    FwdBwd = 1,        // Forward-backward correlation
+    AsyncCpuGpu = 2,   // Async CPU-GPU operation
+    Custom = 255       // Custom flow type
+};
+
+/// Flow information for event dependencies (Kineto-inspired)
+struct FlowInfo {
+    uint64_t id;           // Flow ID for tracking dependencies
+    FlowType type;         // Type of flow
+    bool is_start;         // True if this is flow start, false if flow end
+    
+    FlowInfo() : id(0), type(FlowType::None), is_start(false) {}
+    FlowInfo(uint64_t flow_id, FlowType flow_type, bool start)
+        : id(flow_id), type(flow_type), is_start(start) {}
+};
+
+/// A single trace event (Kineto-compatible)
 struct TraceEvent {
     EventType type;              // Type of event
     Timestamp timestamp;         // When the event occurred (nanoseconds)
     Timestamp duration;          // Duration in nanoseconds (for completed events)
     
     uint32_t device_id;          // GPU device ID
-    uint32_t stream_id;          // Stream ID
+    uint32_t stream_id;          // Stream ID (resource ID in Kineto terms)
     uint64_t correlation_id;     // ID to correlate start/end events
     
     std::string name;            // Kernel name or operation description
+    
+    // Kineto-inspired additions for better profiling
+    uint32_t thread_id;          // Thread that launched the event (0 if unknown)
+    std::map<std::string, std::string> metadata;  // Flexible key-value metadata
+    FlowInfo flow_info;          // Structured flow information for dependencies
     
     // Optional detailed parameters
     std::optional<KernelParams> kernel_params;
@@ -146,7 +171,8 @@ struct TraceEvent {
         , duration(0)
         , device_id(0)
         , stream_id(0)
-        , correlation_id(0) {}
+        , correlation_id(0)
+        , thread_id(0) {}
     
     TraceEvent(EventType t, Timestamp ts = 0)
         : type(t)
@@ -154,7 +180,8 @@ struct TraceEvent {
         , duration(0)
         , device_id(0)
         , stream_id(0)
-        , correlation_id(0) {}
+        , correlation_id(0)
+        , thread_id(0) {}
 };
 
 /// GPU device information

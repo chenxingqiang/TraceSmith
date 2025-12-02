@@ -56,6 +56,18 @@ target_link_libraries(perfetto_enhanced_test PRIVATE
     tracesmith-state
 )
 
+# Kineto Schema Test
+add_executable(kineto_schema_test
+    kineto_schema_test.cpp
+)
+
+target_link_libraries(kineto_schema_test PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-capture
+    tracesmith-state
+)
+
 # CUPTI Example (requires CUDA)
 if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
     # Enable CUDA language for .cu files

@@ -207,6 +207,25 @@ void PerfettoExporter::writeEventArgs(std::ostream& out, const TraceEvent& event
     out << ",\n        \"device_id\": " << event.device_id;
     out << ",\n        \"stream_id\": " << event.stream_id;
     
+    // Kineto-inspired additions
+    if (event.thread_id != 0) {
+        out << ",\n        \"thread_id\": " << event.thread_id;
+    }
+    
+    // Export flow information if present
+    if (event.flow_info.id != 0) {
+        out << ",\n        \"flow_id\": " << event.flow_info.id;
+        out << ",\n        \"flow_type\": " << static_cast<int>(event.flow_info.type);
+        out << ",\n        \"flow_start\": " << (event.flow_info.is_start ? "true" : "false");
+    }
+    
+    // Export metadata if present
+    if (!event.metadata.empty()) {
+        for (const auto& [key, value] : event.metadata) {
+            out << ",\n        \"" << key << "\": \"" << value << "\"";
+        }
+    }
+    
     // Memory-specific parameters
     if (event.memory_params) {
         out << ",\n        \"size_bytes\": " << event.memory_params->size_bytes;

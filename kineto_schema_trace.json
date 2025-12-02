@@ -1,0 +1,168 @@
+{
+  "traceEvents": [
+    {
+      "name": "process_name",
+      "ph": "M",
+      "pid": 0,
+      "args": {
+        "name": "GPU Device 0"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 0,
+      "tid": 0,
+      "args": {
+        "name": "Stream 0"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 0,
+      "tid": 1,
+      "args": {
+        "name": "Stream 1"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 0,
+      "tid": 2,
+      "args": {
+        "name": "Stream 2"
+      }
+    },
+    {
+      "name": "cudaMalloc",
+      "cat": "memory",
+      "ph": "i",
+      "ts": 1000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 50,
+      "args": {
+        "track_name": "GPU Memory Ops",
+        "correlation_id": 1,
+        "event_type": "15",
+        "device_id": 0,
+        "stream_id": 0,
+        "thread_id": 3231282725,
+        "allocator": "cuda_allocator",
+        "size": "4194304",
+        "size_bytes": 4194304,
+        "src_address": "0x0",
+        "dst_address": "0x7f0000000000"
+      }
+    },
+    {
+      "name": "vectorAdd_forward",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 800,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 2,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "thread_id": 3231282725,
+        "flow_id": 42,
+        "flow_type": 1,
+        "flow_start": true,
+        "flops": "2097152",
+        "input_shape": "[1024, 1024]",
+        "is_training": "true",
+        "operator": "aten::add",
+        "output_shape": "[1024, 1024]",
+        "grid_dim": [256, 1, 1],
+        "block_dim": [256, 1, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 32
+      }
+    },
+    {
+      "name": "vectorAdd_backward",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 3000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 950,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 3,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "thread_id": 3231282725,
+        "flow_id": 42,
+        "flow_type": 1,
+        "flow_start": false,
+        "flops": "2097152",
+        "gradient_shape": "[1024, 1024]",
+        "input_shape": "[1024, 1024]",
+        "operator": "aten::add_backward",
+        "grid_dim": [256, 1, 1],
+        "block_dim": [256, 1, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 32
+      }
+    },
+    {
+      "name": "cudaMemcpyAsync",
+      "cat": "memory",
+      "ph": "X",
+      "ts": 4000,
+      "pid": 0,
+      "tid": 2,
+      "dur": 300,
+      "args": {
+        "track_name": "GPU Memory Copy (H->D)",
+        "correlation_id": 4,
+        "event_type": "3",
+        "device_id": 0,
+        "stream_id": 2,
+        "thread_id": 3231282725,
+        "flow_id": 100,
+        "flow_type": 2,
+        "flow_start": true,
+        "async": "true",
+        "stream_name": "data_stream",
+        "transfer_type": "host_to_device",
+        "size_bytes": 1048576,
+        "src_address": "0x7fff00000000",
+        "dst_address": "0x7f0000000000"
+      }
+    },
+    {
+      "name": "training_step_end",
+      "cat": "other",
+      "ph": "i",
+      "ts": 5000,
+      "pid": 0,
+      "tid": 1,
+      "args": {
+        "track_name": "GPU Other",
+        "event_type": "17",
+        "device_id": 0,
+        "stream_id": 1,
+        "thread_id": 3231282725,
+        "accuracy": "0.95",
+        "batch_size": "128",
+        "learning_rate": "0.001",
+        "loss": "0.123",
+        "step": "42"
+      }
+    }
+  ],
+  "displayTimeUnit": "ns",
+  "otherData": {
+    "version": "TraceSmith v0.1"
+  }
+}
