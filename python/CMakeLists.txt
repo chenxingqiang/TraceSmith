@@ -1,0 +1,44 @@
+# Python bindings using pybind11
+cmake_minimum_required(VERSION 3.16)
+
+# Find Python
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+
+# Find or fetch pybind11
+include(FetchContent)
+FetchContent_Declare(
+    pybind11
+    GIT_REPOSITORY https://github.com/pybind/pybind11.git
+    GIT_TAG v2.11.1
+)
+FetchContent_MakeAvailable(pybind11)
+
+# Create Python module
+pybind11_add_module(_tracesmith
+    src/bindings.cpp
+)
+
+target_link_libraries(_tracesmith PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-capture
+    tracesmith-state
+    tracesmith-replay
+)
+
+target_include_directories(_tracesmith PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+# Set output directory
+set_target_properties(_tracesmith PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tracesmith
+)
+
+# Copy Python files after build
+add_custom_command(TARGET _tracesmith POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/tracesmith/__init__.py
+        $<TARGET_FILE_DIR:_tracesmith>/__init__.py
+    COMMENT "Copying Python package files"
+)
