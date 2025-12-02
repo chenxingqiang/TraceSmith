@@ -1,6 +1,10 @@
 # State reconstruction library
 add_library(tracesmith-state STATIC
     instruction_stream.cpp
+    gpu_state_machine.cpp
+    timeline_builder.cpp
+    perfetto_exporter.cpp
+    timeline_viewer.cpp
 )
 
 target_link_libraries(tracesmith-state PUBLIC

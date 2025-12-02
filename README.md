@@ -106,6 +106,8 @@ ctest --output-on-failure
 
 ### Programmatic Usage
 
+#### Basic Event Capture
+
 ```cpp
 #include <tracesmith/tracesmith.hpp>
 
@@ -136,6 +138,42 @@ int main() {
     SBTWriter writer("trace.sbt");
     writer.writeEvents(events);
     writer.finalize();
+    
+    return 0;
+}
+```
+
+#### Timeline Analysis (Phase 3)
+
+```cpp
+#include <tracesmith/tracesmith.hpp>
+#include <tracesmith/timeline_builder.hpp>
+#include <tracesmith/timeline_viewer.hpp>
+#include <tracesmith/perfetto_exporter.hpp>
+
+using namespace tracesmith;
+
+int main() {
+    // Capture events (see above)
+    std::vector<TraceEvent> events = captureEvents();
+    
+    // Build timeline
+    TimelineBuilder builder;
+    builder.addEvents(events);
+    Timeline timeline = builder.build();
+    
+    // Print ASCII visualization
+    TimelineViewer viewer;
+    std::cout << viewer.render(timeline);
+    
+    // Export to Perfetto for chrome://tracing
+    PerfettoExporter exporter;
+    exporter.exportToFile(events, "trace.json");
+    // Open chrome://tracing and load trace.json
+    
+    // Get statistics
+    std::cout << "GPU Utilization: " << timeline.gpu_utilization << std::endl;
+    std::cout << "Max Concurrent Ops: " << timeline.max_concurrent_ops << std::endl;
     
     return 0;
 }
@@ -184,11 +222,12 @@ File structure:
 - [x] Instruction stream builder
 - [x] Dependency analysis
 
-### Phase 3: State Reconstruction
-- [ ] GPU timeline builder
-- [ ] Stream dependency graph
-- [ ] Multi-GPU timestamp synchronization
-- [ ] Perfetto integration
+### Phase 3: GPU State Machine & Timeline Builder ✅
+- [x] GPU state machine with stream tracking
+- [x] Timeline builder with span generation
+- [x] Perfetto export (chrome://tracing format)
+- [x] ASCII timeline visualization
+- [x] Concurrent operation analysis
 
 ### Phase 4: Replay Engine
 - [ ] Instruction replay
