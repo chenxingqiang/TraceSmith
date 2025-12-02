@@ -12,6 +12,7 @@
 - **SBT Binary Trace Format**: Compact, efficient binary format with string interning and delta timestamp encoding
 - **Multi-Platform Support**: NVIDIA CUDA (via CUPTI), AMD ROCm, Apple Metal (planned)
 - **Multi-GPU & Multi-Stream**: Full support for complex GPU topologies and async execution
+- **Enhanced Perfetto Export**: GPU-specific tracks, flow events, and rich metadata for superior visualization
 - **CLI Tools**: Easy-to-use command-line interface for recording and viewing traces
 - **Simulation Mode**: Test and develop without GPU hardware
 
@@ -191,10 +192,12 @@ int main() {
     TimelineViewer viewer;
     std::cout << viewer.render(timeline);
     
-    // Export to Perfetto for chrome://tracing
+    // Export to Perfetto with enhanced GPU tracks
     PerfettoExporter exporter;
+    exporter.setEnableGPUTracks(true);       // GPU-specific tracks
+    exporter.setEnableFlowEvents(true);      // Dependency visualization
     exporter.exportToFile(events, "trace.json");
-    // Open chrome://tracing and load trace.json
+    // Open https://ui.perfetto.dev and load trace.json
     
     // Get statistics
     std::cout << "GPU Utilization: " << timeline.gpu_utilization << std::endl;
