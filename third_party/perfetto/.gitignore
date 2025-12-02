@@ -1,0 +1,3 @@
+# Perfetto SDK (too large for git)
+third_party/perfetto/*.h
+third_party/perfetto/*.cc

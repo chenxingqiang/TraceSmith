@@ -4,12 +4,18 @@ add_library(tracesmith-state STATIC
     gpu_state_machine.cpp
     timeline_builder.cpp
     perfetto_exporter.cpp
+    perfetto_proto_exporter.cpp
     timeline_viewer.cpp
 )
 
 target_link_libraries(tracesmith-state PUBLIC
     tracesmith-common
 )
+
+# Link Perfetto SDK if enabled
+if(TRACESMITH_USE_PERFETTO_SDK)
+    target_link_libraries(tracesmith-state PUBLIC perfetto_sdk)
+endif()
 
 target_include_directories(tracesmith-state PUBLIC
     ${CMAKE_SOURCE_DIR}/include
