@@ -31,3 +31,15 @@ target_link_libraries(phase3_example PRIVATE
     tracesmith-capture
     tracesmith-state
 )
+
+add_executable(phase4_example
+    phase4_example.cpp
+)
+
+target_link_libraries(phase4_example PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-capture
+    tracesmith-state
+    tracesmith-replay
+)

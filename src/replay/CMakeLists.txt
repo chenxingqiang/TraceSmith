@@ -1,13 +1,21 @@
-# Replay engine library (placeholder for Phase 4)
-add_library(tracesmith-replay INTERFACE)
+# Replay engine library
+add_library(tracesmith-replay STATIC
+    stream_scheduler.cpp
+    operation_executor.cpp
+    determinism_checker.cpp
+    replay_engine.cpp
+)
 
-target_include_directories(tracesmith-replay INTERFACE
+target_link_libraries(tracesmith-replay PUBLIC
+    tracesmith-common
+    tracesmith-format
+    tracesmith-state
+)
+
+target_include_directories(tracesmith-replay PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
 
-# TODO: Add replay engine implementation
-# add_library(tracesmith-replay STATIC
-#     replay_engine.cpp
-#     stream_scheduler.cpp
-#     deterministic_checker.cpp
-# )
+set_target_properties(tracesmith-replay PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)
