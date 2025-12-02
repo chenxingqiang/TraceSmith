@@ -4,6 +4,11 @@
 #include <thread>
 
 // Platform-specific includes
+#ifdef TRACESMITH_USE_LIBUNWIND
+    #define UNW_LOCAL_ONLY
+    #include <libunwind.h>
+#endif
+
 #ifdef __APPLE__
     #include <execinfo.h>
     #include <dlfcn.h>
@@ -93,8 +98,37 @@ size_t StackCapture::captureWithThreadId(uint64_t thread_id, CallStack& out) {
 }
 
 size_t StackCapture::captureImpl(void** addresses, size_t max_depth) {
-#if defined(__APPLE__) || defined(__linux__)
-    // Use backtrace() on Unix-like systems
+#ifdef TRACESMITH_USE_LIBUNWIND
+    // Use libunwind (preferred - cross-platform, robust)
+    unw_context_t context;
+    unw_cursor_t cursor;
+    
+    if (unw_getcontext(&context) != 0) {
+        return 0;
+    }
+    
+    if (unw_init_local(&cursor, &context) != 0) {
+        return 0;
+    }
+    
+    size_t count = 0;
+    while (count < max_depth) {
+        unw_word_t ip;
+        if (unw_get_reg(&cursor, UNW_REG_IP, &ip) != 0) {
+            break;
+        }
+        
+        addresses[count++] = reinterpret_cast<void*>(ip);
+        
+        if (unw_step(&cursor) <= 0) {
+            break;
+        }
+    }
+    
+    return count;
+    
+#elif defined(__APPLE__) || defined(__linux__)
+    // Fallback: Use backtrace() on Unix-like systems
     int count = backtrace(addresses, static_cast<int>(max_depth));
     return count > 0 ? static_cast<size_t>(count) : 0;
     
