@@ -68,6 +68,23 @@ target_link_libraries(kineto_schema_test PRIVATE
     tracesmith-state
 )
 
+# Perfetto ProtoZero Export Test
+add_executable(perfetto_proto_test
+    perfetto_proto_test.cpp
+)
+
+target_link_libraries(perfetto_proto_test PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-capture
+    tracesmith-state
+)
+
+# Link Perfetto SDK if enabled
+if(TRACESMITH_USE_PERFETTO_SDK)
+    target_link_libraries(perfetto_proto_test PRIVATE perfetto_sdk)
+endif()
+
 # CUPTI Example (requires CUDA)
 if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
     # Enable CUDA language for .cu files

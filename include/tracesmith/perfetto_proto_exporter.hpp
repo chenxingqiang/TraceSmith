@@ -126,9 +126,7 @@ private:
     std::vector<CounterTrack> counter_tracks_;
     
     // Event conversion helpers
-    void emitTraceEventToSession(const TraceEvent& event);
-    perfetto::Track getOrCreateTrackForEvent(const TraceEvent& event);
-    const char* getTrackNameForEvent(const TraceEvent& event);
+    std::string getEventCategory(EventType type);
     
     // Track event type conversion
     enum class PerfettoEventType {
