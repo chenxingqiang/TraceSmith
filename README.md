@@ -44,69 +44,94 @@
 
 ## Quick Start
 
-### Prerequisites
+### Installation
 
-- CMake 3.16+
-- C++17 compatible compiler (GCC 8+, Clang 8+, MSVC 2019+)
-- (Optional) NVIDIA CUDA Toolkit with CUPTI for CUDA profiling
-
-### Building
+#### Python (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/tracesmith.git
-cd tracesmith
+# Install from PyPI (when published)
+pip install tracesmith
 
-# Create build directory
+# Or install from source
+git clone https://github.com/xingqiangchen/TraceSmith.git
+cd TraceSmith
+pip install .
+```
+
+#### C++ from Source
+
+**Prerequisites:**
+- CMake 3.16+
+- C++17 compatible compiler (GCC 8+, Clang 8+, MSVC 2019+)
+- Python 3.7+ (for Python bindings)
+- (Optional) NVIDIA CUDA Toolkit with CUPTI
+
+**Build:**
+
+```bash
+git clone https://github.com/xingqiangchen/TraceSmith.git
+cd TraceSmith
 mkdir build && cd build
-
-# Configure (simulation mode, no GPU required)
 cmake ..
-
-# Build
 cmake --build . -j$(nproc)
 
-# Run tests
+# Optionally run tests
 ctest --output-on-failure
 ```
 
-### Basic Usage
-
-#### Recording a Trace
+#### Docker
 
 ```bash
-# Record GPU events for 5 seconds (simulation mode)
-./bin/tracesmith record -o trace.sbt -d 5
-
-# Record with custom event rate
-./bin/tracesmith record -o trace.sbt -d 10 -r 5000
+docker build -t tracesmith .
+docker run -it tracesmith
 ```
 
-#### Viewing a Trace
+### Usage
+
+#### Python API (Recommended)
+
+```python
+import tracesmith as ts
+
+# Capture GPU events
+events = ts.capture_trace(duration_ms=1000)
+print(f"Captured {len(events)} events")
+
+# Build timeline and analyze
+timeline = ts.build_timeline(events)
+print(f"GPU Utilization: {timeline.gpu_utilization * 100:.1f}%")
+print(f"Max Concurrent Ops: {timeline.max_concurrent_ops}")
+
+# Export to Perfetto (chrome://tracing)
+ts.export_perfetto(events, "trace.json")
+
+# Replay trace with validation
+result = ts.replay_trace(events, mode=ts.ReplayMode.Full)
+print(f"Replay: {result.operations_executed}/{result.operations_total} ops")
+print(f"Deterministic: {result.deterministic}")
+
+# Save to TraceSmith format
+writer = ts.SBTWriter("trace.sbt")
+writer.write_events(events)
+writer.finalize()
+```
+
+#### Command Line Interface
+
+**Recording a Trace:**
 
 ```bash
-# View trace contents
-./bin/tracesmith view trace.sbt
-
-# Show statistics only
-./bin/tracesmith view --stats trace.sbt
-
-# Limit output to first 100 events
-./bin/tracesmith view -n 100 trace.sbt
-
-# Output as JSON
-./bin/tracesmith view -f json trace.sbt
+./bin/tracesmith-cli record -o trace.sbt -d 5
 ```
 
-#### Getting Trace Info
+**Viewing a Trace:**
 
 ```bash
-./bin/tracesmith info trace.sbt
+./bin/tracesmith-cli view trace.sbt
+./bin/tracesmith-cli info trace.sbt
 ```
 
-### Programmatic Usage
-
-#### Basic Event Capture
+#### C++ API
 
 ```cpp
 #include <tracesmith/tracesmith.hpp>
