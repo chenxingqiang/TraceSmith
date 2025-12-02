@@ -44,6 +44,18 @@ target_link_libraries(phase4_example PRIVATE
     tracesmith-replay
 )
 
+# Enhanced Perfetto Export Test
+add_executable(perfetto_enhanced_test
+    perfetto_enhanced_test.cpp
+)
+
+target_link_libraries(perfetto_enhanced_test PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-capture
+    tracesmith-state
+)
+
 # CUPTI Example (requires CUDA)
 if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
     # Enable CUDA language for .cu files

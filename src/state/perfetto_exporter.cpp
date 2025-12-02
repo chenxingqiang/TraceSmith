@@ -1,6 +1,7 @@
 #include "tracesmith/perfetto_exporter.hpp"
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 
 namespace tracesmith {
 
@@ -10,12 +11,24 @@ bool PerfettoExporter::exportToFile(const std::vector<TraceEvent>& events, const
         return false;
     }
     
+    // Extract metadata from events
+    extractMetadata(events);
+    
     writeHeader(out);
     
     bool first = true;
+    
+    // Write metadata events (process/thread names)
+    writeMetadataEvents(out, events, first);
+    
+    // Write trace events
     for (const auto& event : events) {
         writeEvent(out, event, first);
-        first = false;
+    }
+    
+    // Write flow events for dependencies
+    if (enable_flow_events_) {
+        writeFlowEvents(out, events, first);
     }
     
     writeFooter(out);
@@ -23,64 +36,44 @@ bool PerfettoExporter::exportToFile(const std::vector<TraceEvent>& events, const
 }
 
 std::string PerfettoExporter::exportToString(const std::vector<TraceEvent>& events) {
-    std::ostringstream ss;
-    ss << "{\n  \"traceEvents\": [\n";
+    // Use string stream to build output
+    std::ostringstream temp_file;
+    
+    // Extract metadata from events
+    extractMetadata(events);
+    
+    writeHeader(temp_file);
     
     bool first = true;
+    
+    // Write metadata events
+    writeMetadataEvents(temp_file, events, first);
+    
+    // Write trace events
     for (const auto& event : events) {
-        if (!first) {
-            ss << ",\n";
-        }
-        first = false;
-        
-        // Convert event to Perfetto JSON format
-        ss << "    {\n";
-        ss << "      \"name\": \"" << event.name << "\",\n";
-        ss << "      \"cat\": \"" << getEventCategory(event.type) << "\",\n";
-        ss << "      \"ph\": \"" << getEventPhase(event.type) << "\",\n";
-        ss << "      \"ts\": " << eventToMicroseconds(event.timestamp) << ",\n";
-        ss << "      \"pid\": " << event.device_id << ",\n";
-        ss << "      \"tid\": " << event.stream_id << ",\n";
-        ss << "      \"id\": " << event.correlation_id;
-        
-        // Add duration if available
-        if (event.duration > 0) {
-            ss << ",\n      \"dur\": " << (event.duration / 1000);
-        }
-        
-        // Add args
-        ss << ",\n      \"args\": {\n";
-        ss << "        \"type\": \"" << static_cast<int>(event.type) << "\",\n";
-        ss << "        \"device_id\": " << event.device_id << ",\n";
-        ss << "        \"stream_id\": " << event.stream_id;
-        
-        if (event.memory_params) {
-            ss << ",\n        \"size_bytes\": " << event.memory_params->size_bytes;
-        }
-        
-        ss << "\n      }\n";
-        ss << "    }";
+        writeEvent(temp_file, event, first);
     }
     
-    ss << "\n  ],\n";
-    ss << "  \"displayTimeUnit\": \"ns\",\n";
-    ss << "  \"otherData\": {\n";
-    ss << "    \"version\": \"TraceSmith v0.1\"\n";
-    ss << "  }\n";
-    ss << "}\n";
+    // Write flow events
+    if (enable_flow_events_) {
+        writeFlowEvents(temp_file, events, first);
+    }
     
-    return ss.str();
+    writeFooter(temp_file);
+    
+    return temp_file.str();
 }
 
-void PerfettoExporter::writeHeader(std::ofstream& out) {
+void PerfettoExporter::writeHeader(std::ostream& out) {
     out << "{\n";
     out << "  \"traceEvents\": [\n";
 }
 
-void PerfettoExporter::writeEvent(std::ofstream& out, const TraceEvent& event, bool first) {
+void PerfettoExporter::writeEvent(std::ostream& out, const TraceEvent& event, bool& first) {
     if (!first) {
         out << ",\n";
     }
+    first = false;
     
     out << "    {\n";
     out << "      \"name\": \"" << event.name << "\",\n";
@@ -88,27 +81,36 @@ void PerfettoExporter::writeEvent(std::ofstream& out, const TraceEvent& event, b
     out << "      \"ph\": \"" << getEventPhase(event.type) << "\",\n";
     out << "      \"ts\": " << eventToMicroseconds(event.timestamp) << ",\n";
     out << "      \"pid\": " << event.device_id << ",\n";
-    out << "      \"tid\": " << event.stream_id << ",\n";
-    out << "      \"id\": " << event.correlation_id;
+    out << "      \"tid\": " << event.stream_id;
     
+    // Add duration if available (must come before args)
     if (event.duration > 0) {
         out << ",\n      \"dur\": " << (event.duration / 1000);
     }
     
+    // Use GPU track names if enabled
     out << ",\n      \"args\": {\n";
-    out << "        \"type\": \"" << static_cast<int>(event.type) << "\",\n";
-    out << "        \"device_id\": " << event.device_id << ",\n";
-    out << "        \"stream_id\": " << event.stream_id;
-    
-    if (event.memory_params) {
-        out << ",\n        \"size_bytes\": " << event.memory_params->size_bytes;
+    if (enable_gpu_tracks_) {
+        out << "        \"track_name\": \"" << getGPUTrackName(event.type) << "\"";
     }
+    
+    // Add correlation ID for flow events
+    if (enable_flow_events_ && event.correlation_id != 0) {
+        if (enable_gpu_tracks_) {
+            out << ",\n        \"correlation_id\": " << event.correlation_id;
+        } else {
+            out << "\n        \"correlation_id\": " << event.correlation_id;
+        }
+    }
+    
+    // Write detailed args
+    writeEventArgs(out, event);
     
     out << "\n      }\n";
     out << "    }";
 }
 
-void PerfettoExporter::writeFooter(std::ofstream& out) {
+void PerfettoExporter::writeFooter(std::ostream& out) {
     out << "\n  ],\n";
     out << "  \"displayTimeUnit\": \"ns\",\n";
     out << "  \"otherData\": {\n";
@@ -169,6 +171,180 @@ std::string PerfettoExporter::getEventCategory(EventType type) {
 
 uint64_t PerfettoExporter::eventToMicroseconds(Timestamp ns) {
     return ns / 1000; // Convert nanoseconds to microseconds
+}
+
+std::string PerfettoExporter::getGPUTrackName(EventType type) {
+    switch (type) {
+        case EventType::KernelLaunch:
+        case EventType::KernelComplete:
+            return "GPU Compute";
+        case EventType::MemcpyH2D:
+            return "GPU Memory Copy (H->D)";
+        case EventType::MemcpyD2H:
+            return "GPU Memory Copy (D->H)";
+        case EventType::MemcpyD2D:
+            return "GPU Memory Copy (D->D)";
+        case EventType::MemAlloc:
+        case EventType::MemFree:
+        case EventType::MemsetDevice:
+            return "GPU Memory Ops";
+        case EventType::StreamSync:
+        case EventType::DeviceSync:
+        case EventType::EventSync:
+            return "GPU Synchronization";
+        case EventType::StreamCreate:
+        case EventType::StreamDestroy:
+        case EventType::EventRecord:
+            return "GPU Stream";
+        default:
+            return "GPU Other";
+    }
+}
+
+void PerfettoExporter::writeEventArgs(std::ostream& out, const TraceEvent& event) {
+    // Write basic event metadata
+    out << ",\n        \"event_type\": \"" << static_cast<int>(event.type) << "\"";
+    out << ",\n        \"device_id\": " << event.device_id;
+    out << ",\n        \"stream_id\": " << event.stream_id;
+    
+    // Memory-specific parameters
+    if (event.memory_params) {
+        out << ",\n        \"size_bytes\": " << event.memory_params->size_bytes;
+        out << ",\n        \"src_address\": \"0x" << std::hex << event.memory_params->src_address << std::dec << "\"";
+        out << ",\n        \"dst_address\": \"0x" << std::hex << event.memory_params->dst_address << std::dec << "\"";
+    }
+    
+    // Kernel-specific parameters
+    if (event.kernel_params) {
+        out << ",\n        \"grid_dim\": [" 
+            << event.kernel_params->grid_x << ", "
+            << event.kernel_params->grid_y << ", "
+            << event.kernel_params->grid_z << "]";
+        out << ",\n        \"block_dim\": [" 
+            << event.kernel_params->block_x << ", "
+            << event.kernel_params->block_y << ", "
+            << event.kernel_params->block_z << "]";
+        out << ",\n        \"shared_memory_bytes\": " << event.kernel_params->shared_mem_bytes;
+        out << ",\n        \"registers_per_thread\": " << event.kernel_params->registers_per_thread;
+    }
+}
+
+void PerfettoExporter::extractMetadata(const std::vector<TraceEvent>& events) {
+    device_ids_.clear();
+    stream_ids_.clear();
+    
+    for (const auto& event : events) {
+        device_ids_.insert(event.device_id);
+        stream_ids_.insert(event.stream_id);
+    }
+}
+
+void PerfettoExporter::writeMetadataEvents(std::ostream& out, const std::vector<TraceEvent>& events, bool& first) {
+    // Write process name metadata for each device
+    for (uint32_t device_id : device_ids_) {
+        if (!first) {
+            out << ",\n";
+        }
+        first = false;
+        
+        out << "    {\n";
+        out << "      \"name\": \"process_name\",\n";
+        out << "      \"ph\": \"M\",\n";
+        out << "      \"pid\": " << device_id << ",\n";
+        out << "      \"args\": {\n";
+        out << "        \"name\": \"GPU Device " << device_id << "\"\n";
+        out << "      }\n";
+        out << "    }";
+    }
+    
+    // Write thread name metadata for each stream
+    for (uint32_t stream_id : stream_ids_) {
+        if (!first) {
+            out << ",\n";
+        }
+        first = false;
+        
+        // Find device for this stream
+        uint32_t device_id = 0;
+        for (const auto& event : events) {
+            if (event.stream_id == stream_id) {
+                device_id = event.device_id;
+                break;
+            }
+        }
+        
+        out << "    {\n";
+        out << "      \"name\": \"thread_name\",\n";
+        out << "      \"ph\": \"M\",\n";
+        out << "      \"pid\": " << device_id << ",\n";
+        out << "      \"tid\": " << stream_id << ",\n";
+        out << "      \"args\": {\n";
+        out << "        \"name\": \"Stream " << stream_id << "\"\n";
+        out << "      }\n";
+        out << "    }";
+    }
+}
+
+void PerfettoExporter::writeFlowEvents(std::ostream& out, const std::vector<TraceEvent>& events, bool& first) {
+    // Build correlation map (correlation_id -> events)
+    std::map<uint64_t, std::vector<const TraceEvent*>> correlation_map;
+    
+    for (const auto& event : events) {
+        if (event.correlation_id != 0) {
+            correlation_map[event.correlation_id].push_back(&event);
+        }
+    }
+    
+    // Write flow events for correlated events
+    for (const auto& [correlation_id, correlated_events] : correlation_map) {
+        if (correlated_events.size() < 2) {
+            continue; // Need at least 2 events to form a flow
+        }
+        
+        // Sort by timestamp
+        auto sorted_events = correlated_events;
+        std::sort(sorted_events.begin(), sorted_events.end(),
+                  [](const TraceEvent* a, const TraceEvent* b) {
+                      return a->timestamp < b->timestamp;
+                  });
+        
+        // Create flow from first to last event
+        const TraceEvent* start_event = sorted_events.front();
+        const TraceEvent* end_event = sorted_events.back();
+        
+        // Flow start
+        if (!first) {
+            out << ",\n";
+        }
+        first = false;
+        
+        out << "    {\n";
+        out << "      \"name\": \"Dependency\",\n";
+        out << "      \"cat\": \"flow\",\n";
+        out << "      \"ph\": \"s\",\n"; // Flow start
+        out << "      \"ts\": " << eventToMicroseconds(start_event->timestamp) << ",\n";
+        out << "      \"pid\": " << start_event->device_id << ",\n";
+        out << "      \"tid\": " << start_event->stream_id << ",\n";
+        out << "      \"id\": " << correlation_id << ",\n";
+        out << "      \"bp\": \"e\"\n"; // Binding point: enclosing
+        out << "    }";
+        
+        // Flow end
+        if (!first) {
+            out << ",\n";
+        }
+        
+        out << "    {\n";
+        out << "      \"name\": \"Dependency\",\n";
+        out << "      \"cat\": \"flow\",\n";
+        out << "      \"ph\": \"f\",\n"; // Flow finish
+        out << "      \"ts\": " << eventToMicroseconds(end_event->timestamp) << ",\n";
+        out << "      \"pid\": " << end_event->device_id << ",\n";
+        out << "      \"tid\": " << end_event->stream_id << ",\n";
+        out << "      \"id\": " << correlation_id << ",\n";
+        out << "      \"bp\": \"e\"\n";
+        out << "    }";
+    }
 }
 
 } // namespace tracesmith
