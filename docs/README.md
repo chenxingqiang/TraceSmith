@@ -16,6 +16,8 @@ Complete documentation for the TraceSmith GPU Profiling & Replay System.
 ### Phase Documentation
 - **[Phase 2 Summary](PHASE2_SUMMARY.md)** - Call Stack Collection implementation
 - **[Phase 3 Summary](PHASE3_SUMMARY.md)** - GPU State Machine & Timeline implementation
+- **[Phase 4 Summary](PHASE4_SUMMARY.md)** - Replay Engine implementation
+- **[Phase 5 Summary](PHASE5_SUMMARY.md)** - Production Release (CLI, Python bindings, Docker)
 
 ### Reference
 - **[GPU Profiling Projects](GPU%20Profiling%20与调用栈采集（Callstack）方向的开源项目.md)** - Survey of related open source projects
@@ -49,6 +51,8 @@ docs/
 ├── CHANGELOG.md                # Version history
 ├── PHASE2_SUMMARY.md           # Phase 2 implementation
 ├── PHASE3_SUMMARY.md           # Phase 3 implementation
+├── PHASE4_SUMMARY.md           # Phase 4 implementation (Replay)
+├── PHASE5_SUMMARY.md           # Phase 5 implementation (Production)
 └── GPU Profiling 与调用栈...   # Related projects survey
 ```
 
