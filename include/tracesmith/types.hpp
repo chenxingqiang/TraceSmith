@@ -184,6 +184,61 @@ struct TraceEvent {
         , thread_id(0) {}
 };
 
+/// Memory profiling event (Kineto-compatible, v0.2.0)
+struct MemoryEvent {
+    Timestamp timestamp;
+    uint32_t device_id;
+    uint32_t thread_id;
+    
+    uint64_t bytes;              // Allocation size
+    uint64_t ptr;                // Memory address
+    bool is_allocation;          // true = alloc, false = free
+    std::string allocator_name;  // e.g., "cuda_allocator", "pytorch_caching"
+    
+    // Memory category
+    enum class Category : uint8_t {
+        Unknown = 0,
+        Activation,              // Activation memory
+        Gradient,                // Gradient memory
+        Parameter,               // Model parameters
+        Temporary,               // Temporary/workspace
+        Cached,                  // Cached allocation
+    } category;
+    
+    MemoryEvent()
+        : timestamp(0)
+        , device_id(0)
+        , thread_id(0)
+        , bytes(0)
+        , ptr(0)
+        , is_allocation(true)
+        , category(Category::Unknown) {}
+};
+
+/// Counter/metric event for time-series data (Kineto-compatible, v0.2.0)
+struct CounterEvent {
+    Timestamp timestamp;
+    uint32_t device_id;
+    uint32_t track_id;           // Counter track identifier
+    
+    std::string counter_name;    // e.g., "GPU Memory Bandwidth", "SM Occupancy"
+    double value;                // Counter value
+    std::string unit;            // e.g., "GB/s", "%", "bytes"
+    
+    CounterEvent()
+        : timestamp(0)
+        , device_id(0)
+        , track_id(0)
+        , value(0.0) {}
+    
+    CounterEvent(const std::string& name, double val, Timestamp ts = 0)
+        : timestamp(ts ? ts : getCurrentTimestamp())
+        , device_id(0)
+        , track_id(0)
+        , counter_name(name)
+        , value(val) {}
+};
+
 /// GPU device information
 struct DeviceInfo {
     uint32_t device_id;

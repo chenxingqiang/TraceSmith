@@ -16,6 +16,8 @@ from ._tracesmith import (
     EventType,
     PlatformType,
     ReplayMode,
+    FlowType,           # v0.2.0: Kineto-compatible
+    PerfettoFormat,     # v0.2.0: Protobuf export
     
     # Core classes
     TraceEvent,
@@ -23,6 +25,10 @@ from ._tracesmith import (
     TraceMetadata,
     ProfilerConfig,
     SimulationProfiler,
+    FlowInfo,           # v0.2.0: Kineto-compatible
+    MemoryEvent,        # v0.2.0: Memory profiling
+    MemoryCategory,     # v0.2.0: Memory categories
+    CounterEvent,       # v0.2.0: Metrics/counters
     
     # File I/O
     SBTWriter,
@@ -35,6 +41,14 @@ from ._tracesmith import (
     
     # Export
     PerfettoExporter,
+    PerfettoProtoExporter,  # v0.2.0: Protobuf export
+    
+    # Real-time Tracing (v0.3.0)
+    TracingSession,
+    TracingState,
+    TracingMode,
+    TracingStatistics,
+    TracingConfig,
     
     # Replay
     ReplayConfig,
@@ -57,6 +71,8 @@ __all__ = [
     'EventType',
     'PlatformType',
     'ReplayMode',
+    'FlowType',           # v0.2.0
+    'PerfettoFormat',     # v0.2.0
     
     # Core
     'TraceEvent',
@@ -64,6 +80,10 @@ __all__ = [
     'TraceMetadata',
     'ProfilerConfig',
     'SimulationProfiler',
+    'FlowInfo',           # v0.2.0
+    'MemoryEvent',        # v0.2.0
+    'MemoryCategory',     # v0.2.0
+    'CounterEvent',       # v0.2.0
     
     # I/O
     'SBTWriter',
@@ -76,6 +96,14 @@ __all__ = [
     
     # Export
     'PerfettoExporter',
+    'PerfettoProtoExporter',  # v0.2.0
+    
+    # Real-time Tracing (v0.3.0)
+    'TracingSession',
+    'TracingState',
+    'TracingMode',
+    'TracingStatistics',
+    'TracingConfig',
     
     # Replay
     'ReplayConfig',
@@ -128,19 +156,33 @@ def build_timeline(events: list) -> Timeline:
     return builder.build()
 
 
-def export_perfetto(events: list, filename: str) -> bool:
+def export_perfetto(events: list, filename: str, use_protobuf: bool = False) -> bool:
     """
-    Export events to Perfetto JSON format.
+    Export events to Perfetto format (JSON or Protobuf).
     
     Args:
         events: List of TraceEvent objects
-        filename: Output file path
+        filename: Output file path (.json for JSON, .perfetto-trace for protobuf)
+        use_protobuf: If True, use protobuf format (85% smaller files)
     
     Returns:
         True if successful
     """
-    exporter = PerfettoExporter()
+    if use_protobuf or filename.endswith('.perfetto-trace') or filename.endswith('.pftrace'):
+        exporter = PerfettoProtoExporter(PerfettoFormat.PROTOBUF)
+    else:
+        exporter = PerfettoExporter()
     return exporter.export_to_file(events, filename)
+
+
+def is_protobuf_available() -> bool:
+    """
+    Check if Perfetto SDK is available for protobuf export.
+    
+    Returns:
+        True if SDK is available (6.8x smaller trace files)
+    """
+    return PerfettoProtoExporter.is_sdk_available()
 
 
 def replay_trace(events: list, mode: ReplayMode = ReplayMode.Full) -> ReplayResult:

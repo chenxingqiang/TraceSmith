@@ -2,6 +2,11 @@
  * TraceSmith Python Bindings
  * 
  * Provides Python access to TraceSmith GPU profiling and replay functionality.
+ * 
+ * v0.2.0 Additions:
+ * - Kineto schema fields (thread_id, metadata, flow_info)
+ * - PerfettoProtoExporter for protobuf export
+ * - FlowType enum
  */
 
 #include <pybind11/pybind11.h>
@@ -14,6 +19,7 @@
 #include "tracesmith/sbt_format.hpp"
 #include "tracesmith/timeline_builder.hpp"
 #include "tracesmith/perfetto_exporter.hpp"
+#include "tracesmith/perfetto_proto_exporter.hpp"
 #include "tracesmith/replay_engine.hpp"
 
 namespace py = pybind11;
@@ -46,9 +52,34 @@ PYBIND11_MODULE(_tracesmith, m) {
         .value("MemAlloc", EventType::MemAlloc)
         .value("MemFree", EventType::MemFree)
         .value("Marker", EventType::Marker)
+        .value("RangeStart", EventType::RangeStart)
+        .value("RangeEnd", EventType::RangeEnd)
+        .value("Custom", EventType::Custom)
         .export_values();
     
-    // TraceEvent class
+    // FlowType enum (Kineto-compatible)
+    py::enum_<FlowType>(m, "FlowType")
+        .value("NoFlow", FlowType::None)
+        .value("FwdBwd", FlowType::FwdBwd)
+        .value("AsyncCpuGpu", FlowType::AsyncCpuGpu)
+        .value("Custom", FlowType::Custom)
+        .export_values();
+    
+    // FlowInfo class (Kineto-compatible)
+    py::class_<FlowInfo>(m, "FlowInfo")
+        .def(py::init<>())
+        .def(py::init<uint64_t, FlowType, bool>(),
+             py::arg("id"), py::arg("type"), py::arg("is_start"))
+        .def_readwrite("id", &FlowInfo::id)
+        .def_readwrite("type", &FlowInfo::type)
+        .def_readwrite("is_start", &FlowInfo::is_start)
+        .def("__repr__", [](const FlowInfo& f) {
+            return "<FlowInfo id=" + std::to_string(f.id) + 
+                   " type=" + std::to_string(static_cast<int>(f.type)) +
+                   " is_start=" + (f.is_start ? "True" : "False") + ">";
+        });
+    
+    // TraceEvent class (with Kineto-compatible fields)
     py::class_<TraceEvent>(m, "TraceEvent")
         .def(py::init<>())
         .def(py::init<EventType, Timestamp>())
@@ -59,9 +90,14 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def_readwrite("stream_id", &TraceEvent::stream_id)
         .def_readwrite("correlation_id", &TraceEvent::correlation_id)
         .def_readwrite("name", &TraceEvent::name)
+        // Kineto-compatible fields (v0.2.0)
+        .def_readwrite("thread_id", &TraceEvent::thread_id)
+        .def_readwrite("metadata", &TraceEvent::metadata)
+        .def_readwrite("flow_info", &TraceEvent::flow_info)
         .def("__repr__", [](const TraceEvent& e) {
             return "<TraceEvent " + e.name + " type=" + 
-                   std::string(eventTypeToString(e.type)) + ">";
+                   std::string(eventTypeToString(e.type)) + 
+                   " thread=" + std::to_string(e.thread_id) + ">";
         });
     
     // DeviceInfo class
@@ -72,6 +108,48 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def_readwrite("vendor", &DeviceInfo::vendor)
         .def_readwrite("total_memory", &DeviceInfo::total_memory)
         .def_readwrite("multiprocessor_count", &DeviceInfo::multiprocessor_count);
+    
+    // MemoryEvent class (Kineto-compatible, v0.2.0)
+    py::enum_<MemoryEvent::Category>(m, "MemoryCategory")
+        .value("Unknown", MemoryEvent::Category::Unknown)
+        .value("Activation", MemoryEvent::Category::Activation)
+        .value("Gradient", MemoryEvent::Category::Gradient)
+        .value("Parameter", MemoryEvent::Category::Parameter)
+        .value("Temporary", MemoryEvent::Category::Temporary)
+        .value("Cached", MemoryEvent::Category::Cached)
+        .export_values();
+    
+    py::class_<MemoryEvent>(m, "MemoryEvent")
+        .def(py::init<>())
+        .def_readwrite("timestamp", &MemoryEvent::timestamp)
+        .def_readwrite("device_id", &MemoryEvent::device_id)
+        .def_readwrite("thread_id", &MemoryEvent::thread_id)
+        .def_readwrite("bytes", &MemoryEvent::bytes)
+        .def_readwrite("ptr", &MemoryEvent::ptr)
+        .def_readwrite("is_allocation", &MemoryEvent::is_allocation)
+        .def_readwrite("allocator_name", &MemoryEvent::allocator_name)
+        .def_readwrite("category", &MemoryEvent::category)
+        .def("__repr__", [](const MemoryEvent& e) {
+            return "<MemoryEvent " + 
+                   std::string(e.is_allocation ? "alloc" : "free") + 
+                   " " + std::to_string(e.bytes) + " bytes>";
+        });
+    
+    // CounterEvent class (Kineto-compatible, v0.2.0)
+    py::class_<CounterEvent>(m, "CounterEvent")
+        .def(py::init<>())
+        .def(py::init<const std::string&, double, Timestamp>(),
+             py::arg("name"), py::arg("value"), py::arg("timestamp") = 0)
+        .def_readwrite("timestamp", &CounterEvent::timestamp)
+        .def_readwrite("device_id", &CounterEvent::device_id)
+        .def_readwrite("track_id", &CounterEvent::track_id)
+        .def_readwrite("counter_name", &CounterEvent::counter_name)
+        .def_readwrite("value", &CounterEvent::value)
+        .def_readwrite("unit", &CounterEvent::unit)
+        .def("__repr__", [](const CounterEvent& e) {
+            return "<CounterEvent " + e.counter_name + "=" + 
+                   std::to_string(e.value) + " " + e.unit + ">";
+        });
     
     // TraceMetadata class
     py::class_<TraceMetadata>(m, "TraceMetadata")
@@ -168,11 +246,79 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def("build", &TimelineBuilder::build)
         .def("clear", &TimelineBuilder::clear);
     
-    // PerfettoExporter class
+    // PerfettoExporter class (JSON format)
     py::class_<PerfettoExporter>(m, "PerfettoExporter")
         .def(py::init<>())
         .def("export_to_file", &PerfettoExporter::exportToFile)
-        .def("export_to_string", &PerfettoExporter::exportToString);
+        .def("export_to_string", &PerfettoExporter::exportToString)
+        .def("set_enable_gpu_tracks", &PerfettoExporter::setEnableGPUTracks)
+        .def("set_enable_flow_events", &PerfettoExporter::setEnableFlowEvents);
+    
+    // PerfettoProtoExporter class (Protobuf format - v0.2.0)
+    py::enum_<PerfettoProtoExporter::Format>(m, "PerfettoFormat")
+        .value("JSON", PerfettoProtoExporter::Format::JSON)
+        .value("PROTOBUF", PerfettoProtoExporter::Format::PROTOBUF)
+        .export_values();
+    
+    py::class_<PerfettoProtoExporter>(m, "PerfettoProtoExporter")
+        .def(py::init<PerfettoProtoExporter::Format>(),
+             py::arg("format") = PerfettoProtoExporter::Format::PROTOBUF)
+        .def("export_to_file", &PerfettoProtoExporter::exportToFile,
+             py::arg("events"), py::arg("output_file"),
+             "Export events to file (auto-detects format from extension)")
+        .def("get_format", &PerfettoProtoExporter::getFormat)
+        .def_static("is_sdk_available", &PerfettoProtoExporter::isSDKAvailable,
+                   "Check if Perfetto SDK is available for protobuf export");
+    
+    // TracingSession class (Real-time tracing - v0.3.0)
+    py::enum_<TracingSession::State>(m, "TracingState")
+        .value("Stopped", TracingSession::State::Stopped)
+        .value("Starting", TracingSession::State::Starting)
+        .value("Running", TracingSession::State::Running)
+        .value("Stopping", TracingSession::State::Stopping)
+        .export_values();
+    
+    py::enum_<TracingSession::Mode>(m, "TracingMode")
+        .value("InProcess", TracingSession::Mode::InProcess)
+        .value("File", TracingSession::Mode::File)
+        .export_values();
+    
+    py::class_<TracingSession::Statistics>(m, "TracingStatistics")
+        .def(py::init<>())
+        .def_readwrite("events_emitted", &TracingSession::Statistics::events_emitted)
+        .def_readwrite("events_dropped", &TracingSession::Statistics::events_dropped)
+        .def_readwrite("counters_emitted", &TracingSession::Statistics::counters_emitted)
+        .def_readwrite("start_time", &TracingSession::Statistics::start_time)
+        .def_readwrite("stop_time", &TracingSession::Statistics::stop_time)
+        .def("duration_ms", &TracingSession::Statistics::duration_ms);
+    
+    py::class_<TracingSession>(m, "TracingSession")
+        .def(py::init<>())
+        .def(py::init<size_t, size_t>(),
+             py::arg("event_buffer_size"), py::arg("counter_buffer_size") = 4096)
+        .def("start", &TracingSession::start, py::arg("config"),
+             "Start tracing session")
+        .def("stop", &TracingSession::stop, "Stop tracing session")
+        .def("is_active", &TracingSession::isActive)
+        .def("get_state", &TracingSession::getState)
+        .def("get_mode", &TracingSession::getMode)
+        .def("get_statistics", &TracingSession::getStatistics)
+        .def("emit", py::overload_cast<const TraceEvent&>(&TracingSession::emit),
+             py::arg("event"), "Emit a trace event (thread-safe)")
+        .def("emit_counter", &TracingSession::emitCounter,
+             py::arg("name"), py::arg("value"), py::arg("timestamp") = 0,
+             "Emit a counter value")
+        .def("get_events", &TracingSession::getEvents,
+             py::return_value_policy::reference_internal)
+        .def("get_counters", &TracingSession::getCounters,
+             py::return_value_policy::reference_internal)
+        .def("export_to_file", &TracingSession::exportToFile,
+             py::arg("filename"), py::arg("use_protobuf") = true,
+             "Export session to Perfetto file")
+        .def("clear", &TracingSession::clear)
+        .def("event_buffer_size", &TracingSession::eventBufferSize)
+        .def("event_buffer_capacity", &TracingSession::eventBufferCapacity)
+        .def("events_dropped", &TracingSession::eventsDropped);
     
     // ReplayMode enum
     py::enum_<ReplayMode>(m, "ReplayMode")

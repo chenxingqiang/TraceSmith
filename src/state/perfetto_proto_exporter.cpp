@@ -285,4 +285,20 @@ bool PerfettoProtoExporter::exportToJSON(
     return json_exporter.exportToFile(events, output_file);
 }
 
+// TracingSession implementation (v0.3.0)
+bool TracingSession::exportToFile(const std::string& filename, bool use_protobuf) {
+    if (state_ == State::Running) {
+        flushEvents();
+        flushCounters();
+    }
+    
+    if (use_protobuf && PerfettoProtoExporter::isSDKAvailable()) {
+        PerfettoProtoExporter exporter(PerfettoProtoExporter::Format::PROTOBUF);
+        return exporter.exportToFile(flushed_events_, filename);
+    } else {
+        PerfettoExporter exporter;
+        return exporter.exportToFile(flushed_events_, filename);
+    }
+}
+
 } // namespace tracesmith

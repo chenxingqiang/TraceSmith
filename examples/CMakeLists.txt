@@ -80,9 +80,22 @@ target_link_libraries(perfetto_proto_test PRIVATE
     tracesmith-state
 )
 
+# Real-time Tracing Example (v0.3.0)
+add_executable(realtime_tracing_example
+    realtime_tracing_example.cpp
+)
+
+target_link_libraries(realtime_tracing_example PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-capture
+    tracesmith-state
+)
+
 # Link Perfetto SDK if enabled
 if(TRACESMITH_USE_PERFETTO_SDK)
     target_link_libraries(perfetto_proto_test PRIVATE perfetto_sdk)
+    target_link_libraries(realtime_tracing_example PRIVATE perfetto_sdk)
 endif()
 
 # CUPTI Example (requires CUDA)

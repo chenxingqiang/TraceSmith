@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tracesmith/types.hpp"
+#include "tracesmith/ring_buffer.hpp"
 #include <vector>
 #include <string>
 #include <memory>
@@ -8,6 +9,11 @@
 #ifdef TRACESMITH_PERFETTO_SDK_ENABLED
 #include "perfetto.h"
 #endif
+
+// Forward declaration
+namespace tracesmith {
+class PerfettoExporter;
+}
 
 namespace tracesmith {
 
@@ -142,6 +148,196 @@ private:
     // JSON fallback
     bool exportToJSON(const std::vector<TraceEvent>& events, 
                      const std::string& output_file);
+};
+
+/// Real-time tracing session (v0.3.0 full implementation)
+/// 
+/// Thread-safe trace collection using lock-free ring buffer.
+/// Supports both in-process collection and file export.
+/// 
+/// Features:
+/// - Thread-safe event emission via RingBuffer
+/// - Counter track support
+/// - Automatic flush on stop
+/// - Statistics tracking
+class TracingSession {
+public:
+    /// Session state
+    enum class State {
+        Stopped,
+        Starting,
+        Running,
+        Stopping
+    };
+    
+    /// Tracing mode
+    enum class Mode {
+        InProcess,      // In-process circular buffer
+        File            // Direct file output
+    };
+    
+    /// Session statistics
+    struct Statistics {
+        uint64_t events_emitted = 0;
+        uint64_t events_dropped = 0;
+        uint64_t counters_emitted = 0;
+        Timestamp start_time = 0;
+        Timestamp stop_time = 0;
+        
+        double duration_ms() const {
+            return (stop_time - start_time) / 1000000.0;
+        }
+    };
+    
+    /// Default constructor with 64K event buffer
+    TracingSession() 
+        : state_(State::Stopped)
+        , mode_(Mode::InProcess)
+        , event_buffer_(65536)
+        , counter_buffer_(4096) {}
+    
+    /// Constructor with custom buffer size
+    explicit TracingSession(size_t event_buffer_size, size_t counter_buffer_size = 4096)
+        : state_(State::Stopped)
+        , mode_(Mode::InProcess)
+        , event_buffer_(event_buffer_size)
+        , counter_buffer_(counter_buffer_size) {}
+    
+    ~TracingSession() { stop(); }
+    
+    /// Start tracing session
+    /// @param config Configuration for the session
+    /// @return true if session started successfully
+    bool start(const TracingConfig& config) {
+        if (state_ != State::Stopped) return false;
+        
+        config_ = config;
+        state_ = State::Starting;
+        
+        // Reset buffers and stats
+        event_buffer_.reset();
+        counter_buffer_.reset();
+        stats_ = Statistics{};
+        stats_.start_time = getCurrentTimestamp();
+        
+        state_ = State::Running;
+        return true;
+    }
+    
+    /// Stop tracing session and flush data
+    void stop() {
+        if (state_ != State::Running) return;
+        
+        state_ = State::Stopping;
+        stats_.stop_time = getCurrentTimestamp();
+        
+        // Flush remaining events from buffer
+        flushEvents();
+        flushCounters();
+        
+        stats_.events_dropped = event_buffer_.droppedCount();
+        
+        state_ = State::Stopped;
+    }
+    
+    /// Check if session is active
+    bool isActive() const { return state_ == State::Running; }
+    
+    /// Get current state
+    State getState() const { return state_; }
+    
+    /// Get tracing mode
+    Mode getMode() const { return mode_; }
+    
+    /// Get session statistics
+    const Statistics& getStatistics() const { return stats_; }
+    
+    /// Emit a trace event (thread-safe, lock-free)
+    /// @param event Event to emit
+    /// @return true if event was queued, false if dropped
+    bool emit(const TraceEvent& event) {
+        if (state_ != State::Running) return false;
+        
+        bool success = event_buffer_.push(event);
+        if (success) {
+            stats_.events_emitted++;
+        }
+        return success;
+    }
+    
+    /// Emit a trace event with move semantics
+    bool emit(TraceEvent&& event) {
+        if (state_ != State::Running) return false;
+        
+        bool success = event_buffer_.push(std::move(event));
+        if (success) {
+            stats_.events_emitted++;
+        }
+        return success;
+    }
+    
+    /// Emit a counter value (thread-safe)
+    /// @param name Counter name
+    /// @param value Counter value
+    /// @param timestamp Optional timestamp (0 = auto)
+    bool emitCounter(const std::string& name, double value, Timestamp timestamp = 0) {
+        if (state_ != State::Running) return false;
+        
+        CounterEvent counter(name, value, timestamp);
+        bool success = counter_buffer_.push(std::move(counter));
+        if (success) {
+            stats_.counters_emitted++;
+        }
+        return success;
+    }
+    
+    /// Get all captured events (call after stop)
+    const std::vector<TraceEvent>& getEvents() const { return flushed_events_; }
+    
+    /// Get all captured counters (call after stop)
+    const std::vector<CounterEvent>& getCounters() const { return flushed_counters_; }
+    
+    /// Export session to Perfetto file (defined in cpp to avoid circular includes)
+    /// @param filename Output file path
+    /// @param use_protobuf Use protobuf format if SDK available
+    /// @return true if export successful
+    bool exportToFile(const std::string& filename, bool use_protobuf = true);
+    
+    /// Clear all captured data
+    void clear() {
+        event_buffer_.reset();
+        counter_buffer_.reset();
+        flushed_events_.clear();
+        flushed_counters_.clear();
+        stats_ = Statistics{};
+    }
+    
+    /// Get buffer statistics
+    size_t eventBufferSize() const { return event_buffer_.size(); }
+    size_t eventBufferCapacity() const { return event_buffer_.capacity(); }
+    uint64_t eventsDropped() const { return event_buffer_.droppedCount(); }
+
+private:
+    void flushEvents() {
+        event_buffer_.popBatch(flushed_events_, event_buffer_.capacity());
+    }
+    
+    void flushCounters() {
+        counter_buffer_.popBatch(flushed_counters_, counter_buffer_.capacity());
+    }
+    
+    State state_;
+    Mode mode_;
+    TracingConfig config_;
+    Statistics stats_;
+    
+    // Lock-free ring buffers for thread-safe emission
+    RingBuffer<TraceEvent> event_buffer_;
+    RingBuffer<CounterEvent> counter_buffer_;
+    
+    // Flushed data storage
+    std::vector<TraceEvent> flushed_events_;
+    std::vector<CounterEvent> flushed_counters_;
 };
 
 } // namespace tracesmith

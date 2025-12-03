@@ -2,6 +2,7 @@
 add_library(tracesmith-common STATIC
     types.cpp
     stack_capture.cpp
+    xray_importer.cpp
 )
 
 target_include_directories(tracesmith-common PUBLIC
