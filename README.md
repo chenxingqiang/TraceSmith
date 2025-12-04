@@ -19,6 +19,7 @@
 - **LLVM XRay Support**: Import compiler-instrumented function traces
 - **eBPF Types** (Linux): Kernel-level GPU event tracing support
 - **RenderDoc-style Frame Capture**: F12-trigger capture with resource state snapshots
+- **GPU Memory Profiler**: Allocation tracking, leak detection, peak usage monitoring
 - **CLI Tools**: Easy-to-use command-line interface for recording and viewing traces
 - **Simulation Mode**: Test and develop without GPU hardware
 
@@ -341,8 +342,8 @@ Tested on **NVIDIA GeForce RTX 4090 D** with CUDA 12.8 (Driver 570.124.06):
 
 | Metric | Value |
 |--------|-------|
-| **Test Suite** | 74 tests |
-| **Pass Rate** | 98.6% (73/74) |
+| **Test Suite** | 86 tests |
+| **Pass Rate** | 100% (86/86) |
 | **Platform** | Linux x86_64, Kernel 5.4.0 |
 | **CUPTI Version** | 26 |
 
@@ -359,7 +360,7 @@ Tested on **NVIDIA GeForce RTX 4090 D** with CUDA 12.8 (Driver 570.124.06):
 
 ```
 ✅ RingBuffer Tests      (9/9)   - Lock-free SPSC buffer
-✅ SBT Format Tests      (6/7)   - Binary trace format
+✅ SBT Format Tests      (7/7)   - Binary trace format
 ✅ Types Tests           (12/12) - Core data structures
 ✅ Kineto Schema Tests   (7/7)   - PyTorch compatibility
 ✅ Kineto V2 Tests       (6/6)   - Memory & Counter events
@@ -367,6 +368,7 @@ Tested on **NVIDIA GeForce RTX 4090 D** with CUDA 12.8 (Driver 570.124.06):
 ✅ XRay Importer Tests   (5/5)   - LLVM XRay support
 ✅ BPF Types Tests       (6/6)   - eBPF integration
 ✅ FrameCapture Tests    (12/12) - RenderDoc-style capture
+✅ MemoryProfiler Tests  (12/12) - GPU memory tracking
 ```
 
 ## Version History
