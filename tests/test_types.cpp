@@ -837,3 +837,175 @@ TEST(FrameCaptureTest, ClearCapture) {
     EXPECT_TRUE(capture.getCapturedFrames().empty());
     EXPECT_EQ(capture.getState(), CaptureState::Idle);
 }
+
+// ============================================================
+// Memory Profiler Tests (v0.6.0)
+// ============================================================
+
+#include "tracesmith/memory_profiler.hpp"
+
+TEST(MemoryProfilerTest, DefaultConstruction) {
+    MemoryProfiler profiler;
+    
+    EXPECT_FALSE(profiler.isActive());
+    EXPECT_EQ(profiler.getCurrentUsage(), 0u);
+    EXPECT_EQ(profiler.getPeakUsage(), 0u);
+}
+
+TEST(MemoryProfilerTest, StartStop) {
+    MemoryProfiler profiler;
+    
+    EXPECT_FALSE(profiler.isActive());
+    
+    profiler.start();
+    EXPECT_TRUE(profiler.isActive());
+    
+    profiler.stop();
+    EXPECT_FALSE(profiler.isActive());
+}
+
+TEST(MemoryProfilerTest, RecordAllocation) {
+    MemoryProfiler profiler;
+    profiler.start();
+    
+    profiler.recordAlloc(0x1000, 4096, 0, "test_allocator");
+    
+    EXPECT_EQ(profiler.getCurrentUsage(), 4096u);
+    EXPECT_EQ(profiler.getPeakUsage(), 4096u);
+    EXPECT_EQ(profiler.getLiveAllocationCount(), 1u);
+    
+    profiler.stop();
+}
+
+TEST(MemoryProfilerTest, RecordFree) {
+    MemoryProfiler profiler;
+    profiler.start();
+    
+    profiler.recordAlloc(0x1000, 4096, 0);
+    EXPECT_EQ(profiler.getCurrentUsage(), 4096u);
+    
+    profiler.recordFree(0x1000, 0);
+    EXPECT_EQ(profiler.getCurrentUsage(), 0u);
+    EXPECT_EQ(profiler.getLiveAllocationCount(), 0u);
+    
+    // Peak should still be 4096
+    EXPECT_EQ(profiler.getPeakUsage(), 4096u);
+    
+    profiler.stop();
+}
+
+TEST(MemoryProfilerTest, MultipleAllocations) {
+    MemoryProfiler profiler;
+    profiler.start();
+    
+    profiler.recordAlloc(0x1000, 1024, 0);
+    profiler.recordAlloc(0x2000, 2048, 0);
+    profiler.recordAlloc(0x3000, 4096, 0);
+    
+    EXPECT_EQ(profiler.getCurrentUsage(), 1024u + 2048u + 4096u);
+    EXPECT_EQ(profiler.getLiveAllocationCount(), 3u);
+    
+    profiler.recordFree(0x2000, 0);
+    EXPECT_EQ(profiler.getCurrentUsage(), 1024u + 4096u);
+    EXPECT_EQ(profiler.getLiveAllocationCount(), 2u);
+    
+    profiler.stop();
+}
+
+TEST(MemoryProfilerTest, GetLiveAllocations) {
+    MemoryProfiler profiler;
+    profiler.start();
+    
+    profiler.recordAlloc(0x1000, 1024, 0, "alloc1", "tag1");
+    profiler.recordAlloc(0x2000, 2048, 1, "alloc2", "tag2");
+    
+    auto live = profiler.getLiveAllocations();
+    EXPECT_EQ(live.size(), 2u);
+    
+    profiler.stop();
+}
+
+TEST(MemoryProfilerTest, TakeSnapshot) {
+    MemoryProfiler profiler;
+    profiler.start();
+    
+    profiler.recordAlloc(0x1000, 1024, 0);
+    profiler.recordAlloc(0x2000, 2048, 0);
+    
+    auto snapshot = profiler.takeSnapshot();
+    
+    EXPECT_EQ(snapshot.live_bytes, 1024u + 2048u);
+    EXPECT_EQ(snapshot.live_allocations, 2u);
+    EXPECT_GT(snapshot.timestamp, 0u);
+    
+    profiler.stop();
+}
+
+TEST(MemoryProfilerTest, GenerateReport) {
+    MemoryProfiler profiler;
+    profiler.start();
+    
+    profiler.recordAlloc(0x1000, 1024, 0, "cuda");
+    profiler.recordAlloc(0x2000, 2048, 0, "cuda");
+    profiler.recordFree(0x1000, 0);
+    
+    profiler.stop();
+    
+    auto report = profiler.generateReport();
+    
+    EXPECT_EQ(report.total_allocations, 2u);
+    EXPECT_EQ(report.total_frees, 1u);
+    EXPECT_EQ(report.total_bytes_allocated, 1024u + 2048u);
+    EXPECT_EQ(report.total_bytes_freed, 1024u);
+    EXPECT_EQ(report.current_memory_usage, 2048u);
+    EXPECT_EQ(report.peak_memory_usage, 1024u + 2048u);
+}
+
+TEST(MemoryProfilerTest, Clear) {
+    MemoryProfiler profiler;
+    profiler.start();
+    
+    profiler.recordAlloc(0x1000, 1024, 0);
+    EXPECT_EQ(profiler.getCurrentUsage(), 1024u);
+    
+    profiler.clear();
+    
+    EXPECT_EQ(profiler.getCurrentUsage(), 0u);
+    EXPECT_EQ(profiler.getPeakUsage(), 0u);
+    EXPECT_EQ(profiler.getLiveAllocationCount(), 0u);
+}
+
+TEST(MemoryProfilerTest, ToCounterEvents) {
+    MemoryProfiler profiler;
+    profiler.start();
+    
+    profiler.recordAlloc(0x1000, 1024 * 1024, 0);
+    
+    profiler.stop();
+    
+    auto counters = profiler.toCounterEvents();
+    
+    // Should have at least start and end snapshots
+    EXPECT_GE(counters.size(), 2u);
+}
+
+TEST(MemoryProfilerTest, FormatBytes) {
+    EXPECT_EQ(formatBytes(512), "512.00 B");
+    EXPECT_EQ(formatBytes(1024), "1.00 KB");
+    EXPECT_EQ(formatBytes(1024 * 1024), "1.00 MB");
+    EXPECT_EQ(formatBytes(1024 * 1024 * 1024), "1.00 GB");
+}
+
+TEST(MemoryProfilerTest, ReportSummary) {
+    MemoryProfiler profiler;
+    profiler.start();
+    
+    profiler.recordAlloc(0x1000, 1024 * 1024, 0, "cuda");
+    profiler.stop();
+    
+    auto report = profiler.generateReport();
+    auto summary = report.summary();
+    
+    EXPECT_FALSE(summary.empty());
+    EXPECT_NE(summary.find("GPU Memory Profiler Report"), std::string::npos);
+}

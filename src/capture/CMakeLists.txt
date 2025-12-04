@@ -2,6 +2,7 @@
 add_library(tracesmith-capture STATIC
     profiler.cpp
     bpf_tracer.cpp
+    memory_profiler.cpp
 )
 
 target_link_libraries(tracesmith-capture PUBLIC
