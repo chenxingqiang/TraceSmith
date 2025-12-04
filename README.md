@@ -686,20 +686,20 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| **v0.7.1** | 2024-12 | **Multi-GPU Phase 2** - TimeSync, NCCLTracker, ClockCorrelator, CommAnalysis |
-| **v0.7.0** | 2024-12 | **Multi-GPU Cluster** - GPUTopology, MultiGPUProfiler, GitHub Actions CI/CD |
-| v0.6.9 | 2024-12 | Include reorganization - Directory structure matches `src/` layout |
-| v0.6.8 | 2024-12 | Enhanced CLI - ASCII banner, all commands, Python CLI |
-| v0.6.7 | 2024-12 | Real GPU benchmark - 10K+ CUDA kernels with CUPTI  |
-| v0.6.5 | 2024-12 | StackCapture bindings, OverflowPolicy, detect_leaks |
-| v0.6.2 | 2024-12 | PyPI release, Native extension packaging fix |
-| v0.6.0 | 2024-12 | NVIDIA CUPTI integration, Full GPU testing |
-| v0.5.0 | 2024-12 | RenderDoc-style frame capture, Resource tracking |
-| v0.4.0 | 2024-12 | LLVM XRay, eBPF types, TracingSession, Counter tracks |
-| v0.3.0 | 2024-12 | Real-time tracing, Counter events, Memory events |
-| v0.2.0 | 2024-12 | Perfetto SDK (85% smaller traces), Kineto schema |
-| v0.1.1 | 2024-11 | libunwind, Enhanced Perfetto export, Flow events |
-| v0.1.0 | 2024-11 | Initial release: SBT format, Ring buffer, Replay |
+| **v0.7.1** | 2025-12 | **Multi-GPU Phase 2** - TimeSync, NCCLTracker, ClockCorrelator, CommAnalysis |
+| **v0.7.0** | 2025-12 | **Multi-GPU Cluster** - GPUTopology, MultiGPUProfiler, GitHub Actions CI/CD |
+| v0.6.9 | 2025-12 | Include reorganization - Directory structure matches `src/` layout |
+| v0.6.8 | 2025-12 | Enhanced CLI - ASCII banner, all commands, Python CLI |
+| v0.6.7 | 2025-12 | Real GPU benchmark - 10K+ CUDA kernels with CUPTI  |
+| v0.6.5 | 2025-12 | StackCapture bindings, OverflowPolicy, detect_leaks |
+| v0.6.2 | 2025-12 | PyPI release, Native extension packaging fix |
+| v0.6.0 | 2025-12 | NVIDIA CUPTI integration, Full GPU testing |
+| v0.5.0 | 2025-12 | RenderDoc-style frame capture, Resource tracking |
+| v0.4.0 | 2025-12 | LLVM XRay, eBPF types, TracingSession, Counter tracks |
+| v0.3.0 | 2025-12 | Real-time tracing, Counter events, Memory events |
+| v0.2.0 | 2025-12 | Perfetto SDK (85% smaller traces), Kineto schema |
+| v0.1.1 | 2025-11 | libunwind, Enhanced Perfetto export, Flow events |
+| v0.1.0 | 2025-11 | Initial release: SBT format, Ring buffer, Replay |
 
 ## Acknowledgments
 

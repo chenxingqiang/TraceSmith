@@ -5,7 +5,7 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.1] - 2024-12-04
+## [0.7.1] - 2025-12-04
 
 ### Added
 - **Multi-GPU Cluster Profiling (Phase 2)**: Time Synchronization
@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python CLI benchmark display alignment
 - TraceEvent.call_stack binding for std::optional<CallStack>
 
-## [0.7.0] - 2024-12-04
+## [0.7.0] - 2025-12-04
 
 ### Added
 - **Multi-GPU Cluster Profiling (Phase 1)**: Single-node multi-GPU support
@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI benchmark command now compiles with CUDA support when available
 - Improved CMake CUDA detection with `check_language(CUDA)`
 
-## [0.6.9] - 2024-12-04
+## [0.6.9] - 2025-12-04
 
 ### Changed
 - **Reorganized include directory structure** to match `src/` layout:
@@ -73,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated all source files, examples, tests, and Python bindings to use new paths
 - Main `tracesmith.hpp` header remains at top level and includes all modules
 
-## [0.6.8] - 2024-12-04
+## [0.6.8] - 2025-12-04
 
 ### Added
 - **Enhanced CLI**: Comprehensive command-line interface with ASCII banner
@@ -89,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `getting_started.md` with real GPU profiling examples
 - Removed all simulation code from profiler
 
-## [0.6.7] - 2024-12-04
+## [0.6.7] - 2025-12-04
 
 ### Added
 - **StackCapture bindings**: Full Python API for call stack capturing
@@ -107,7 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed `MemoryProfiler.detect_leaks()` visibility (moved to public)
 - Fixed missing `OverflowPolicy` export in Python
 
-## [0.6.4] - 2024-12-04
+## [0.6.4] - 2025-12-04
 
 ### Added
 - **Platform-specific builds**: Support compiling for specific GPU platforms
@@ -122,7 +122,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build system now auto-detects CUDA_HOME/CUDA_PATH environment variables
 - Parallel build enabled by default
 
-## [0.6.3] - 2024-12-04
+## [0.6.3] - 2025-12-04
 
 ### Changed
 - **Remove simulation mode**: Focus on real GPU profiling
@@ -130,19 +130,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed `capture_trace()` convenience function (use `create_profiler()` instead)
   - Added `create_profiler(PlatformType)` to Python exports
 
-## [0.6.2] - 2024-12-04
+## [0.6.2] - 2025-12-04
 
 ### Fixed
 - **PyPI packaging**: Fixed native extension not being included in wheel
   - Use custom `TRACESMITH_PYTHON_OUTPUT_DIR` variable instead of `CMAKE_LIBRARY_OUTPUT_DIRECTORY`
   - Ensures the `_tracesmith.so` is placed in the correct location for wheel packaging
 
-## [0.6.1] - 2024-12-04
+## [0.6.1] - 2025-12-04
 
 ### Fixed
 - **PyPI packaging**: Attempted fix for native extension (incomplete)
 
-## [0.6.0] - 2024-12-04
+## [0.6.0] - 2025-12-04
 
 ### Added
 - **GPU Memory Profiler**: Complete memory tracking with leak detection
@@ -165,7 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated version to 0.6.0
 - Total test count: 86 tests (100% pass rate)
 
-## [0.5.0] - 2024-12-03
+## [0.5.0] - 2025-12-03
 
 ### Added
 - **RenderDoc-inspired Frame Capture**
@@ -180,7 +180,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced Python bindings with Frame Capture support
 - Improved Perfetto export with counter tracks
 
-## [0.4.0] - 2024-12-02
+## [0.4.0] - 2025-12-02
 
 ### Added
 - **LLVM XRay Integration**
@@ -191,7 +191,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Memory operation tracing
   - UVM fault and migration tracking
 
-## [0.3.0] - 2024-12-01
+## [0.3.0] - 2025-12-01
 
 ### Added
 - **Real-time Tracing**
@@ -200,7 +200,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Counter track support
 - **Counter Events** for time-series metrics
 
-## [0.2.0] - 2024-11-30
+## [0.2.0] - 2025-11-30
 
 ### Added
 - **Perfetto SDK Integration**
@@ -213,7 +213,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `MemoryEvent` for memory operations
   - `CounterEvent` for metrics
 
-## [0.1.0] - 2024-11-28
+## [0.1.0] - 2025-11-28
 
 ### Added
 - Initial release
@@ -246,10 +246,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date       | Highlights                                    |
 |---------|------------|-----------------------------------------------|
-| 0.6.0   | 2024-12-04 | GPU Memory Profiler, CLI, PyPI packaging      |
-| 0.5.0   | 2024-12-03 | Frame Capture, Counter Tracks, eBPF runtime   |
-| 0.4.0   | 2024-12-02 | XRay integration, eBPF types                  |
-| 0.3.0   | 2024-12-01 | Real-time tracing, lock-free buffers          |
-| 0.2.0   | 2024-11-30 | Perfetto SDK, Kineto compatibility            |
-| 0.1.0   | 2024-11-28 | Initial release                               |
+| 0.6.0   | 2025-12-04 | GPU Memory Profiler, CLI, PyPI packaging      |
+| 0.5.0   | 2025-12-03 | Frame Capture, Counter Tracks, eBPF runtime   |
+| 0.4.0   | 2025-12-02 | XRay integration, eBPF types                  |
+| 0.3.0   | 2025-12-01 | Real-time tracing, lock-free buffers          |
+| 0.2.0   | 2025-11-30 | Perfetto SDK, Kineto compatibility            |
+| 0.1.0   | 2025-11-28 | Initial release                               |
 
