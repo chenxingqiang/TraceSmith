@@ -18,9 +18,10 @@
 ## **Phase 1：可运行的最小版本（MVP）**
 周期：4–6 周
 ### **目标：**
-* 支持采集 GPU Kernel 执行事件* 基于 CUPTI / ROCprofiler 获取：  * kernel launch events
+* 支持采集 GPU Kernel 执行事件* 基于 CUPTI / ROCprofiler 获取：  
+* kernel launch events
   * stream ID
-  * start/end timestamp  
+  * start/end timestamp   
   * 设计 Trace Record 结构与二进制格式（TraceSmith Trace v0.1）
   * 开发 CLI 工具：  * TraceSmith record（记录事件流）
   * TraceSmith view（文本化显示）
