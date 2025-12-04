@@ -260,6 +260,20 @@ target_link_libraries(goal_validation_example PRIVATE
 )
 
 # ----------------------------------------------------------------------------
+# Benchmark: 10K Call Stacks - Validates core goal
+# "在不中断业务的情况下采集 1 万+ 指令级 GPU 调用栈"
+# ----------------------------------------------------------------------------
+add_executable(benchmark_10k_stacks
+    benchmark_10k_stacks.cpp
+)
+
+target_link_libraries(benchmark_10k_stacks PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-capture
+)
+
+# ----------------------------------------------------------------------------
 # Install Python example
 # ----------------------------------------------------------------------------
 install(FILES python_example.py
@@ -294,3 +308,4 @@ if(TRACESMITH_ENABLE_METAL AND APPLE)
 endif()
 message(STATUS "  - python_example.py (Python API demonstration)")
 message(STATUS "  - goal_validation_example (Validates all PLANNING.md goals)")
+message(STATUS "  - benchmark_10k_stacks (10K call stack capture benchmark)")
