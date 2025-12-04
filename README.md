@@ -398,6 +398,15 @@ make benchmark_10k_stacks -j8
 ./bin/benchmark_10k_stacks
 ```
 
+### CUPTI Real GPU Profiling Results
+
+| Kernel | Duration (ns) | Duration (µs) | Duration (ms) |
+|--------|---------------|---------------|---------------|
+| vectorAdd (1M elements) | 5,313 | 5.31 | 0.0053 |
+| matrixMul (512×512) | 66,912 | 66.91 | 0.0669 |
+| relu (1M elements) | 4,704 | 4.70 | 0.0047 |
+| **TOTAL** | **76,929** | **76.93** | **0.0769** |
+
 ### Performance Characteristics
 
 | Feature | Performance |
