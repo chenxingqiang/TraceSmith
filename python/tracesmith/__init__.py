@@ -242,26 +242,30 @@ __all__ = [
 # High-level Convenience Functions
 # ============================================================================
 
-def capture_trace(duration_ms: int = 1000, stream_count: int = 1) -> list:
+def capture_trace(duration_ms: int = 1000, stream_count: int = 1, event_count: int = 10) -> list:
     """
     Capture a trace using simulation profiler.
     
     Args:
-        duration_ms: Capture duration in milliseconds
+        duration_ms: Simulated capture duration (used for event timestamps)
         stream_count: Number of streams to simulate
+        event_count: Number of events to generate
     
     Returns:
         List of TraceEvent objects
     """
-    import time
-    
     profiler = SimulationProfiler()
     config = ProfilerConfig()
     config.capture_callstacks = False
     profiler.initialize(config)
     profiler.start_capture()
     
-    time.sleep(duration_ms / 1000.0)
+    # Generate simulated events (no actual waiting)
+    for i in range(event_count):
+        stream_id = i % max(1, stream_count)
+        profiler.generate_kernel_event(f"kernel_{i}", stream_id)
+        if i % 3 == 0:
+            profiler.generate_memcpy_event(EventType.MemcpyH2D, 1024 * (i + 1), stream_id)
     
     profiler.stop_capture()
     return profiler.get_events()
