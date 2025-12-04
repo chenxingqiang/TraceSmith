@@ -85,18 +85,80 @@ TRACESMITH_CUDA=1 pip install .  # with CUDA support
 - C++17 compatible compiler (GCC 8+, Clang 8+, MSVC 2019+)
 - Python 3.7+ (for Python bindings)
 - (Optional) NVIDIA CUDA Toolkit with CUPTI
+- (Optional) Xcode Command Line Tools (for Metal on macOS)
 
-**Build:**
+**Basic Build:**
 
 ```bash
-git clone https://github.com/xingqiangchen/TraceSmith.git
+git clone https://github.com/chenxingqiang/TraceSmith.git
 cd TraceSmith
 mkdir build && cd build
 cmake ..
 cmake --build . -j$(nproc)
+```
 
-# Optionally run tests
+**CMake Build Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `CMAKE_BUILD_TYPE` | Debug | Build type: Debug, Release, RelWithDebInfo |
+| `TRACESMITH_ENABLE_CUDA` | OFF | Enable NVIDIA CUDA/CUPTI support |
+| `TRACESMITH_ENABLE_ROCM` | OFF | Enable AMD ROCm support |
+| `TRACESMITH_ENABLE_METAL` | OFF | Enable Apple Metal support |
+| `TRACESMITH_BUILD_PYTHON` | OFF | Build Python bindings (pybind11) |
+| `TRACESMITH_BUILD_TESTS` | ON | Build unit tests (Google Test) |
+| `TRACESMITH_BUILD_EXAMPLES` | ON | Build example programs |
+| `TRACESMITH_BUILD_CLI` | ON | Build command-line interface |
+| `TRACESMITH_USE_PERFETTO_SDK` | OFF | Use Perfetto SDK for protobuf export |
+
+**Build Examples:**
+
+```bash
+# Release build with Metal support (macOS)
+cmake .. -DCMAKE_BUILD_TYPE=Release -DTRACESMITH_ENABLE_METAL=ON
+cmake --build . -j$(nproc)
+
+# CUDA build (Linux/Windows with NVIDIA GPU)
+cmake .. -DCMAKE_BUILD_TYPE=Release -DTRACESMITH_ENABLE_CUDA=ON
+cmake --build . -j$(nproc)
+
+# Full build with all features
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+         -DTRACESMITH_ENABLE_METAL=ON \
+         -DTRACESMITH_BUILD_PYTHON=ON \
+         -DTRACESMITH_USE_PERFETTO_SDK=ON
+cmake --build . -j$(nproc)
+
+# Minimal build (library only, no tests/examples/CLI)
+cmake .. -DTRACESMITH_BUILD_TESTS=OFF \
+         -DTRACESMITH_BUILD_EXAMPLES=OFF \
+         -DTRACESMITH_BUILD_CLI=OFF
+cmake --build . -j$(nproc)
+```
+
+**Install:**
+
+```bash
+# Install to default location (/usr/local)
+sudo cmake --install .
+
+# Install to custom prefix
+cmake --install . --prefix /path/to/install
+
+# Installed files:
+#   bin/tracesmith          - CLI executable
+#   include/tracesmith/     - Header files
+#   lib/libtracesmith-*.a   - Static libraries
+```
+
+**Run Tests:**
+
+```bash
+# Run all tests
 ctest --output-on-failure
+
+# Run specific test
+./bin/tracesmith_tests --gtest_filter="RingBuffer*"
 ```
 
 #### Docker
