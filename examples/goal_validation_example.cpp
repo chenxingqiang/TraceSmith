@@ -10,14 +10,15 @@
  * Phase 5: Python binding (separate), Perfetto integration
  */
 
-#include <iostream>
-#include <iomanip>
-#include <vector>
-#include <map>
+#include <algorithm>
 #include <chrono>
-#include <thread>
-#include <random>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <random>
+#include <thread>
+#include <vector>
 
 #include "tracesmith/common/types.hpp"
 #include "tracesmith/capture/profiler.hpp"

@@ -11,6 +11,7 @@
 
 #include "tracesmith/tracesmith.hpp"
 #include "tracesmith/replay/replay_engine.hpp"
+#include <algorithm>
 #include <iostream>
 #include <iomanip>
 #include <random>

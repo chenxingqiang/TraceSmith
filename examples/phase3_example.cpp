@@ -13,6 +13,7 @@
 #include "tracesmith/state/timeline_builder.hpp"
 #include "tracesmith/state/perfetto_exporter.hpp"
 #include "tracesmith/state/timeline_viewer.hpp"
+#include <algorithm>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
