@@ -22,6 +22,7 @@ out/
 *.dll
 *.exe
 *.out
+*.json
 
 # Trace files
 *.sbt
@@ -75,3 +76,25 @@ tmp/
 temp/
 *.tmp
 *.temp
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+.eggs/
+*.whl
+.python-version
+.pytest_cache/
+.tox/
+.nox/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Perfetto trace files
+*.perfetto-trace
+*.pftrace

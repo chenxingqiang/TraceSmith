@@ -1,0 +1,46 @@
+# Include essential files
+include README.md
+include LICENSE
+include CHANGELOG.md
+include pyproject.toml
+include setup.py
+
+# Include C++ source and headers
+recursive-include include *.hpp *.h
+recursive-include src *.cpp *.c *.hpp *.h CMakeLists.txt
+
+# Include CMake files
+include CMakeLists.txt
+recursive-include cmake *.cmake *.cmake.in
+
+# Include Python package
+recursive-include python *.py *.cpp CMakeLists.txt
+
+# Include examples
+recursive-include examples *.cpp *.py CMakeLists.txt
+
+# Include third_party
+recursive-include third_party *.txt *.cmake CMakeLists.txt
+
+# Include CLI
+recursive-include cli *.cpp CMakeLists.txt
+
+# Include tests (for source distribution)
+recursive-include tests *.cpp CMakeLists.txt
+
+# Include documentation
+recursive-include docs *.md *.rst
+
+# Exclude build artifacts
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.so
+global-exclude *.dylib
+global-exclude *.dll
+global-exclude *.o
+global-exclude *.a
+prune build
+prune dist
+prune *.egg-info
+prune .git
+

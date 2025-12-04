@@ -1,0 +1,112 @@
+[build-system]
+requires = [
+    "setuptools>=45",
+    "wheel",
+    "cmake>=3.16",
+    "pybind11>=2.11.0",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tracesmith"
+version = "0.6.0"
+description = "Cross-platform GPU Profiling & Replay System"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Xingqiang Chen", email = "chenxingqiang@gmail.com"}
+]
+maintainers = [
+    {name = "Xingqiang Chen", email = "chenxingqiang@gmail.com"}
+]
+keywords = [
+    "gpu",
+    "profiling",
+    "tracing",
+    "cuda",
+    "rocm",
+    "metal",
+    "debugging",
+    "replay",
+    "perfetto",
+    "memory-profiler",
+    "frame-capture",
+    "deep-learning",
+    "machine-learning",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Debuggers",
+    "Topic :: System :: Monitoring",
+]
+requires-python = ">=3.8"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "numpy",
+    "build",
+    "twine",
+]
+torch = [
+    "torch>=1.9",
+]
+visualization = [
+    "matplotlib",
+    "plotly",
+]
+
+[project.urls]
+Homepage = "https://github.com/chenxingqiang/TraceSmith"
+Documentation = "https://github.com/chenxingqiang/TraceSmith#readme"
+Repository = "https://github.com/chenxingqiang/TraceSmith.git"
+Issues = "https://github.com/chenxingqiang/TraceSmith/issues"
+Changelog = "https://github.com/chenxingqiang/TraceSmith/blob/main/CHANGELOG.md"
+
+[project.scripts]
+tracesmith = "tracesmith.cli:main"
+
+[tool.setuptools]
+packages = ["tracesmith"]
+package-dir = {"" = "python"}
+
+[tool.setuptools.package-data]
+tracesmith = ["*.so", "*.pyd", "*.dll"]
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+

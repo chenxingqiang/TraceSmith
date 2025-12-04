@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(TraceSmith 
-    VERSION 0.1.0
-    DESCRIPTION "GPU Profiling & Replay System"
+    VERSION 0.6.0
+    DESCRIPTION "Cross-platform GPU Profiling & Replay System"
     LANGUAGES CXX
 )
 
@@ -14,6 +14,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(TRACESMITH_BUILD_TESTS "Build unit tests" ON)
 option(TRACESMITH_BUILD_EXAMPLES "Build examples" ON)
 option(TRACESMITH_BUILD_CLI "Build CLI tools" ON)
+option(TRACESMITH_BUILD_PYTHON "Build Python bindings" OFF)
 option(TRACESMITH_ENABLE_CUDA "Enable CUDA/CUPTI support" OFF)
 option(TRACESMITH_ENABLE_ROCM "Enable ROCm support" OFF)
 option(TRACESMITH_ENABLE_METAL "Enable Metal support" OFF)
@@ -136,6 +137,11 @@ if(TRACESMITH_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
+# Python bindings
+if(TRACESMITH_BUILD_PYTHON)
+    add_subdirectory(python)
+endif()
+
 # Installation
 include(GNUInstallDirs)
 
@@ -171,6 +177,7 @@ message(STATUS "  Build type:     ${CMAKE_BUILD_TYPE}")
 message(STATUS "  Build tests:    ${TRACESMITH_BUILD_TESTS}")
 message(STATUS "  Build examples: ${TRACESMITH_BUILD_EXAMPLES}")
 message(STATUS "  Build CLI:      ${TRACESMITH_BUILD_CLI}")
+message(STATUS "  Build Python:   ${TRACESMITH_BUILD_PYTHON}")
 if(CUPTI_FOUND)
     message(STATUS "  CUDA support:   ${TRACESMITH_ENABLE_CUDA} (CUPTI ${CUPTI_VERSION})")
 else()

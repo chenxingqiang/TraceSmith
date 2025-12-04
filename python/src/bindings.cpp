@@ -22,6 +22,9 @@
 #include "tracesmith/perfetto_proto_exporter.hpp"
 #include "tracesmith/replay_engine.hpp"
 #include "tracesmith/frame_capture.hpp"
+#include "tracesmith/memory_profiler.hpp"
+#include "tracesmith/xray_importer.hpp"
+#include "tracesmith/bpf_types.hpp"
 
 namespace py = pybind11;
 using namespace tracesmith;
@@ -30,7 +33,7 @@ PYBIND11_MODULE(_tracesmith, m) {
     m.doc() = "TraceSmith GPU Profiling & Replay System";
     
     // Version info
-    m.attr("__version__") = "0.1.0";
+    m.attr("__version__") = "0.6.0";
     m.attr("VERSION_MAJOR") = VERSION_MAJOR;
     m.attr("VERSION_MINOR") = VERSION_MINOR;
     m.attr("VERSION_PATCH") = VERSION_PATCH;
@@ -250,10 +253,25 @@ PYBIND11_MODULE(_tracesmith, m) {
     // PerfettoExporter class (JSON format)
     py::class_<PerfettoExporter>(m, "PerfettoExporter")
         .def(py::init<>())
-        .def("export_to_file", &PerfettoExporter::exportToFile)
-        .def("export_to_string", &PerfettoExporter::exportToString)
+        .def("export_to_file", 
+             py::overload_cast<const std::vector<TraceEvent>&, const std::string&>(
+                 &PerfettoExporter::exportToFile),
+             py::arg("events"), py::arg("output_file"))
+        .def("export_to_file_with_counters",
+             py::overload_cast<const std::vector<TraceEvent>&, const std::vector<CounterEvent>&, const std::string&>(
+                 &PerfettoExporter::exportToFile),
+             py::arg("events"), py::arg("counters"), py::arg("output_file"))
+        .def("export_to_string",
+             py::overload_cast<const std::vector<TraceEvent>&>(
+                 &PerfettoExporter::exportToString),
+             py::arg("events"))
+        .def("export_to_string_with_counters",
+             py::overload_cast<const std::vector<TraceEvent>&, const std::vector<CounterEvent>&>(
+                 &PerfettoExporter::exportToString),
+             py::arg("events"), py::arg("counters"))
         .def("set_enable_gpu_tracks", &PerfettoExporter::setEnableGPUTracks)
-        .def("set_enable_flow_events", &PerfettoExporter::setEnableFlowEvents);
+        .def("set_enable_flow_events", &PerfettoExporter::setEnableFlowEvents)
+        .def("set_enable_counter_tracks", &PerfettoExporter::setEnableCounterTracks);
     
     // PerfettoProtoExporter class (Protobuf format - v0.2.0)
     py::enum_<PerfettoProtoExporter::Format>(m, "PerfettoFormat")
@@ -497,6 +515,215 @@ PYBIND11_MODULE(_tracesmith, m) {
     // Resource type to string helper
     m.def("resource_type_to_string", &resourceTypeToString,
           "Convert ResourceType to string");
+    
+    // ========================================================================
+    // Memory Profiler - v0.6.0
+    // ========================================================================
+    
+    // MemoryAllocation struct
+    py::class_<MemoryAllocation>(m, "MemoryAllocation")
+        .def(py::init<>())
+        .def_readwrite("ptr", &MemoryAllocation::ptr)
+        .def_readwrite("size", &MemoryAllocation::size)
+        .def_readwrite("device_id", &MemoryAllocation::device_id)
+        .def_readwrite("alloc_time", &MemoryAllocation::alloc_time)
+        .def_readwrite("free_time", &MemoryAllocation::free_time)
+        .def_readwrite("allocator", &MemoryAllocation::allocator)
+        .def_readwrite("tag", &MemoryAllocation::tag)
+        .def("is_live", &MemoryAllocation::is_live)
+        .def("lifetime_ns", &MemoryAllocation::lifetime_ns);
+    
+    // MemorySnapshot struct
+    py::class_<MemorySnapshot>(m, "MemorySnapshot")
+        .def(py::init<>())
+        .def_readwrite("timestamp", &MemorySnapshot::timestamp)
+        .def_readwrite("total_allocated", &MemorySnapshot::total_allocated)
+        .def_readwrite("total_freed", &MemorySnapshot::total_freed)
+        .def_readwrite("live_allocations", &MemorySnapshot::live_allocations)
+        .def_readwrite("live_bytes", &MemorySnapshot::live_bytes)
+        .def_readwrite("peak_bytes", &MemorySnapshot::peak_bytes)
+        .def_readwrite("device_usage", &MemorySnapshot::device_usage)
+        .def_readwrite("allocator_usage", &MemorySnapshot::allocator_usage);
+    
+    // MemoryLeak struct
+    py::class_<MemoryLeak>(m, "MemoryLeak")
+        .def(py::init<>())
+        .def_readwrite("ptr", &MemoryLeak::ptr)
+        .def_readwrite("size", &MemoryLeak::size)
+        .def_readwrite("alloc_time", &MemoryLeak::alloc_time)
+        .def_readwrite("allocator", &MemoryLeak::allocator)
+        .def_readwrite("tag", &MemoryLeak::tag)
+        .def_readwrite("lifetime_ns", &MemoryLeak::lifetime_ns);
+    
+    // MemoryReport struct
+    py::class_<MemoryReport>(m, "MemoryReport")
+        .def(py::init<>())
+        .def_readonly("total_allocations", &MemoryReport::total_allocations)
+        .def_readonly("total_frees", &MemoryReport::total_frees)
+        .def_readonly("total_bytes_allocated", &MemoryReport::total_bytes_allocated)
+        .def_readonly("total_bytes_freed", &MemoryReport::total_bytes_freed)
+        .def_readonly("peak_memory_usage", &MemoryReport::peak_memory_usage)
+        .def_readonly("current_memory_usage", &MemoryReport::current_memory_usage)
+        .def_readonly("profile_duration_ns", &MemoryReport::profile_duration_ns)
+        .def_readonly("min_allocation_size", &MemoryReport::min_allocation_size)
+        .def_readonly("max_allocation_size", &MemoryReport::max_allocation_size)
+        .def_readonly("avg_allocation_size", &MemoryReport::avg_allocation_size)
+        .def_readonly("potential_leaks", &MemoryReport::potential_leaks)
+        .def_readonly("timeline", &MemoryReport::timeline)
+        .def("summary", &MemoryReport::summary)
+        .def("to_json", &MemoryReport::toJSON);
+    
+    // MemoryProfiler::Config
+    py::class_<MemoryProfiler::Config>(m, "MemoryProfilerConfig")
+        .def(py::init<>())
+        .def_readwrite("snapshot_interval_ms", &MemoryProfiler::Config::snapshot_interval_ms)
+        .def_readwrite("leak_threshold_ns", &MemoryProfiler::Config::leak_threshold_ns)
+        .def_readwrite("track_call_stacks", &MemoryProfiler::Config::track_call_stacks)
+        .def_readwrite("detect_double_free", &MemoryProfiler::Config::detect_double_free)
+        .def_readwrite("max_timeline_samples", &MemoryProfiler::Config::max_timeline_samples);
+    
+    // MemoryProfiler class
+    py::class_<MemoryProfiler>(m, "MemoryProfiler")
+        .def(py::init<>())
+        .def(py::init<const MemoryProfiler::Config&>(), py::arg("config"))
+        .def("start", &MemoryProfiler::start)
+        .def("stop", &MemoryProfiler::stop)
+        .def("is_active", &MemoryProfiler::isActive)
+        .def("record_alloc", &MemoryProfiler::recordAlloc,
+             py::arg("ptr"), py::arg("size"), py::arg("device_id") = 0,
+             py::arg("allocator") = "default", py::arg("tag") = "")
+        .def("record_free", &MemoryProfiler::recordFree,
+             py::arg("ptr"), py::arg("device_id") = 0)
+        .def("record_event", &MemoryProfiler::recordEvent, py::arg("event"))
+        .def("get_current_usage", &MemoryProfiler::getCurrentUsage)
+        .def("get_peak_usage", &MemoryProfiler::getPeakUsage)
+        .def("get_live_allocation_count", &MemoryProfiler::getLiveAllocationCount)
+        .def("get_live_allocations", &MemoryProfiler::getLiveAllocations)
+        .def("take_snapshot", &MemoryProfiler::takeSnapshot)
+        .def("generate_report", &MemoryProfiler::generateReport)
+        .def("clear", &MemoryProfiler::clear)
+        .def("to_counter_events", &MemoryProfiler::toCounterEvents)
+        .def("to_memory_events", &MemoryProfiler::toMemoryEvents);
+    
+    // Utility functions
+    m.def("format_bytes", &formatBytes, "Format bytes to human-readable string");
+    m.def("format_duration", &formatDuration, "Format nanoseconds to human-readable string");
+    
+    // ========================================================================
+    // XRay Importer - v0.4.0
+    // ========================================================================
+    
+    // XRayEntryType enum
+    py::enum_<XRayEntryType>(m, "XRayEntryType")
+        .value("FunctionEnter", XRayEntryType::FunctionEnter)
+        .value("FunctionExit", XRayEntryType::FunctionExit)
+        .value("TailExit", XRayEntryType::TailExit)
+        .value("CustomEvent", XRayEntryType::CustomEvent)
+        .value("TypedEvent", XRayEntryType::TypedEvent)
+        .export_values();
+    
+    // XRayFileHeader
+    py::class_<XRayFileHeader>(m, "XRayFileHeader")
+        .def(py::init<>())
+        .def_readonly("version", &XRayFileHeader::version)
+        .def_readonly("type", &XRayFileHeader::type)
+        .def_readonly("cycle_frequency", &XRayFileHeader::cycle_frequency)
+        .def_readonly("num_records", &XRayFileHeader::num_records);
+    
+    // XRayImporter::Config
+    py::class_<XRayImporter::Config>(m, "XRayImporterConfig")
+        .def(py::init<>())
+        .def_readwrite("resolve_symbols", &XRayImporter::Config::resolve_symbols)
+        .def_readwrite("include_custom_events", &XRayImporter::Config::include_custom_events)
+        .def_readwrite("filter_short_calls", &XRayImporter::Config::filter_short_calls)
+        .def_readwrite("min_duration_ns", &XRayImporter::Config::min_duration_ns)
+        .def_readwrite("symbol_file", &XRayImporter::Config::symbol_file);
+    
+    // XRayImporter::Statistics
+    py::class_<XRayImporter::Statistics>(m, "XRayStatistics")
+        .def(py::init<>())
+        .def_readonly("records_read", &XRayImporter::Statistics::records_read)
+        .def_readonly("records_converted", &XRayImporter::Statistics::records_converted)
+        .def_readonly("records_filtered", &XRayImporter::Statistics::records_filtered)
+        .def_readonly("custom_events", &XRayImporter::Statistics::custom_events)
+        .def_readonly("functions_identified", &XRayImporter::Statistics::functions_identified)
+        .def_readonly("total_duration_ms", &XRayImporter::Statistics::total_duration_ms);
+    
+    // XRayFunctionRecord
+    py::class_<XRayFunctionRecord>(m, "XRayFunctionRecord")
+        .def(py::init<>())
+        .def_readwrite("function_id", &XRayFunctionRecord::function_id)
+        .def_readwrite("timestamp", &XRayFunctionRecord::timestamp)
+        .def_readwrite("type", &XRayFunctionRecord::type)
+        .def_readwrite("thread_id", &XRayFunctionRecord::thread_id)
+        .def_readwrite("cpu_id", &XRayFunctionRecord::cpu_id)
+        .def_readwrite("function_name", &XRayFunctionRecord::function_name)
+        .def_readwrite("file_name", &XRayFunctionRecord::file_name)
+        .def_readwrite("line_number", &XRayFunctionRecord::line_number);
+    
+    // XRayImporter class
+    py::class_<XRayImporter>(m, "XRayImporter")
+        .def(py::init<>())
+        .def(py::init<const XRayImporter::Config&>(), py::arg("config"))
+        .def("import_file", &XRayImporter::importFile, py::arg("filename"),
+             "Import XRay log file and return TraceEvents")
+        .def("import_buffer", &XRayImporter::importBuffer,
+             py::arg("data"), py::arg("size"))
+        .def("get_raw_records", &XRayImporter::getRawRecords,
+             py::return_value_policy::reference_internal)
+        .def("get_statistics", &XRayImporter::getStatistics,
+             py::return_value_policy::reference_internal)
+        .def("get_header", &XRayImporter::getHeader,
+             py::return_value_policy::reference_internal)
+        .def("set_symbol_file", &XRayImporter::setSymbolFile, py::arg("path"))
+        .def("set_config", &XRayImporter::setConfig, py::arg("config"))
+        .def_static("is_available", &XRayImporter::isAvailable);
+    
+    // ========================================================================
+    // BPF Types - v0.4.0
+    // ========================================================================
+    
+    // BPFEventType enum
+    py::enum_<BPFEventType>(m, "BPFEventType")
+        .value("Unknown", BPFEventType::Unknown)
+        .value("CudaLaunchKernel", BPFEventType::CudaLaunchKernel)
+        .value("CudaMemcpy", BPFEventType::CudaMemcpy)
+        .value("CudaMalloc", BPFEventType::CudaMalloc)
+        .value("CudaFree", BPFEventType::CudaFree)
+        .value("CudaSynchronize", BPFEventType::CudaSynchronize)
+        .value("UvmFault", BPFEventType::UvmFault)
+        .value("UvmMigrate", BPFEventType::UvmMigrate)
+        .value("HipLaunchKernel", BPFEventType::HipLaunchKernel)
+        .value("HipMemcpy", BPFEventType::HipMemcpy)
+        .export_values();
+    
+    // BPFEventRecord struct
+    py::class_<BPFEventRecord>(m, "BPFEventRecord")
+        .def(py::init<>())
+        .def_readwrite("timestamp_ns", &BPFEventRecord::timestamp_ns)
+        .def_readwrite("pid", &BPFEventRecord::pid)
+        .def_readwrite("tid", &BPFEventRecord::tid)
+        .def_readwrite("cpu", &BPFEventRecord::cpu)
+        .def_readwrite("type", &BPFEventRecord::type);
+    
+    // BPFTracer class
+    py::class_<BPFTracer>(m, "BPFTracer")
+        .def(py::init<>())
+        .def("load_program", &BPFTracer::loadProgram, py::arg("path"))
+        .def("attach", &BPFTracer::attach, py::arg("pattern"))
+        .def("detach", &BPFTracer::detach)
+        .def("start", &BPFTracer::start)
+        .def("stop", &BPFTracer::stop)
+        .def("poll_events", &BPFTracer::pollEvents, py::arg("max_events") = 1000)
+        .def("get_statistics", &BPFTracer::getStatistics)
+        .def_static("is_available", &BPFTracer::isAvailable,
+                   "Check if BPF is available (Linux only)")
+        .def_static("get_gpu_tracepoints", &BPFTracer::getGPUTracepoints);
+    
+    m.def("bpf_event_type_to_string", &bpfEventTypeToString,
+          "Convert BPFEventType to string");
+    m.def("bpf_event_to_trace_event", &bpfEventToTraceEvent,
+          "Convert BPFEventRecord to TraceEvent");
     
     // Helper functions
     m.def("get_current_timestamp", &getCurrentTimestamp,

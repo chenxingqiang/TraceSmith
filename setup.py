@@ -57,13 +57,18 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='tracesmith',
-    version='0.1.0',
-    author='TraceSmith Authors',
-    author_email='tracesmith@example.com',
-    description='GPU Profiling & Replay System',
+    version='0.6.0',
+    author='Xingqiang Chen',
+    author_email='chenxingqiang@gmail.com',
+    description='Cross-platform GPU Profiling & Replay System',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/chenxingqiang/tracesmith',
+    url='https://github.com/chenxingqiang/TraceSmith',
+    project_urls={
+        'Documentation': 'https://github.com/chenxingqiang/TraceSmith#readme',
+        'Source': 'https://github.com/chenxingqiang/TraceSmith',
+        'Tracker': 'https://github.com/chenxingqiang/TraceSmith/issues',
+    },
     license='Apache-2.0',
     
     packages=find_packages(where='python'),
@@ -72,34 +77,47 @@ setup(
     ext_modules=[CMakeExtension('tracesmith._tracesmith')],
     cmdclass={'build_ext': CMakeBuild},
     
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     install_requires=[],
     extras_require={
         'dev': [
             'pytest>=6.0',
             'numpy',
+            'build',
+            'twine',
+        ],
+        'torch': [
+            'torch>=1.9',
+        ],
+        'visualization': [
+            'matplotlib',
+            'plotly',
         ],
     },
     
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
+        'Operating System :: POSIX :: Linux',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows',
         'Programming Language :: C++',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Topic :: Scientific/Engineering',
+        'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Software Development :: Debuggers',
         'Topic :: System :: Monitoring',
     ],
     
-    keywords='gpu profiling tracing cuda rocm debugging replay',
+    keywords='gpu profiling tracing cuda rocm metal debugging replay perfetto memory-profiler frame-capture',
     
     entry_points={
         'console_scripts': [
