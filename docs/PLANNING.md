@@ -11,15 +11,16 @@
 
 # **二、项目目标（Goal）**
 
-## **总目标：**开发一款开源 GPU 高级 Profiling 工具，具备 **Real-time profiling + Deterministic replay + State reconstruction** 功能，成为国产 GPU、AI 框架、算子优化工具链中的关键组件。
+## **总目标：**
+开发一款开源 GPU 高级 Profiling 工具，具备 **Real-time profiling + Deterministic replay + State reconstruction** 功能，成为国产 GPU、AI 框架、算子优化工具链中的关键组件。
 
 # **三、阶段性目标（Milestones）**
 
 ## **Phase 1：可运行的最小版本（MVP）**
 周期：4–6 周
 ### **目标：**
-* 支持采集 GPU Kernel 执行事件* 基于 CUPTI / ROCprofiler 获取：  
-* kernel launch events
+  * 支持采集 GPU Kernel 执行事件* 基于 CUPTI / ROCprofiler 获取：  
+  * kernel launch events
   * stream ID
   * start/end timestamp   
   * 设计 Trace Record 结构与二进制格式（TraceSmith Trace v0.1）
@@ -29,14 +30,15 @@
 
   ### **交付物：*** 事件采集模块（record）
 
-* Trace 存储格式（sbt: TraceSmith Binary Trace）
-* MVP 文档 + 样例
+    * Trace 存储格式（sbt: TraceSmith Binary Trace）
+  * MVP 文档 + 样例
+
 ## **Phase 2：指令级调用栈采集（核心功能）**周期：5–8 周
 
 ### *目标：*** 使用 LLVM XRay/eBPF 采集 GPU kernel 的 host-side 调用栈
-* GPU kernel 内部之间的 “调用链” 与执行依赖图
-* 自动构建 GPU 指令流（Instruction Stream）
-* 高性能 ring-buffer，确保低开销运行
+    * GPU kernel 内部之间的 “调用链” 与执行依赖图
+    * 自动构建 GPU 指令流（Instruction Stream）
+    * 高性能 ring-buffer，确保低开销运行
 
 ### **交付物：**
 * 调用栈采集引擎（stack collector）
@@ -51,20 +53,27 @@
 * 多流（Multi-stream）调度重建
 * 多 GPU（Multi-device）事件对齐* 生成可视化 Timeline（配合 Perfetto / 自制 UI）
 
-### **交付物：
-*** 状态机恢复（State Rebuilder）
+### **交付物**
+* 状态机恢复（State Rebuilder）
 * 图形化 Timeline Viewer（可选使用前端 React + ECharts）
 * 跨 GPU 时间戳同步机制
 
-## **Phase 4：Replay（回放）引擎开发**周期：8–10 周
+## **Phase 4：Replay（回放）引擎开发**
+周期：8–10 周
 
-### **目标：*** 
-将采集的指令流序列化* 基于 Command Stream 进行 GPU 指令 Replay* 支持：  * 单流回放
+
+### **目标：**
+
+* 将采集的指令流序列化
+* 基于 Command Stream 进行 GPU 指令 Replay
+* 支持： 
+  * 单流回放
   * 多流回放
   * 部分片段回放（Partial Replay）  
   * 回放一致性检查（Deterministic Check）
 
-### **交付物：*** Replay Engine v1.0
+### **交付物：**
+* Replay Engine v1.0
 * 流调度仿真器（Stream Scheduler Emulator）
 * 可复现性验证框架
 
@@ -76,7 +85,8 @@
 * Docker 镜像、Homebrew 发布
 * 发布 v1.0 开源版本
 
-# **🧱** # **四、系统架构（高层）**```
+# **🧱** # **四、系统架构（高层）**
+```
 
  ┌──────────────────────────────────────┐
  │               TraceSmith             │
@@ -108,7 +118,8 @@
 ```
 ------
 
-# **⚙️** # **五、技术路线**| **模块**    | **技术**                                 |
+# **⚙️** # **五、技术路线**
+| **模块**    | **技术**                                 |
 | ----------- | ---------------------------------------- |
 | GPU Trace   | CUPTI, ROCm rocprofiler, Vulkan Trace    |
 | 调用栈采集  | eBPF, LLVM XRay                          |
@@ -120,21 +131,25 @@
 
 # **六、预期价值**
 
-## **1. 技术价值*** 为国产 / 异构 GPU 构建第一套通用 Profiling & Replay 开源工具
+## **1. 技术价值**
+* 为国产 / 异构 GPU 构建第一套通用 Profiling & Replay 开源工具
 * 能用于 GPU 编译器、算子优化、深度学习框架调度优化
 * 补齐国内 GPU 开发工具链的空白
 
-## **2. 工程价值*** 可作为调试 GPU 算子的重要工具
+## **2. 工程价值**
+* 可作为调试 GPU 算子的重要工具
 * 工程师可以复现 GPU 侧 nondeterministic bug
 * 提升异构集群的 GPU 分析能力
 
-## **3. 商业价值*** 
+## **3. 商业价值**
+* 
 可让国内 AI Infra 企业建立自己的 GPU 工具栈* 可进一步拓展至：   
   * 性能优化（Performance Tuning）
   * GPU 资源调度
   * 自动化 Profiling Toolbox  
   
-# **🏁**# **七、未来扩展（2.0 / 长期规划）*** AI 辅助 GPU 性能诊断（LLM-based Profiler Assistant）
+# **🏁**# **七、未来扩展（2.0 / 长期规划）**
+* AI 辅助 GPU 性能诊断（LLM-based Profiler Assistant）
 * 与 TVM / Triton Compiler 集成
 * GPU 指令级仿真器（类似 GPGPU-Sim 的轻量版本）
 * 全流程自动分析报告生成
