@@ -363,8 +363,8 @@ def cmd_record(args):
     
     print_success(f"Trace saved to {output_file}")
     print(f"\nNext steps:")
-    print(f"  {C(Color.CYAN)}tracesmith view {output_file} --stats{C(Color.RESET)}")
-    print(f"  {C(Color.CYAN)}tracesmith export {output_file}{C(Color.RESET)}")
+    print(f"  {C(Color.CYAN)}tracesmith-cli view {output_file} --stats{C(Color.RESET)}")
+    print(f"  {C(Color.CYAN)}tracesmith-cli export {output_file}{C(Color.RESET)}")
     
     return 0
 
@@ -866,7 +866,7 @@ def cmd_benchmark(args):
         writer = SBTWriter(output_file)
         meta = TraceMetadata()
         meta.application_name = "TraceSmith Python Benchmark"
-        meta.command_line = f"tracesmith benchmark -n {target_kernels}"
+        meta.command_line = f"tracesmith-cli benchmark -n {target_kernels}"
         writer.write_metadata(meta)
         
         for event in events:
@@ -1043,7 +1043,7 @@ def _run_real_gpu_benchmark(cp, CUPTIProfiler, target_kernels, output_file,
         writer = SBTWriter(output_file)
         meta = TraceMetadata()
         meta.application_name = "TraceSmith Python Benchmark (Real GPU)"
-        meta.command_line = f"tracesmith benchmark -n {target_kernels} --real-gpu"
+        meta.command_line = f"tracesmith-cli benchmark -n {target_kernels} --real-gpu"
         writer.write_metadata(meta)
         
         for event in gpu_events:
@@ -1116,14 +1116,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 {C(Color.BOLD)}Examples:{C(Color.RESET)}
-  tracesmith record -o trace.sbt -d 5      # Record for 5 seconds
-  tracesmith view trace.sbt --stats        # Show statistics
-  tracesmith export trace.sbt              # Export to Perfetto
-  tracesmith analyze trace.sbt             # Analyze performance
-  tracesmith benchmark -n 10000            # Run 10K benchmark
-  tracesmith devices                       # List GPUs
+  tracesmith-cli record -o trace.sbt -d 5  # Record for 5 seconds
+  tracesmith-cli view trace.sbt --stats    # Show statistics
+  tracesmith-cli export trace.sbt          # Export to Perfetto
+  tracesmith-cli analyze trace.sbt         # Analyze performance
+  tracesmith-cli benchmark -n 10000        # Run 10K benchmark
+  tracesmith-cli devices                   # List GPUs
 
-Run '{C(Color.CYAN)}tracesmith <command> --help{C(Color.RESET)}' for more information.
+Run '{C(Color.CYAN)}tracesmith-cli <command> --help{C(Color.RESET)}' for more information.
 """
     )
     parser.add_argument('--version', action='store_true', help='Show version')
