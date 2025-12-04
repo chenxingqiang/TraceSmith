@@ -60,7 +60,7 @@ target_link_libraries(phase4_example PRIVATE
 )
 
 # ----------------------------------------------------------------------------
-# Memory Profiler Example - GPU memory tracking, leak detection
+# Memory Profiler Example - REAL GPU memory tracking, leak detection
 # ----------------------------------------------------------------------------
 add_executable(memory_profiler_example
     memory_profiler_example.cpp
@@ -70,6 +70,11 @@ target_link_libraries(memory_profiler_example PRIVATE
     tracesmith-common
     tracesmith-capture
 )
+
+# Link CUDA if available for real GPU memory profiling
+if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
+    target_link_libraries(memory_profiler_example PRIVATE CUDA::cudart)
+endif()
 
 # ----------------------------------------------------------------------------
 # Stack Capture Example - Call stack capture, symbol resolution

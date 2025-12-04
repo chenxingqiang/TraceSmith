@@ -203,7 +203,7 @@ using namespace tracesmith;
 
 int main() {
     // Create profiler
-    auto profiler = createProfiler(PlatformType::Simulation);
+    auto profiler = createProfiler(PlatformType::CUDA);
     
     // Configure
     ProfilerConfig config;
@@ -302,7 +302,6 @@ File structure:
 - [x] SBT binary trace format
 - [x] Lock-free ring buffer
 - [x] Platform abstraction interface
-- [x] Simulation profiler
 - [x] CLI tools (record, view, info)
 
 ### Phase 2: Instruction-Level Call Stack ✅
@@ -471,7 +470,7 @@ make goal_validation_example
 
 ### Benchmark Testing
 
-The `benchmark_10k_stacks` uses **real CUDA kernels and CUPTI profiling** (no simulation):
+The `benchmark_10k_stacks` uses **real CUDA kernels and CUPTI profiling**:
 
 ```cpp
 // Real CUDA kernel executed on GPU
