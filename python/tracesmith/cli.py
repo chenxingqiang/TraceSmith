@@ -31,11 +31,28 @@ def cmd_info(args):
         VERSION_PATCH,
         is_protobuf_available,
         is_bpf_available,
+        is_cuda_available,
+        is_metal_available,
+        get_cuda_device_count,
+        get_metal_device_count,
+        detect_platform,
     )
     
     print(f"TraceSmith v{__version__}")
     print(f"  Version: {VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}")
     print()
+    
+    # Platform detection
+    print("Platform Detection:")
+    platform = detect_platform()
+    print(f"  Detected: {platform}")
+    
+    cuda_avail = is_cuda_available()
+    metal_avail = is_metal_available()
+    print(f"  CUDA:  {'✓ (' + str(get_cuda_device_count()) + ' devices)' if cuda_avail else '✗'}")
+    print(f"  Metal: {'✓ (' + str(get_metal_device_count()) + ' devices)' if metal_avail else '✗'}")
+    print()
+    
     print("Features:")
     print(f"  Perfetto Protobuf: {'✓' if is_protobuf_available() else '✗'}")
     print(f"  BPF Tracing:       {'✓' if is_bpf_available() else '✗ (Linux only)'}")
@@ -44,7 +61,6 @@ def cmd_info(args):
     print("  • CUDA (NVIDIA)")
     print("  • ROCm (AMD)")
     print("  • Metal (Apple)")
-    print("  • Simulation (Cross-platform)")
     return 0
 
 
