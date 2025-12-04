@@ -180,6 +180,17 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def_readwrite("thread_id", &TraceEvent::thread_id)
         .def_readwrite("metadata", &TraceEvent::metadata)
         .def_readwrite("flow_info", &TraceEvent::flow_info)
+        // Call stack (v0.7.0)
+        .def_property("call_stack",
+            [](const TraceEvent& e) -> py::object {
+                if (e.call_stack.has_value()) {
+                    return py::cast(e.call_stack.value());
+                }
+                return py::none();
+            },
+            [](TraceEvent& e, const CallStack& stack) {
+                e.call_stack = stack;
+            })
         .def("__repr__", [](const TraceEvent& e) {
             return "<TraceEvent " + e.name + " type=" + 
                    std::string(eventTypeToString(e.type)) + 
