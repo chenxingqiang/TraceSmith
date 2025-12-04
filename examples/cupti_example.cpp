@@ -188,15 +188,25 @@ void printEventSummary(const std::vector<TraceEvent>& events) {
     std::cout << "\n=== Event Summary ===\n";
     std::cout << "Total events captured: " << events.size() << "\n\n";
     
-    // Count by type
+    // Count by type and calculate durations from Launch/Complete pairs
     std::map<EventType, int> type_counts;
-    std::map<EventType, uint64_t> type_durations;
+    std::map<std::string, uint64_t> kernel_launch_times;  // name -> launch timestamp
+    std::vector<std::pair<std::string, uint64_t>> kernel_durations;  // name, duration_ns
     
     for (const auto& event : events) {
         type_counts[event.type]++;
         
-        // Get duration from event
-        type_durations[event.type] += event.duration;
+        // Track kernel launch/complete pairs
+        if (event.type == EventType::KernelLaunch) {
+            kernel_launch_times[event.name] = event.timestamp;
+        } else if (event.type == EventType::KernelComplete) {
+            auto it = kernel_launch_times.find(event.name);
+            if (it != kernel_launch_times.end()) {
+                uint64_t duration = event.timestamp - it->second;
+                kernel_durations.push_back({event.name, duration});
+                kernel_launch_times.erase(it);
+            }
+        }
     }
     
     auto typeName = [](EventType t) -> const char* {
@@ -214,25 +224,41 @@ void printEventSummary(const std::vector<TraceEvent>& events) {
     };
     
     std::cout << std::left << std::setw(20) << "Event Type" 
-              << std::setw(10) << "Count" 
-              << std::setw(15) << "Total Duration"
-              << "Avg Duration\n";
-    std::cout << std::string(65, '-') << "\n";
+              << std::setw(10) << "Count\n";
+    std::cout << std::string(30, '-') << "\n";
     
     for (const auto& [type, count] : type_counts) {
         std::cout << std::left << std::setw(20) << typeName(type)
-                  << std::setw(10) << count;
+                  << std::setw(10) << count << "\n";
+    }
+    
+    // Print kernel execution times
+    if (!kernel_durations.empty()) {
+        std::cout << "\n=== Kernel Execution Times ===\n";
+        std::cout << std::left << std::setw(35) << "Kernel Name" 
+                  << std::setw(15) << "Duration (ns)"
+                  << std::setw(15) << "Duration (us)"
+                  << "Duration (ms)\n";
+        std::cout << std::string(80, '-') << "\n";
         
-        if (type_durations.count(type) && type_durations[type] > 0) {
-            double total_us = type_durations[type] / 1e3;  // ns -> us
-            double avg_us = total_us / count;
-            std::cout << std::fixed << std::setprecision(2) 
-                      << std::setw(12) << total_us << " us "
-                      << std::setw(10) << avg_us << " us";
-        } else {
-            std::cout << std::setw(12) << "-" << "    " << std::setw(10) << "-";
+        uint64_t total_kernel_time = 0;
+        for (const auto& [name, duration] : kernel_durations) {
+            double us = duration / 1e3;
+            double ms = duration / 1e6;
+            std::cout << std::left << std::setw(35) << name
+                      << std::setw(15) << duration
+                      << std::fixed << std::setprecision(2)
+                      << std::setw(15) << us
+                      << std::setprecision(4) << ms << "\n";
+            total_kernel_time += duration;
         }
-        std::cout << "\n";
+        
+        std::cout << std::string(80, '-') << "\n";
+        std::cout << std::left << std::setw(35) << "TOTAL"
+                  << std::setw(15) << total_kernel_time
+                  << std::fixed << std::setprecision(2)
+                  << std::setw(15) << (total_kernel_time / 1e3)
+                  << std::setprecision(4) << (total_kernel_time / 1e6) << "\n";
     }
     
     // Print some sample events
