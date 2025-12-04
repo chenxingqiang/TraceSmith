@@ -268,7 +268,7 @@ setup(
     
     entry_points={
         'console_scripts': [
-            'tracesmith=tracesmith.cli:main',
+            'tracesmith-cli=tracesmith.cli:main',
         ],
     },
     
