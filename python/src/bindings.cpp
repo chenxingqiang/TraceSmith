@@ -21,6 +21,7 @@
 #include "tracesmith/perfetto_exporter.hpp"
 #include "tracesmith/perfetto_proto_exporter.hpp"
 #include "tracesmith/replay_engine.hpp"
+#include "tracesmith/frame_capture.hpp"
 
 namespace py = pybind11;
 using namespace tracesmith;
@@ -354,6 +355,148 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def("load_trace", &ReplayEngine::loadTrace)
         .def("load_events", &ReplayEngine::loadEvents)
         .def("replay", &ReplayEngine::replay);
+    
+    // ========================================================================
+    // Frame Capture (RenderDoc-inspired) - v0.5.0
+    // ========================================================================
+    
+    // ResourceType enum
+    py::enum_<ResourceType>(m, "ResourceType")
+        .value("Unknown", ResourceType::Unknown)
+        .value("Buffer", ResourceType::Buffer)
+        .value("Texture1D", ResourceType::Texture1D)
+        .value("Texture2D", ResourceType::Texture2D)
+        .value("Texture3D", ResourceType::Texture3D)
+        .value("TextureCube", ResourceType::TextureCube)
+        .value("Sampler", ResourceType::Sampler)
+        .value("Shader", ResourceType::Shader)
+        .value("Pipeline", ResourceType::Pipeline)
+        .value("DescriptorSet", ResourceType::DescriptorSet)
+        .value("CommandBuffer", ResourceType::CommandBuffer)
+        .value("QueryPool", ResourceType::QueryPool)
+        .export_values();
+    
+    // CaptureState enum
+    py::enum_<CaptureState>(m, "CaptureState")
+        .value("Idle", CaptureState::Idle)
+        .value("Armed", CaptureState::Armed)
+        .value("Capturing", CaptureState::Capturing)
+        .value("Processing", CaptureState::Processing)
+        .value("Complete", CaptureState::Complete)
+        .export_values();
+    
+    // ResourceState class
+    py::class_<ResourceState>(m, "ResourceState")
+        .def(py::init<>())
+        .def_readwrite("resource_id", &ResourceState::resource_id)
+        .def_readwrite("type", &ResourceState::type)
+        .def_readwrite("name", &ResourceState::name)
+        .def_readwrite("address", &ResourceState::address)
+        .def_readwrite("size", &ResourceState::size)
+        .def_readwrite("width", &ResourceState::width)
+        .def_readwrite("height", &ResourceState::height)
+        .def_readwrite("depth", &ResourceState::depth)
+        .def_readwrite("format", &ResourceState::format)
+        .def_readwrite("readable", &ResourceState::readable)
+        .def_readwrite("writable", &ResourceState::writable)
+        .def_readwrite("bound_as_input", &ResourceState::bound_as_input)
+        .def_readwrite("bound_as_output", &ResourceState::bound_as_output)
+        .def_readwrite("last_modified", &ResourceState::last_modified);
+    
+    // DrawCallInfo class
+    py::class_<DrawCallInfo>(m, "DrawCallInfo")
+        .def(py::init<>())
+        .def_readwrite("call_id", &DrawCallInfo::call_id)
+        .def_readwrite("name", &DrawCallInfo::name)
+        .def_readwrite("timestamp", &DrawCallInfo::timestamp)
+        .def_readwrite("vertex_count", &DrawCallInfo::vertex_count)
+        .def_readwrite("instance_count", &DrawCallInfo::instance_count)
+        .def_readwrite("index_count", &DrawCallInfo::index_count)
+        .def_readwrite("group_count_x", &DrawCallInfo::group_count_x)
+        .def_readwrite("group_count_y", &DrawCallInfo::group_count_y)
+        .def_readwrite("group_count_z", &DrawCallInfo::group_count_z)
+        .def_readwrite("pipeline_id", &DrawCallInfo::pipeline_id)
+        .def_readwrite("vertex_shader", &DrawCallInfo::vertex_shader)
+        .def_readwrite("fragment_shader", &DrawCallInfo::fragment_shader)
+        .def_readwrite("compute_shader", &DrawCallInfo::compute_shader);
+    
+    // CapturedFrame class
+    py::class_<CapturedFrame>(m, "CapturedFrame")
+        .def(py::init<>())
+        .def_readonly("frame_number", &CapturedFrame::frame_number)
+        .def_readonly("start_time", &CapturedFrame::start_time)
+        .def_readonly("end_time", &CapturedFrame::end_time)
+        .def_readonly("events", &CapturedFrame::events)
+        .def_readonly("draw_calls", &CapturedFrame::draw_calls)
+        .def_readonly("total_draw_calls", &CapturedFrame::total_draw_calls)
+        .def_readonly("total_dispatches", &CapturedFrame::total_dispatches)
+        .def_readonly("total_memory_ops", &CapturedFrame::total_memory_ops)
+        .def_readonly("total_sync_ops", &CapturedFrame::total_sync_ops)
+        .def("duration", &CapturedFrame::duration)
+        .def("get_resource_state_at", &CapturedFrame::getResourceStateAt,
+             py::arg("resource_id"), py::arg("draw_call_id"));
+    
+    // FrameCaptureConfig class
+    py::class_<FrameCaptureConfig>(m, "FrameCaptureConfig")
+        .def(py::init<>())
+        .def_readwrite("capture_on_keypress", &FrameCaptureConfig::capture_on_keypress)
+        .def_readwrite("capture_after_present", &FrameCaptureConfig::capture_after_present)
+        .def_readwrite("frames_to_capture", &FrameCaptureConfig::frames_to_capture)
+        .def_readwrite("capture_api_calls", &FrameCaptureConfig::capture_api_calls)
+        .def_readwrite("capture_resource_state", &FrameCaptureConfig::capture_resource_state)
+        .def_readwrite("capture_buffer_contents", &FrameCaptureConfig::capture_buffer_contents)
+        .def_readwrite("capture_texture_contents", &FrameCaptureConfig::capture_texture_contents)
+        .def_readwrite("max_buffer_capture_size", &FrameCaptureConfig::max_buffer_capture_size)
+        .def_readwrite("max_texture_capture_size", &FrameCaptureConfig::max_texture_capture_size);
+    
+    // FrameCapture class
+    py::class_<FrameCapture>(m, "FrameCapture")
+        .def(py::init<>())
+        .def(py::init<const FrameCaptureConfig&>(), py::arg("config"))
+        .def("set_config", &FrameCapture::setConfig, py::arg("config"))
+        .def("get_config", &FrameCapture::getConfig, py::return_value_policy::reference)
+        .def("trigger_capture", &FrameCapture::triggerCapture,
+             "Trigger frame capture (like pressing F12 in RenderDoc)")
+        .def("is_capturing", &FrameCapture::isCapturing)
+        .def("get_state", &FrameCapture::getState)
+        .def("on_frame_end", &FrameCapture::onFrameEnd,
+             "Signal end of frame (call on Present/SwapBuffers)")
+        .def("record_draw_call", &FrameCapture::recordDrawCall, py::arg("draw"))
+        .def("record_dispatch", &FrameCapture::recordDispatch, py::arg("dispatch"))
+        .def("record_resource_create", &FrameCapture::recordResourceCreate, py::arg("resource"))
+        .def("record_event", &FrameCapture::recordEvent, py::arg("event"))
+        .def("get_captured_frames", &FrameCapture::getCapturedFrames,
+             py::return_value_policy::reference_internal)
+        .def("get_frame", &FrameCapture::getFrame, py::arg("frame_number"),
+             py::return_value_policy::reference_internal)
+        .def("get_resource", &FrameCapture::getResource, py::arg("resource_id"),
+             py::return_value_policy::reference_internal)
+        .def("get_resources", &FrameCapture::getResources,
+             py::return_value_policy::reference_internal)
+        .def("replay_to_draw_call", &FrameCapture::replayToDrawCall,
+             py::arg("frame_number"), py::arg("draw_call_id"))
+        .def("export_to_perfetto", &FrameCapture::exportToPerfetto,
+             py::arg("filename"), py::arg("frame_number"))
+        .def("clear", &FrameCapture::clear);
+    
+    // ResourceTracker class
+    py::class_<ResourceTracker>(m, "ResourceTracker")
+        .def(py::init<>())
+        .def("register_resource", &ResourceTracker::registerResource,
+             py::arg("id"), py::arg("type"), py::arg("name") = "")
+        .def("update_resource_binding", &ResourceTracker::updateResourceBinding,
+             py::arg("id"), py::arg("address"), py::arg("size"))
+        .def("mark_modified", &ResourceTracker::markModified,
+             py::arg("id"), py::arg("when"))
+        .def("destroy_resource", &ResourceTracker::destroyResource, py::arg("id"))
+        .def("get_resource", &ResourceTracker::getResource, py::arg("id"),
+             py::return_value_policy::reference_internal)
+        .def("get_live_resources", &ResourceTracker::getLiveResources)
+        .def("get_modified_since", &ResourceTracker::getModifiedSince, py::arg("since"));
+    
+    // Resource type to string helper
+    m.def("resource_type_to_string", &resourceTypeToString,
+          "Convert ResourceType to string");
     
     // Helper functions
     m.def("get_current_timestamp", &getCurrentTimestamp,

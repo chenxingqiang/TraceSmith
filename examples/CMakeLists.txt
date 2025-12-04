@@ -139,6 +139,16 @@ if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
     )
 endif()
 
+# Frame Capture Example (RenderDoc-inspired) - v0.5.0
+add_executable(frame_capture_example
+    frame_capture_example.cpp
+)
+
+target_link_libraries(frame_capture_example PRIVATE
+    tracesmith-common
+    tracesmith-replay
+)
+
 # Metal Example (requires macOS)
 if(TRACESMITH_ENABLE_METAL AND APPLE)
     add_executable(metal_example

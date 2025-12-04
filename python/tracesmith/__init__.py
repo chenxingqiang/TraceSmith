@@ -18,6 +18,8 @@ from ._tracesmith import (
     ReplayMode,
     FlowType,           # v0.2.0: Kineto-compatible
     PerfettoFormat,     # v0.2.0: Protobuf export
+    ResourceType,       # v0.5.0: Frame capture
+    CaptureState,       # v0.5.0: Frame capture
     
     # Core classes
     TraceEvent,
@@ -50,6 +52,14 @@ from ._tracesmith import (
     TracingStatistics,
     TracingConfig,
     
+    # Frame Capture (v0.5.0 - RenderDoc-inspired)
+    FrameCapture,
+    FrameCaptureConfig,
+    CapturedFrame,
+    DrawCallInfo,
+    ResourceState,
+    ResourceTracker,
+    
     # Replay
     ReplayConfig,
     ReplayResult,
@@ -58,6 +68,7 @@ from ._tracesmith import (
     # Functions
     get_current_timestamp,
     event_type_to_string,
+    resource_type_to_string,  # v0.5.0
 )
 
 __all__ = [
@@ -73,6 +84,8 @@ __all__ = [
     'ReplayMode',
     'FlowType',           # v0.2.0
     'PerfettoFormat',     # v0.2.0
+    'ResourceType',       # v0.5.0
+    'CaptureState',       # v0.5.0
     
     # Core
     'TraceEvent',
@@ -105,6 +118,14 @@ __all__ = [
     'TracingStatistics',
     'TracingConfig',
     
+    # Frame Capture (v0.5.0)
+    'FrameCapture',
+    'FrameCaptureConfig',
+    'CapturedFrame',
+    'DrawCallInfo',
+    'ResourceState',
+    'ResourceTracker',
+    
     # Replay
     'ReplayConfig',
     'ReplayResult',
@@ -113,6 +134,7 @@ __all__ = [
     # Functions
     'get_current_timestamp',
     'event_type_to_string',
+    'resource_type_to_string',  # v0.5.0
 ]
 
 
