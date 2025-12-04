@@ -73,10 +73,12 @@
 #include "tracesmith/replay/frame_capture.hpp"
 
 // =============================================================================
-// Cluster - Multi-GPU profiling (v0.7.0)
+// Cluster - Multi-GPU profiling (v0.7.0+)
 // =============================================================================
 #include "tracesmith/cluster/gpu_topology.hpp"
 #include "tracesmith/cluster/multi_gpu_profiler.hpp"
+#include "tracesmith/cluster/time_sync.hpp"
+#include "tracesmith/cluster/nccl_tracker.hpp"
 
 namespace tracesmith {
 

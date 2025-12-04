@@ -4,6 +4,8 @@
 set(CLUSTER_SOURCES
     gpu_topology.cpp
     multi_gpu_profiler.cpp
+    time_sync.cpp
+    nccl_tracker.cpp
 )
 
 add_library(tracesmith-cluster STATIC ${CLUSTER_SOURCES})

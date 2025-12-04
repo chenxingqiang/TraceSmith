@@ -4,7 +4,7 @@ TraceSmith - GPU Profiling & Replay System
 A cross-platform GPU profiling and replay system for AI compilers,
 deep learning frameworks, and GPU driver engineers.
 
-Version: 0.7.0
+Version: 0.7.1
 
 Features:
 - Cross-platform GPU profiling (CUDA via CUPTI, ROCm, Metal)
@@ -17,6 +17,9 @@ Features:
 - eBPF GPU event tracing (Linux)
 - Multi-GPU profiling with topology discovery (v0.7.0)
 - NVLink/NVSwitch tracking
+- Time synchronization for multi-GPU/cluster (v0.7.1)
+- NCCL collective operation tracking (v0.7.1)
+- Communication pattern analysis (v0.7.1)
 - Python and C++ APIs
 """
 
@@ -183,6 +186,38 @@ from ._tracesmith import (
     MultiGPUConfig,
     MultiGPUStats,
     MultiGPUProfiler,
+    
+    # ========================================================================
+    # Cluster Module - Time Sync (v0.7.1)
+    # ========================================================================
+    TimeSyncMethod,
+    TimeSyncConfig,
+    SyncResult,
+    TimeSync,
+    DriftModel,
+    ClockCorrelator,
+    time_sync_method_to_string,
+    string_to_time_sync_method,
+    
+    # ========================================================================
+    # Cluster Module - NCCL Tracking (v0.7.1)
+    # ========================================================================
+    NCCLOpType,
+    NCCLRedOp,
+    NCCLDataType,
+    NCCLOperation,
+    NCCLTrackerConfig,
+    NCCLStatistics,
+    NCCLTracker,
+    CommPattern,
+    CommMatrix,
+    CommBottleneck,
+    LoadImbalance,
+    CommAnalysis,
+    nccl_op_type_to_string,
+    nccl_red_op_to_string,
+    nccl_data_type_to_string,
+    nccl_data_type_size,
 )
 
 __all__ = [
@@ -326,6 +361,34 @@ __all__ = [
     'MultiGPUConfig',
     'MultiGPUStats',
     'MultiGPUProfiler',
+    
+    # Time Sync (v0.7.1)
+    'TimeSyncMethod',
+    'TimeSyncConfig',
+    'SyncResult',
+    'TimeSync',
+    'DriftModel',
+    'ClockCorrelator',
+    'time_sync_method_to_string',
+    'string_to_time_sync_method',
+    
+    # NCCL Tracking (v0.7.1)
+    'NCCLOpType',
+    'NCCLRedOp',
+    'NCCLDataType',
+    'NCCLOperation',
+    'NCCLTrackerConfig',
+    'NCCLStatistics',
+    'NCCLTracker',
+    'CommPattern',
+    'CommMatrix',
+    'CommBottleneck',
+    'LoadImbalance',
+    'CommAnalysis',
+    'nccl_op_type_to_string',
+    'nccl_red_op_to_string',
+    'nccl_data_type_to_string',
+    'nccl_data_type_size',
 ]
 
 

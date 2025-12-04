@@ -12,7 +12,7 @@ namespace tracesmith {
 /// Version information
 constexpr uint32_t VERSION_MAJOR = 0;
 constexpr uint32_t VERSION_MINOR = 7;
-constexpr uint32_t VERSION_PATCH = 0;
+constexpr uint32_t VERSION_PATCH = 1;
 
 /// Event types that can be captured
 enum class EventType : uint8_t {
@@ -36,6 +36,9 @@ enum class EventType : uint8_t {
     Marker,            // User-defined marker
     RangeStart,        // Range start (for nested profiling)
     RangeEnd,          // Range end
+    // NCCL events (v0.7.1)
+    NCCLStart,         // NCCL collective operation start
+    NCCLComplete,      // NCCL collective operation complete
     Custom = 255       // Custom event type
 };
 
@@ -61,6 +64,8 @@ inline const char* eventTypeToString(EventType type) {
         case EventType::Marker:          return "Marker";
         case EventType::RangeStart:      return "RangeStart";
         case EventType::RangeEnd:        return "RangeEnd";
+        case EventType::NCCLStart:       return "NCCLStart";
+        case EventType::NCCLComplete:    return "NCCLComplete";
         case EventType::Custom:          return "Custom";
         default:                         return "Unknown";
     }

@@ -5,6 +5,32 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2024-12-04
+
+### Added
+- **Multi-GPU Cluster Profiling (Phase 2)**: Time Synchronization
+  - `TimeSync`: Cross-GPU and cross-node time synchronization
+    - Multiple sync methods: SystemClock, NTP, PTP, CUDA
+    - GPU timestamp correlation
+    - Offset and drift compensation
+  - `ClockCorrelator`: Clock drift modeling and correction
+    - Linear regression for drift compensation
+    - Automatic timestamp correction
+  - `NCCLTracker`: NCCL collective operation tracking
+    - Intercept AllReduce, AllGather, Broadcast, etc.
+    - Correlation with GPU events
+    - Communication statistics
+  - `CommAnalysis`: Communication pattern analysis
+    - Communication matrix generation
+    - Pattern detection (AllToAll, Ring, Tree)
+    - Bottleneck identification
+- Python bindings for TimeSync, NCCLTracker, CommAnalysis
+- TraceEvent.call_stack property for storing call stacks
+
+### Fixed
+- Python CLI benchmark display alignment
+- TraceEvent.call_stack binding for std::optional<CallStack>
+
 ## [0.7.0] - 2024-12-04
 
 ### Added

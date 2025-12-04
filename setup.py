@@ -182,7 +182,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='tracesmith',
-    version='0.7.0',
+    version='0.7.1',
     author='Xingqiang Chen',
     author_email='chenxingqiang@gmail.com',
     description='Cross-platform GPU Profiling & Replay System',

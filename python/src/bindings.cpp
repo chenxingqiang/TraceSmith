@@ -47,6 +47,8 @@
 // Cluster (v0.7.0)
 #include "tracesmith/cluster/gpu_topology.hpp"
 #include "tracesmith/cluster/multi_gpu_profiler.hpp"
+#include "tracesmith/cluster/time_sync.hpp"
+#include "tracesmith/cluster/nccl_tracker.hpp"
 
 namespace py = pybind11;
 using namespace tracesmith;
@@ -55,7 +57,7 @@ PYBIND11_MODULE(_tracesmith, m) {
     m.doc() = "TraceSmith GPU Profiling & Replay System";
     
     // Version info
-    m.attr("__version__") = "0.7.0";
+    m.attr("__version__") = "0.7.1";
     m.attr("VERSION_MAJOR") = VERSION_MAJOR;
     m.attr("VERSION_MINOR") = VERSION_MINOR;
     m.attr("VERSION_PATCH") = VERSION_PATCH;
@@ -1236,4 +1238,245 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def("get_statistics", &cluster::MultiGPUProfiler::getStatistics)
         .def("get_all_device_info", &cluster::MultiGPUProfiler::getAllDeviceInfo)
         .def("get_device_info", &cluster::MultiGPUProfiler::getDeviceInfo);
+    
+    // =========================================================================
+    // Time Synchronization (v0.7.1)
+    // =========================================================================
+    
+    // TimeSyncMethod enum
+    py::enum_<cluster::TimeSyncMethod>(m, "TimeSyncMethod")
+        .value("SystemClock", cluster::TimeSyncMethod::SystemClock)
+        .value("NTP", cluster::TimeSyncMethod::NTP)
+        .value("PTP", cluster::TimeSyncMethod::PTP)
+        .value("CUDA", cluster::TimeSyncMethod::CUDA)
+        .value("Custom", cluster::TimeSyncMethod::Custom)
+        .export_values();
+    
+    // TimeSyncConfig struct
+    py::class_<cluster::TimeSyncConfig>(m, "TimeSyncConfig")
+        .def(py::init<>())
+        .def_readwrite("method", &cluster::TimeSyncConfig::method)
+        .def_readwrite("ntp_server", &cluster::TimeSyncConfig::ntp_server)
+        .def_readwrite("ptp_interface", &cluster::TimeSyncConfig::ptp_interface)
+        .def_readwrite("sync_interval_ms", &cluster::TimeSyncConfig::sync_interval_ms)
+        .def_readwrite("max_acceptable_offset_ns", &cluster::TimeSyncConfig::max_acceptable_offset_ns);
+    
+    // SyncResult struct
+    py::class_<cluster::SyncResult>(m, "SyncResult")
+        .def(py::init<>())
+        .def_readwrite("success", &cluster::SyncResult::success)
+        .def_readwrite("offset_ns", &cluster::SyncResult::offset_ns)
+        .def_readwrite("round_trip_ns", &cluster::SyncResult::round_trip_ns)
+        .def_readwrite("uncertainty_ns", &cluster::SyncResult::uncertainty_ns)
+        .def_readwrite("sync_time", &cluster::SyncResult::sync_time)
+        .def_readwrite("error_message", &cluster::SyncResult::error_message);
+    
+    // TimeSync class
+    py::class_<cluster::TimeSync>(m, "TimeSync")
+        .def(py::init<>())
+        .def(py::init<const cluster::TimeSyncConfig&>())
+        .def("initialize", &cluster::TimeSync::initialize)
+        .def("finalize", &cluster::TimeSync::finalize)
+        .def("is_initialized", &cluster::TimeSync::isInitialized)
+        .def("get_config", &cluster::TimeSync::getConfig)
+        .def("synchronize", &cluster::TimeSync::synchronize)
+        .def("synchronize_with_node", &cluster::TimeSync::synchronizeWithNode)
+        .def("to_synchronized_time", &cluster::TimeSync::toSynchronizedTime)
+        .def("to_local_time", &cluster::TimeSync::toLocalTime)
+        .def("get_current_offset", &cluster::TimeSync::getCurrentOffset)
+        .def("set_manual_offset", &cluster::TimeSync::setManualOffset)
+        .def("correlate_gpu_timestamps", &cluster::TimeSync::correlateGPUTimestamps)
+        .def("get_gpu_offset", &cluster::TimeSync::getGPUOffset)
+        .def("set_gpu_offset", &cluster::TimeSync::setGPUOffset)
+        .def("get_average_offset", &cluster::TimeSync::getAverageOffset)
+        .def("get_offset_std_dev", &cluster::TimeSync::getOffsetStdDev)
+        .def("get_sync_count", &cluster::TimeSync::getSyncCount)
+        .def("get_last_sync_result", &cluster::TimeSync::getLastSyncResult)
+        .def("clear_history", &cluster::TimeSync::clearHistory);
+    
+    // ClockCorrelator::DriftModel struct
+    py::class_<cluster::ClockCorrelator::DriftModel>(m, "DriftModel")
+        .def(py::init<>())
+        .def_readwrite("offset", &cluster::ClockCorrelator::DriftModel::offset)
+        .def_readwrite("drift_rate", &cluster::ClockCorrelator::DriftModel::drift_rate)
+        .def_readwrite("r_squared", &cluster::ClockCorrelator::DriftModel::r_squared)
+        .def_readwrite("valid", &cluster::ClockCorrelator::DriftModel::valid);
+    
+    // ClockCorrelator class
+    py::class_<cluster::ClockCorrelator>(m, "ClockCorrelator")
+        .def(py::init<>())
+        .def("add_correlation_point", &cluster::ClockCorrelator::addCorrelationPoint)
+        .def("calculate_offset", &cluster::ClockCorrelator::calculateOffset)
+        .def("correct_timestamps", &cluster::ClockCorrelator::correctTimestamps)
+        .def("calculate_drift_model", &cluster::ClockCorrelator::calculateDriftModel)
+        .def("apply_drift_correction", &cluster::ClockCorrelator::applyDriftCorrection)
+        .def("clear", &cluster::ClockCorrelator::clear)
+        .def("clear_source", &cluster::ClockCorrelator::clearSource);
+    
+    // Utility functions
+    m.def("time_sync_method_to_string", &cluster::timeSyncMethodToString);
+    m.def("string_to_time_sync_method", &cluster::stringToTimeSyncMethod);
+    
+    // =========================================================================
+    // NCCL Tracking (v0.7.1)
+    // =========================================================================
+    
+    // NCCLOpType enum
+    py::enum_<cluster::NCCLOpType>(m, "NCCLOpType")
+        .value("Unknown", cluster::NCCLOpType::Unknown)
+        .value("AllReduce", cluster::NCCLOpType::AllReduce)
+        .value("AllGather", cluster::NCCLOpType::AllGather)
+        .value("ReduceScatter", cluster::NCCLOpType::ReduceScatter)
+        .value("Broadcast", cluster::NCCLOpType::Broadcast)
+        .value("Reduce", cluster::NCCLOpType::Reduce)
+        .value("AllToAll", cluster::NCCLOpType::AllToAll)
+        .value("Send", cluster::NCCLOpType::Send)
+        .value("Recv", cluster::NCCLOpType::Recv)
+        .value("GroupStart", cluster::NCCLOpType::GroupStart)
+        .value("GroupEnd", cluster::NCCLOpType::GroupEnd)
+        .export_values();
+    
+    // NCCLRedOp enum
+    py::enum_<cluster::NCCLRedOp>(m, "NCCLRedOp")
+        .value("Sum", cluster::NCCLRedOp::Sum)
+        .value("Prod", cluster::NCCLRedOp::Prod)
+        .value("Max", cluster::NCCLRedOp::Max)
+        .value("Min", cluster::NCCLRedOp::Min)
+        .value("Avg", cluster::NCCLRedOp::Avg)
+        .export_values();
+    
+    // NCCLDataType enum
+    py::enum_<cluster::NCCLDataType>(m, "NCCLDataType")
+        .value("Int8", cluster::NCCLDataType::Int8)
+        .value("Uint8", cluster::NCCLDataType::Uint8)
+        .value("Int32", cluster::NCCLDataType::Int32)
+        .value("Uint32", cluster::NCCLDataType::Uint32)
+        .value("Int64", cluster::NCCLDataType::Int64)
+        .value("Uint64", cluster::NCCLDataType::Uint64)
+        .value("Float16", cluster::NCCLDataType::Float16)
+        .value("Float32", cluster::NCCLDataType::Float32)
+        .value("Float64", cluster::NCCLDataType::Float64)
+        .value("BFloat16", cluster::NCCLDataType::BFloat16)
+        .export_values();
+    
+    // NCCLOperation struct
+    py::class_<cluster::NCCLOperation>(m, "NCCLOperation")
+        .def(py::init<>())
+        .def_readwrite("op_id", &cluster::NCCLOperation::op_id)
+        .def_readwrite("op_type", &cluster::NCCLOperation::op_type)
+        .def_readwrite("red_op", &cluster::NCCLOperation::red_op)
+        .def_readwrite("data_type", &cluster::NCCLOperation::data_type)
+        .def_readwrite("comm_id", &cluster::NCCLOperation::comm_id)
+        .def_readwrite("rank", &cluster::NCCLOperation::rank)
+        .def_readwrite("world_size", &cluster::NCCLOperation::world_size)
+        .def_readwrite("count", &cluster::NCCLOperation::count)
+        .def_readwrite("data_size", &cluster::NCCLOperation::data_size)
+        .def_readwrite("start_time", &cluster::NCCLOperation::start_time)
+        .def_readwrite("end_time", &cluster::NCCLOperation::end_time)
+        .def_readwrite("duration_ns", &cluster::NCCLOperation::duration_ns)
+        .def_readwrite("peer_rank", &cluster::NCCLOperation::peer_rank)
+        .def_readwrite("cuda_stream", &cluster::NCCLOperation::cuda_stream)
+        .def_readwrite("correlation_id", &cluster::NCCLOperation::correlation_id)
+        .def_readwrite("completed", &cluster::NCCLOperation::completed);
+    
+    // NCCLTrackerConfig struct
+    py::class_<cluster::NCCLTrackerConfig>(m, "NCCLTrackerConfig")
+        .def(py::init<>())
+        .def_readwrite("hook_enabled", &cluster::NCCLTrackerConfig::hook_enabled)
+        .def_readwrite("track_all_comms", &cluster::NCCLTrackerConfig::track_all_comms)
+        .def_readwrite("comm_filter", &cluster::NCCLTrackerConfig::comm_filter)
+        .def_readwrite("capture_call_stack", &cluster::NCCLTrackerConfig::capture_call_stack)
+        .def_readwrite("max_operations", &cluster::NCCLTrackerConfig::max_operations);
+    
+    // NCCLTracker::Statistics struct
+    py::class_<cluster::NCCLTracker::Statistics>(m, "NCCLStatistics")
+        .def(py::init<>())
+        .def_readwrite("total_operations", &cluster::NCCLTracker::Statistics::total_operations)
+        .def_readwrite("total_bytes_transferred", &cluster::NCCLTracker::Statistics::total_bytes_transferred)
+        .def_readwrite("total_duration_ns", &cluster::NCCLTracker::Statistics::total_duration_ns)
+        .def_readwrite("ops_by_type", &cluster::NCCLTracker::Statistics::ops_by_type)
+        .def_readwrite("bytes_by_type", &cluster::NCCLTracker::Statistics::bytes_by_type)
+        .def_readwrite("duration_by_type", &cluster::NCCLTracker::Statistics::duration_by_type);
+    
+    // NCCLTracker class
+    py::class_<cluster::NCCLTracker>(m, "NCCLTracker")
+        .def(py::init<>())
+        .def(py::init<const cluster::NCCLTrackerConfig&>())
+        .def("install_hooks", &cluster::NCCLTracker::installHooks)
+        .def("remove_hooks", &cluster::NCCLTracker::removeHooks)
+        .def("is_hooked", &cluster::NCCLTracker::isHooked)
+        .def("start_capture", &cluster::NCCLTracker::startCapture)
+        .def("stop_capture", &cluster::NCCLTracker::stopCapture)
+        .def("is_capturing", &cluster::NCCLTracker::isCapturing)
+        .def("clear", &cluster::NCCLTracker::clear)
+        .def("record_operation_start", &cluster::NCCLTracker::recordOperationStart,
+             py::arg("type"), py::arg("count"), py::arg("dtype"), 
+             py::arg("rank"), py::arg("stream") = 0)
+        .def("record_operation_end", &cluster::NCCLTracker::recordOperationEnd)
+        .def("get_operations", &cluster::NCCLTracker::getOperations)
+        .def("get_operations_by_type", &cluster::NCCLTracker::getOperationsByType)
+        .def("get_operations_by_comm", &cluster::NCCLTracker::getOperationsByComm)
+        .def("get_operation", &cluster::NCCLTracker::getOperation)
+        .def("to_trace_events", &cluster::NCCLTracker::toTraceEvents)
+        .def("correlate_with_gpu_events", &cluster::NCCLTracker::correlateWithGPUEvents)
+        .def("get_statistics", &cluster::NCCLTracker::getStatistics);
+    
+    // CommAnalysis::CommPattern enum
+    py::enum_<cluster::CommAnalysis::CommPattern>(m, "CommPattern")
+        .value("Unknown", cluster::CommAnalysis::CommPattern::Unknown)
+        .value("AllToAll", cluster::CommAnalysis::CommPattern::AllToAll)
+        .value("Ring", cluster::CommAnalysis::CommPattern::Ring)
+        .value("Tree", cluster::CommAnalysis::CommPattern::Tree)
+        .value("Butterfly", cluster::CommAnalysis::CommPattern::Butterfly)
+        .value("PointToPoint", cluster::CommAnalysis::CommPattern::PointToPoint)
+        .value("Broadcast", cluster::CommAnalysis::CommPattern::Broadcast)
+        .value("Custom", cluster::CommAnalysis::CommPattern::Custom)
+        .export_values();
+    
+    // CommAnalysis::CommMatrix struct
+    py::class_<cluster::CommAnalysis::CommMatrix>(m, "CommMatrix")
+        .def(py::init<>())
+        .def_readwrite("bytes", &cluster::CommAnalysis::CommMatrix::bytes)
+        .def_readwrite("count", &cluster::CommAnalysis::CommMatrix::count)
+        .def_readwrite("avg_latency", &cluster::CommAnalysis::CommMatrix::avg_latency)
+        .def_readwrite("world_size", &cluster::CommAnalysis::CommMatrix::world_size);
+    
+    // CommAnalysis::Bottleneck struct
+    py::class_<cluster::CommAnalysis::Bottleneck>(m, "CommBottleneck")
+        .def(py::init<>())
+        .def_readwrite("rank_a", &cluster::CommAnalysis::Bottleneck::rank_a)
+        .def_readwrite("rank_b", &cluster::CommAnalysis::Bottleneck::rank_b)
+        .def_readwrite("utilization", &cluster::CommAnalysis::Bottleneck::utilization)
+        .def_readwrite("reason", &cluster::CommAnalysis::Bottleneck::reason);
+    
+    // CommAnalysis::LoadImbalance struct
+    py::class_<cluster::CommAnalysis::LoadImbalance>(m, "LoadImbalance")
+        .def(py::init<>())
+        .def_readwrite("rank", &cluster::CommAnalysis::LoadImbalance::rank)
+        .def_readwrite("deviation", &cluster::CommAnalysis::LoadImbalance::deviation)
+        .def_readwrite("total_bytes", &cluster::CommAnalysis::LoadImbalance::total_bytes)
+        .def_readwrite("total_time_ns", &cluster::CommAnalysis::LoadImbalance::total_time_ns);
+    
+    // CommAnalysis class
+    py::class_<cluster::CommAnalysis>(m, "CommAnalysis")
+        .def(py::init<>())
+        .def("add_operations", &cluster::CommAnalysis::addOperations)
+        .def("add_operation", &cluster::CommAnalysis::addOperation)
+        .def("clear", &cluster::CommAnalysis::clear)
+        .def("get_comm_matrix", &cluster::CommAnalysis::getCommMatrix)
+        .def("detect_pattern", &cluster::CommAnalysis::detectPattern)
+        .def("find_bottlenecks", &cluster::CommAnalysis::findBottlenecks)
+        .def("analyze_load_balance", &cluster::CommAnalysis::analyzeLoadBalance)
+        .def("matrix_to_ascii", &cluster::CommAnalysis::matrixToASCII)
+        .def("matrix_to_heatmap_json", &cluster::CommAnalysis::matrixToHeatmapJSON)
+        .def("get_total_bytes", &cluster::CommAnalysis::getTotalBytes)
+        .def("get_total_operations", &cluster::CommAnalysis::getTotalOperations)
+        .def("get_world_size", &cluster::CommAnalysis::getWorldSize)
+        .def_static("pattern_to_string", &cluster::CommAnalysis::patternToString);
+    
+    // NCCL utility functions
+    m.def("nccl_op_type_to_string", &cluster::ncclOpTypeToString);
+    m.def("nccl_red_op_to_string", &cluster::ncclRedOpToString);
+    m.def("nccl_data_type_to_string", &cluster::ncclDataTypeToString);
+    m.def("nccl_data_type_size", &cluster::ncclDataTypeSize);
 }
