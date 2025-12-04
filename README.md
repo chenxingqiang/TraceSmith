@@ -57,17 +57,26 @@
 #### Python (Recommended)
 
 ```bash
-# Install from PyPI
+# Install from PyPI (auto-detects GPU platform)
 pip install tracesmith
 
+# Platform-specific installation:
+# CUDA/CUPTI (NVIDIA GPU)
+TRACESMITH_CUDA=1 pip install tracesmith
+
+# ROCm (AMD GPU)
+TRACESMITH_ROCM=1 pip install tracesmith
+
+# Metal (Apple GPU)
+TRACESMITH_METAL=1 pip install tracesmith
+
 # Verify installation
-python -c "import tracesmith; print(tracesmith.__version__)"
-# Output: 0.6.2
+python -c "import tracesmith; print(tracesmith.__version__, tracesmith.detect_platform())"
 
 # Or install from source
 git clone https://github.com/chenxingqiang/TraceSmith.git
 cd TraceSmith
-pip install .
+TRACESMITH_CUDA=1 pip install .  # with CUDA support
 ```
 
 #### C++ from Source

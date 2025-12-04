@@ -4,6 +4,19 @@ TraceSmith - GPU Profiling & Replay System
 Installation:
     pip install .
 
+Platform-specific installation:
+    # Auto-detect (default)
+    pip install .
+    
+    # CUDA/CUPTI (NVIDIA)
+    TRACESMITH_CUDA=1 pip install .
+    
+    # ROCm (AMD)
+    TRACESMITH_ROCM=1 pip install .
+    
+    # Metal (Apple)
+    TRACESMITH_METAL=1 pip install .
+
 Development installation:
     pip install -e .
 """
@@ -11,9 +24,37 @@ Development installation:
 import os
 import sys
 import subprocess
+import shutil
 from pathlib import Path
 from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
+
+
+def detect_cuda():
+    """Detect CUDA installation."""
+    # Check for nvcc
+    if shutil.which('nvcc'):
+        return True
+    # Check CUDA_HOME
+    cuda_home = os.environ.get('CUDA_HOME') or os.environ.get('CUDA_PATH')
+    if cuda_home and os.path.exists(cuda_home):
+        return True
+    # Check common paths
+    for path in ['/usr/local/cuda', '/opt/cuda']:
+        if os.path.exists(path):
+            return True
+    return False
+
+
+def detect_rocm():
+    """Detect ROCm installation."""
+    rocm_path = os.environ.get('ROCM_PATH', '/opt/rocm')
+    return os.path.exists(rocm_path)
+
+
+def detect_metal():
+    """Detect Metal (macOS)."""
+    return sys.platform == 'darwin'
 
 
 class CMakeExtension(Extension):
@@ -26,12 +67,12 @@ class CMakeBuild(build_ext):
     def build_extension(self, ext):
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
         
-        # Required for auto-detection of auxiliary "native" libs
         if not extdir.endswith(os.path.sep):
             extdir += os.path.sep
 
         cfg = 'Debug' if self.debug else 'Release'
 
+        # Base CMake arguments
         cmake_args = [
             f'-DTRACESMITH_PYTHON_OUTPUT_DIR={extdir}',
             f'-DPYTHON_EXECUTABLE={sys.executable}',
@@ -42,11 +83,57 @@ class CMakeBuild(build_ext):
             '-DTRACESMITH_BUILD_PYTHON=ON',
         ]
 
+        # Platform selection via environment variables
+        enable_cuda = os.environ.get('TRACESMITH_CUDA', '').lower() in ('1', 'true', 'on', 'yes')
+        enable_rocm = os.environ.get('TRACESMITH_ROCM', '').lower() in ('1', 'true', 'on', 'yes')
+        enable_metal = os.environ.get('TRACESMITH_METAL', '').lower() in ('1', 'true', 'on', 'yes')
+        auto_detect = os.environ.get('TRACESMITH_AUTO', '1').lower() in ('1', 'true', 'on', 'yes')
+
+        # Auto-detect if no platform explicitly specified
+        if not (enable_cuda or enable_rocm or enable_metal) and auto_detect:
+            if detect_cuda():
+                enable_cuda = True
+                print("TraceSmith: Auto-detected CUDA")
+            elif detect_rocm():
+                enable_rocm = True
+                print("TraceSmith: Auto-detected ROCm")
+            elif detect_metal():
+                enable_metal = True
+                print("TraceSmith: Auto-detected Metal")
+            else:
+                print("TraceSmith: No GPU platform detected")
+
+        # Add platform-specific CMake options
+        if enable_cuda:
+            cmake_args.append('-DTRACESMITH_ENABLE_CUDA=ON')
+            print("TraceSmith: Building with CUDA/CUPTI support")
+        else:
+            cmake_args.append('-DTRACESMITH_ENABLE_CUDA=OFF')
+
+        if enable_rocm:
+            cmake_args.append('-DTRACESMITH_ENABLE_ROCM=ON')
+            print("TraceSmith: Building with ROCm support")
+        else:
+            cmake_args.append('-DTRACESMITH_ENABLE_ROCM=OFF')
+
+        if enable_metal:
+            cmake_args.append('-DTRACESMITH_ENABLE_METAL=ON')
+            print("TraceSmith: Building with Metal support")
+        else:
+            cmake_args.append('-DTRACESMITH_ENABLE_METAL=OFF')
+
+        # Additional build arguments
         build_args = ['--config', cfg]
+        
+        # Parallel build
+        if 'CMAKE_BUILD_PARALLEL_LEVEL' not in os.environ:
+            cpu_count = os.cpu_count() or 1
+            build_args += ['-j', str(cpu_count)]
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
+        print(f"TraceSmith: CMake args: {' '.join(cmake_args)}")
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp)
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
@@ -86,6 +173,8 @@ setup(
             'build',
             'twine',
         ],
+        'cuda': [],  # CUDA dependencies (none required, system CUDA used)
+        'rocm': [],  # ROCm dependencies
         'torch': [
             'torch>=1.9',
         ],
@@ -115,9 +204,10 @@ setup(
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Software Development :: Debuggers',
         'Topic :: System :: Monitoring',
+        'Environment :: GPU :: NVIDIA CUDA',
     ],
     
-    keywords='gpu profiling tracing cuda rocm metal debugging replay perfetto memory-profiler frame-capture',
+    keywords='gpu profiling tracing cuda rocm metal debugging replay perfetto memory-profiler frame-capture cupti',
     
     entry_points={
         'console_scripts': [
