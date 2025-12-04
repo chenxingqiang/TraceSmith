@@ -4,7 +4,7 @@ TraceSmith - GPU Profiling & Replay System
 A cross-platform GPU profiling and replay system for AI compilers,
 deep learning frameworks, and GPU driver engineers.
 
-Version: 0.6.9
+Version: 0.7.0
 
 Features:
 - Cross-platform GPU profiling (CUDA via CUPTI, ROCm, Metal)
@@ -15,6 +15,8 @@ Features:
 - GPU memory profiling and leak detection
 - LLVM XRay trace import
 - eBPF GPU event tracing (Linux)
+- Multi-GPU profiling with topology discovery (v0.7.0)
+- NVLink/NVSwitch tracking
 - Python and C++ APIs
 """
 
@@ -163,6 +165,24 @@ from ._tracesmith import (
     is_metal_available,
     get_metal_device_count,
     detect_platform,
+    
+    # ========================================================================
+    # Cluster Module - Multi-GPU Profiling (v0.7.0)
+    # ========================================================================
+    GPULinkType,
+    GPULink,
+    GPUDeviceTopology,
+    GPUTopologyInfo,
+    GPUTopology,
+    is_nvml_available,
+    get_nvml_version,
+    link_type_to_string,
+    get_link_bandwidth,
+    NVLinkTransfer,
+    PeerAccess,
+    MultiGPUConfig,
+    MultiGPUStats,
+    MultiGPUProfiler,
 )
 
 __all__ = [
@@ -290,6 +310,22 @@ __all__ = [
     'replay_trace',
     'profile_memory',
     'is_bpf_available',
+    
+    # Cluster Module (v0.7.0)
+    'GPULinkType',
+    'GPULink',
+    'GPUDeviceTopology',
+    'GPUTopologyInfo',
+    'GPUTopology',
+    'is_nvml_available',
+    'get_nvml_version',
+    'link_type_to_string',
+    'get_link_bandwidth',
+    'NVLinkTransfer',
+    'PeerAccess',
+    'MultiGPUConfig',
+    'MultiGPUStats',
+    'MultiGPUProfiler',
 ]
 
 

@@ -120,6 +120,7 @@ add_subdirectory(src/format)
 add_subdirectory(src/capture)
 add_subdirectory(src/state)
 add_subdirectory(src/replay)
+add_subdirectory(src/cluster)
 
 # CLI tools
 if(TRACESMITH_BUILD_CLI)

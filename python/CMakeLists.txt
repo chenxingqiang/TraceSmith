@@ -24,6 +24,7 @@ target_link_libraries(_tracesmith PRIVATE
     tracesmith-capture
     tracesmith-state
     tracesmith-replay
+    tracesmith-cluster
 )
 
 target_include_directories(_tracesmith PRIVATE

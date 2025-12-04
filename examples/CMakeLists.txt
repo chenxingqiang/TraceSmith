@@ -315,6 +315,30 @@ else()
 endif()
 
 # ----------------------------------------------------------------------------
+# Multi-GPU Example (v0.7.0) - Requires CUDA
+# ----------------------------------------------------------------------------
+if(CUDA_EXAMPLES_ENABLED)
+    add_executable(multi_gpu_example
+        multi_gpu_example.cpp
+    )
+    set_source_files_properties(multi_gpu_example.cpp PROPERTIES LANGUAGE CUDA)
+    target_link_libraries(multi_gpu_example PRIVATE
+        tracesmith-common
+        tracesmith-format
+        tracesmith-capture
+        tracesmith-state
+        tracesmith-cluster
+        CUDA::cudart
+        ${CUPTI_LIBRARY}
+    )
+    target_compile_definitions(multi_gpu_example PRIVATE TRACESMITH_ENABLE_CUDA)
+    set_target_properties(multi_gpu_example PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+        CUDA_ARCHITECTURES "70;75;80;86;89;90"
+    )
+endif()
+
+# ----------------------------------------------------------------------------
 # Install Python example
 # ----------------------------------------------------------------------------
 install(FILES python_example.py
@@ -347,6 +371,7 @@ if(CUDA_EXAMPLES_ENABLED)
     message(STATUS "    - memory_profiler_example (Real GPU memory tracking)")
     message(STATUS "    - realtime_tracing_example (Real GPU workload tracing)")
     message(STATUS "    - benchmark_10k_stacks (10K GPU call stack capture)")
+    message(STATUS "    - multi_gpu_example (Multi-GPU profiling v0.7.0)")
 else()
     message(STATUS "  CUDA examples: SKIPPED (CUDA compiler not found)")
     message(STATUS "    Note: benchmark_10k_stacks built without GPU support")

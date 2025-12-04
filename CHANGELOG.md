@@ -5,6 +5,36 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2024-12-04
+
+### Added
+- **Multi-GPU Cluster Profiling (Phase 1)**: Single-node multi-GPU support
+  - `MultiGPUProfiler`: Unified profiling across multiple GPUs
+    - Automatic GPU discovery and initialization
+    - Per-GPU event buffering with configurable sizes
+    - Aggregation thread for real-time event collection
+    - Event callbacks for live processing
+  - `GPUTopology`: GPU interconnect topology discovery using NVML
+    - NVLink detection (v1-v4)
+    - NVSwitch detection
+    - PCIe fallback for basic connectivity
+    - Topology visualization (ASCII, Graphviz DOT, JSON)
+    - Optimal path finding between GPUs
+  - `MultiGPUConfig`: Configuration for multi-GPU profiling
+    - Per-GPU buffer size
+    - NVLink/peer access tracking toggles
+    - Aggregation interval control
+- New `cluster/` module: `include/tracesmith/cluster/`, `src/cluster/`
+- New `multi_gpu_example.cpp`: Demonstrates multi-GPU profiling capabilities
+- CuPy as optional dependency for Python CLI real GPU profiling
+  - `pip install tracesmith[cuda12]` for CUDA 12.x
+  - `pip install tracesmith[cuda11]` for CUDA 11.x
+
+### Changed
+- Updated `tracesmith.hpp` to include cluster module headers
+- CLI benchmark command now compiles with CUDA support when available
+- Improved CMake CUDA detection with `check_language(CUDA)`
+
 ## [0.6.9] - 2024-12-04
 
 ### Changed

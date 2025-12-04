@@ -44,6 +44,10 @@
 #include "tracesmith/common/stack_capture.hpp"
 #include "tracesmith/common/ring_buffer.hpp"
 
+// Cluster (v0.7.0)
+#include "tracesmith/cluster/gpu_topology.hpp"
+#include "tracesmith/cluster/multi_gpu_profiler.hpp"
+
 namespace py = pybind11;
 using namespace tracesmith;
 
@@ -51,7 +55,7 @@ PYBIND11_MODULE(_tracesmith, m) {
     m.doc() = "TraceSmith GPU Profiling & Replay System";
     
     // Version info
-    m.attr("__version__") = "0.6.9";
+    m.attr("__version__") = "0.7.0";
     m.attr("VERSION_MAJOR") = VERSION_MAJOR;
     m.attr("VERSION_MINOR") = VERSION_MINOR;
     m.attr("VERSION_PATCH") = VERSION_PATCH;
@@ -1074,4 +1078,151 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def("render", &TimelineViewer::render)
         .def("render_stream", &TimelineViewer::renderStream)
         .def("render_stats", &TimelineViewer::renderStats);
+    
+    // =========================================================================
+    // Cluster Module - Multi-GPU Profiling (v0.7.0)
+    // =========================================================================
+    
+    // GPULinkType enum
+    py::enum_<cluster::GPULinkType>(m, "GPULinkType")
+        .value("None_", cluster::GPULinkType::None)
+        .value("PCIe", cluster::GPULinkType::PCIe)
+        .value("NVLink1", cluster::GPULinkType::NVLink1)
+        .value("NVLink2", cluster::GPULinkType::NVLink2)
+        .value("NVLink3", cluster::GPULinkType::NVLink3)
+        .value("NVLink4", cluster::GPULinkType::NVLink4)
+        .value("NVSwitch", cluster::GPULinkType::NVSwitch)
+        .export_values();
+    
+    // GPULink struct
+    py::class_<cluster::GPULink>(m, "GPULink")
+        .def(py::init<>())
+        .def_readwrite("gpu_a", &cluster::GPULink::gpu_a)
+        .def_readwrite("gpu_b", &cluster::GPULink::gpu_b)
+        .def_readwrite("type", &cluster::GPULink::type)
+        .def_readwrite("link_count", &cluster::GPULink::link_count)
+        .def_readwrite("bandwidth_gbps", &cluster::GPULink::bandwidth_gbps)
+        .def_readwrite("measured_bandwidth", &cluster::GPULink::measured_bandwidth)
+        .def_readwrite("bidirectional", &cluster::GPULink::bidirectional);
+    
+    // GPUDeviceTopology struct
+    py::class_<cluster::GPUDeviceTopology>(m, "GPUDeviceTopology")
+        .def(py::init<>())
+        .def_readwrite("gpu_id", &cluster::GPUDeviceTopology::gpu_id)
+        .def_readwrite("name", &cluster::GPUDeviceTopology::name)
+        .def_readwrite("pci_bus_id", &cluster::GPUDeviceTopology::pci_bus_id)
+        .def_readwrite("numa_node", &cluster::GPUDeviceTopology::numa_node)
+        .def_readwrite("has_nvlink", &cluster::GPUDeviceTopology::has_nvlink)
+        .def_readwrite("nvlink_count", &cluster::GPUDeviceTopology::nvlink_count);
+    
+    // GPUTopologyInfo struct
+    py::class_<cluster::GPUTopologyInfo>(m, "GPUTopologyInfo")
+        .def(py::init<>())
+        .def_readwrite("gpu_count", &cluster::GPUTopologyInfo::gpu_count)
+        .def_readwrite("has_nvswitch", &cluster::GPUTopologyInfo::has_nvswitch)
+        .def_readwrite("devices", &cluster::GPUTopologyInfo::devices)
+        .def_readwrite("links", &cluster::GPUTopologyInfo::links);
+    
+    // GPUTopology class
+    py::class_<cluster::GPUTopology>(m, "GPUTopology")
+        .def(py::init<>())
+        .def("discover", &cluster::GPUTopology::discover)
+        .def("is_discovered", &cluster::GPUTopology::isDiscovered)
+        .def("get_topology", &cluster::GPUTopology::getTopology)
+        .def("get_gpu_count", &cluster::GPUTopology::getGPUCount)
+        .def("get_link_type", &cluster::GPUTopology::getLinkType)
+        .def("get_bandwidth", &cluster::GPUTopology::getBandwidth)
+        .def("can_access_peer", &cluster::GPUTopology::canAccessPeer)
+        .def("get_nvlink_count", &cluster::GPUTopology::getNVLinkCount)
+        .def("is_directly_connected", &cluster::GPUTopology::isDirectlyConnected)
+        .def("get_connected_gpus", &cluster::GPUTopology::getConnectedGPUs)
+        .def("get_device_info", &cluster::GPUTopology::getDeviceInfo)
+        .def("get_optimal_path", &cluster::GPUTopology::getOptimalPath)
+        .def("estimate_transfer_time", &cluster::GPUTopology::estimateTransferTime)
+        .def("to_ascii", &cluster::GPUTopology::toASCII)
+        .def("to_graphviz", &cluster::GPUTopology::toGraphviz)
+        .def("to_json", &cluster::GPUTopology::toJSON)
+        .def("print_summary", &cluster::GPUTopology::printSummary);
+    
+    // Utility functions
+    m.def("is_nvml_available", &cluster::isNVMLAvailable);
+    m.def("get_nvml_version", &cluster::getNVMLVersion);
+    m.def("link_type_to_string", &cluster::linkTypeToString);
+    m.def("get_link_bandwidth", &cluster::getLinkBandwidth);
+    
+    // NVLinkTransfer struct
+    py::class_<cluster::NVLinkTransfer>(m, "NVLinkTransfer")
+        .def(py::init<>())
+        .def_readwrite("src_gpu", &cluster::NVLinkTransfer::src_gpu)
+        .def_readwrite("dst_gpu", &cluster::NVLinkTransfer::dst_gpu)
+        .def_readwrite("bytes", &cluster::NVLinkTransfer::bytes)
+        .def_readwrite("timestamp", &cluster::NVLinkTransfer::timestamp)
+        .def_readwrite("duration_ns", &cluster::NVLinkTransfer::duration_ns)
+        .def_readwrite("link_id", &cluster::NVLinkTransfer::link_id);
+    
+    // PeerAccess struct
+    py::class_<cluster::PeerAccess>(m, "PeerAccess")
+        .def(py::init<>())
+        .def_readwrite("src_gpu", &cluster::PeerAccess::src_gpu)
+        .def_readwrite("dst_gpu", &cluster::PeerAccess::dst_gpu)
+        .def_readwrite("address", &cluster::PeerAccess::address)
+        .def_readwrite("bytes", &cluster::PeerAccess::bytes)
+        .def_readwrite("is_write", &cluster::PeerAccess::is_write)
+        .def_readwrite("timestamp", &cluster::PeerAccess::timestamp);
+    
+    // MultiGPUConfig struct
+    py::class_<cluster::MultiGPUConfig>(m, "MultiGPUConfig")
+        .def(py::init<>())
+        .def_readwrite("gpu_ids", &cluster::MultiGPUConfig::gpu_ids)
+        .def_readwrite("per_gpu_buffer_size", &cluster::MultiGPUConfig::per_gpu_buffer_size)
+        .def_readwrite("enable_nvlink_tracking", &cluster::MultiGPUConfig::enable_nvlink_tracking)
+        .def_readwrite("enable_peer_access_tracking", &cluster::MultiGPUConfig::enable_peer_access_tracking)
+        .def_readwrite("aggregation_interval_ms", &cluster::MultiGPUConfig::aggregation_interval_ms)
+        .def_readwrite("unified_timestamps", &cluster::MultiGPUConfig::unified_timestamps)
+        .def_readwrite("capture_topology", &cluster::MultiGPUConfig::capture_topology)
+        .def_readwrite("overflow_policy", &cluster::MultiGPUConfig::overflow_policy);
+    
+    // MultiGPUStats struct
+    py::class_<cluster::MultiGPUStats>(m, "MultiGPUStats")
+        .def(py::init<>())
+        .def_readwrite("total_events", &cluster::MultiGPUStats::total_events)
+        .def_readwrite("total_dropped", &cluster::MultiGPUStats::total_dropped)
+        .def_readwrite("nvlink_transfers", &cluster::MultiGPUStats::nvlink_transfers)
+        .def_readwrite("nvlink_bytes", &cluster::MultiGPUStats::nvlink_bytes)
+        .def_readwrite("peer_accesses", &cluster::MultiGPUStats::peer_accesses)
+        .def_readwrite("events_per_gpu", &cluster::MultiGPUStats::events_per_gpu)
+        .def_readwrite("dropped_per_gpu", &cluster::MultiGPUStats::dropped_per_gpu)
+        .def_readwrite("capture_duration_ms", &cluster::MultiGPUStats::capture_duration_ms);
+    
+    // MultiGPUProfiler class
+    py::class_<cluster::MultiGPUProfiler>(m, "MultiGPUProfiler")
+        .def(py::init<>())
+        .def(py::init<const cluster::MultiGPUConfig&>())
+        .def("initialize", &cluster::MultiGPUProfiler::initialize)
+        .def("finalize", &cluster::MultiGPUProfiler::finalize)
+        .def("is_initialized", &cluster::MultiGPUProfiler::isInitialized)
+        .def("add_gpu", &cluster::MultiGPUProfiler::addGPU)
+        .def("remove_gpu", &cluster::MultiGPUProfiler::removeGPU)
+        .def("get_active_gpus", &cluster::MultiGPUProfiler::getActiveGPUs)
+        .def("get_available_gpu_count", &cluster::MultiGPUProfiler::getAvailableGPUCount)
+        .def("start_capture", &cluster::MultiGPUProfiler::startCapture)
+        .def("stop_capture", &cluster::MultiGPUProfiler::stopCapture)
+        .def("is_capturing", &cluster::MultiGPUProfiler::isCapturing)
+        .def("get_events", [](cluster::MultiGPUProfiler& self, size_t max_count) {
+            std::vector<TraceEvent> events;
+            self.getEvents(events, max_count);
+            return events;
+        }, py::arg("max_count") = 0)
+        .def("get_events_from_gpu", [](cluster::MultiGPUProfiler& self, uint32_t gpu_id) {
+            std::vector<TraceEvent> events;
+            self.getEventsFromGPU(gpu_id, events);
+            return events;
+        })
+        .def("get_nvlink_transfers", &cluster::MultiGPUProfiler::getNVLinkTransfers)
+        .def("get_peer_accesses", &cluster::MultiGPUProfiler::getPeerAccesses)
+        .def("total_events_captured", &cluster::MultiGPUProfiler::totalEventsCaptured)
+        .def("events_from_gpu", &cluster::MultiGPUProfiler::eventsFromGPU)
+        .def("get_statistics", &cluster::MultiGPUProfiler::getStatistics)
+        .def("get_all_device_info", &cluster::MultiGPUProfiler::getAllDeviceInfo)
+        .def("get_device_info", &cluster::MultiGPUProfiler::getDeviceInfo);
 }
