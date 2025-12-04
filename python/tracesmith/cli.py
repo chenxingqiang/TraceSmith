@@ -4,14 +4,17 @@ TraceSmith Command Line Interface (Python)
 GPU Profiling & Replay System
 
 Usage:
-    tracesmith info              Show version and system info
-    tracesmith devices           List available GPU devices
-    tracesmith record            Record GPU events
-    tracesmith view FILE         View trace file contents
-    tracesmith export FILE       Export to Perfetto format
-    tracesmith analyze FILE      Analyze trace file
-    tracesmith replay FILE       Replay a captured trace
-    tracesmith benchmark         Run 10K GPU call stacks benchmark
+    tracesmith-cli info              Show version and system info
+    tracesmith-cli devices           List available GPU devices
+    tracesmith-cli record            Record GPU events
+    tracesmith-cli view FILE         View trace file contents
+    tracesmith-cli export FILE       Export to Perfetto format
+    tracesmith-cli analyze FILE      Analyze trace file
+    tracesmith-cli replay FILE       Replay a captured trace
+    tracesmith-cli benchmark         Run 10K GPU call stacks benchmark
+
+Or via Python module:
+    python -m tracesmith <command>
 """
 
 import argparse
@@ -1108,8 +1111,8 @@ def main():
         sys.argv.remove('--no-color')
     
     parser = argparse.ArgumentParser(
-        prog='tracesmith',
-        description='TraceSmith GPU Profiling & Replay System',
+        prog='tracesmith-cli',
+        description='TraceSmith GPU Profiling & Replay System (Python CLI)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 {C(Color.BOLD)}Examples:{C(Color.RESET)}

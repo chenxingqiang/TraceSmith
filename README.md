@@ -305,25 +305,25 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
 
 ```bash
 # Show system info
-python -m tracesmith info
+tracesmith-cli info
 
 # List GPU devices
-python -m tracesmith devices
+tracesmith-cli devices
 
 # Record a trace
-python -m tracesmith record -o trace.sbt -d 5
+tracesmith-cli record -o trace.sbt -d 5
 
 # View trace contents
-python -m tracesmith view trace.sbt --stats
+tracesmith-cli view trace.sbt --stats
 
 # Export to Perfetto
-python -m tracesmith export trace.sbt -o trace.json
+tracesmith-cli export trace.sbt -o trace.json
 
 # Analyze trace
-python -m tracesmith analyze trace.sbt
+tracesmith-cli analyze trace.sbt
 
 # Replay trace
-python -m tracesmith replay trace.sbt --mode dry-run
+tracesmith-cli replay trace.sbt --mode dry-run
 ```
 
 #### C++ API
@@ -611,7 +611,7 @@ With CuPy installed, you can run real GPU profiling from Python:
 pip install tracesmith[cuda12]
 
 # Run real GPU benchmark
-python -m tracesmith benchmark --real-gpu -n 10000
+tracesmith-cli benchmark --real-gpu -n 10000
 ```
 
 **Tested on NVIDIA GPU Server (RTX 4090):**
