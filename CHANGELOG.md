@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.3] - 2024-12-04
 
-### Fixed
-- **capture_trace()**: Remove unnecessary `time.sleep()` from simulation profiler
-  - Function now generates events immediately without waiting
-  - Added `event_count` parameter for controlling number of simulated events
+### Changed
+- **Remove simulation mode**: Focus on real GPU profiling
+  - Removed `SimulationProfiler` from Python exports
+  - Removed `capture_trace()` convenience function (use `create_profiler()` instead)
+  - Added `create_profiler(PlatformType)` to Python exports
 
 ## [0.6.2] - 2024-12-04
 

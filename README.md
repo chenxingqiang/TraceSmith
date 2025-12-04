@@ -105,8 +105,21 @@ docker run -it tracesmith
 ```python
 import tracesmith as ts
 
-# Capture GPU events
-events = ts.capture_trace(duration_ms=1000)
+# Create profiler for your GPU platform
+profiler = ts.create_profiler(ts.PlatformType.CUDA)  # or ROCm, Metal
+
+# Configure and capture
+config = ts.ProfilerConfig()
+config.capture_kernels = True
+config.capture_memcpy = True
+profiler.initialize(config)
+
+profiler.start_capture()
+# ... your GPU code here (CUDA kernels, etc.) ...
+profiler.stop_capture()
+
+# Get captured events
+events = profiler.get_events()
 print(f"Captured {len(events)} events")
 
 # Build timeline and analyze
@@ -114,19 +127,10 @@ timeline = ts.build_timeline(events)
 print(f"GPU Utilization: {timeline.gpu_utilization * 100:.1f}%")
 print(f"Max Concurrent Ops: {timeline.max_concurrent_ops}")
 
-# Export to Perfetto (chrome://tracing)
+# Export to Perfetto (chrome://tracing or ui.perfetto.dev)
 ts.export_perfetto(events, "trace.json")
 
-# Export with Perfetto SDK (85% smaller files!)
-if ts.is_protobuf_available():
-    ts.export_perfetto(events, "trace.perfetto-trace", use_protobuf=True)
-
-# Replay trace with validation
-result = ts.replay_trace(events, mode=ts.ReplayMode.Full)
-print(f"Replay: {result.operations_executed}/{result.operations_total} ops")
-print(f"Deterministic: {result.deterministic}")
-
-# Save to TraceSmith format
+# Save to TraceSmith binary format
 writer = ts.SBTWriter("trace.sbt")
 writer.write_events(events)
 writer.finalize()

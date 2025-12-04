@@ -4,10 +4,10 @@ TraceSmith - GPU Profiling & Replay System
 A cross-platform GPU profiling and replay system for AI compilers,
 deep learning frameworks, and GPU driver engineers.
 
-Version: 0.6.0
+Version: 0.6.3
 
 Features:
-- Cross-platform GPU profiling (CUDA, ROCm, Metal, Simulation)
+- Cross-platform GPU profiling (CUDA via CUPTI, ROCm, Metal)
 - SBT binary trace format (compact, efficient)
 - Perfetto JSON and Protobuf export (85% smaller files)
 - Real-time tracing with lock-free ring buffers
@@ -31,23 +31,17 @@ from ._tracesmith import (
     EventType,
     PlatformType,
     ReplayMode,
-    FlowType,           # v0.2.0: Kineto-compatible
-    PerfettoFormat,     # v0.2.0: Protobuf export
-    ResourceType,       # v0.5.0: Frame capture
-    CaptureState,       # v0.5.0: Frame capture
-    MemoryCategory,     # v0.2.0: Memory categories
-    
-    # Real-time Tracing enums (v0.3.0)
+    FlowType,
+    PerfettoFormat,
+    ResourceType,
+    CaptureState,
+    MemoryCategory,
     TracingState,
     TracingMode,
-    
-    # XRay enums and types (v0.4.0)
     XRayEntryType,
     XRayFileHeader,
     XRayFunctionRecord,
     XRayStatistics,
-    
-    # BPF enums (v0.4.0)
     BPFEventType,
     
     # ========================================================================
@@ -57,10 +51,9 @@ from ._tracesmith import (
     DeviceInfo,
     TraceMetadata,
     ProfilerConfig,
-    SimulationProfiler,
-    FlowInfo,           # v0.2.0: Kineto-compatible
-    MemoryEvent,        # v0.2.0: Memory profiling
-    CounterEvent,       # v0.2.0: Metrics/counters
+    FlowInfo,
+    MemoryEvent,
+    CounterEvent,
     
     # ========================================================================
     # File I/O - SBT Binary Format
@@ -78,17 +71,17 @@ from ._tracesmith import (
     # ========================================================================
     # Export - Perfetto
     # ========================================================================
-    PerfettoExporter,           # JSON format
-    PerfettoProtoExporter,      # Protobuf format (v0.2.0)
+    PerfettoExporter,
+    PerfettoProtoExporter,
     
     # ========================================================================
-    # Real-time Tracing (v0.3.0)
+    # Real-time Tracing
     # ========================================================================
     TracingSession,
     TracingStatistics,
     
     # ========================================================================
-    # Frame Capture (v0.5.0 - RenderDoc-inspired)
+    # Frame Capture (RenderDoc-inspired)
     # ========================================================================
     FrameCapture,
     FrameCaptureConfig,
@@ -98,7 +91,7 @@ from ._tracesmith import (
     ResourceTracker,
     
     # ========================================================================
-    # Memory Profiler (v0.6.0)
+    # Memory Profiler
     # ========================================================================
     MemoryProfiler,
     MemoryProfilerConfig,
@@ -108,13 +101,13 @@ from ._tracesmith import (
     MemoryReport,
     
     # ========================================================================
-    # XRay Importer (v0.4.0)
+    # XRay Importer
     # ========================================================================
     XRayImporter,
     XRayImporterConfig,
     
     # ========================================================================
-    # BPF Tracer (v0.4.0 - Linux only)
+    # BPF Tracer (Linux only)
     # ========================================================================
     BPFTracer,
     BPFEventRecord,
@@ -131,11 +124,12 @@ from ._tracesmith import (
     # ========================================================================
     get_current_timestamp,
     event_type_to_string,
-    resource_type_to_string,    # v0.5.0
-    format_bytes,               # v0.6.0
-    format_duration,            # v0.6.0
-    bpf_event_type_to_string,   # v0.4.0
-    bpf_event_to_trace_event,   # v0.4.0
+    resource_type_to_string,
+    format_bytes,
+    format_duration,
+    bpf_event_type_to_string,
+    bpf_event_to_trace_event,
+    create_profiler,
 )
 
 __all__ = [
@@ -167,7 +161,6 @@ __all__ = [
     'DeviceInfo',
     'TraceMetadata',
     'ProfilerConfig',
-    'SimulationProfiler',
     'FlowInfo',
     'MemoryEvent',
     'CounterEvent',
@@ -226,9 +219,9 @@ __all__ = [
     'format_duration',
     'bpf_event_type_to_string',
     'bpf_event_to_trace_event',
+    'create_profiler',
     
     # High-level convenience functions
-    'capture_trace',
     'build_timeline',
     'export_perfetto',
     'is_protobuf_available',
@@ -241,35 +234,6 @@ __all__ = [
 # ============================================================================
 # High-level Convenience Functions
 # ============================================================================
-
-def capture_trace(duration_ms: int = 1000, stream_count: int = 1, event_count: int = 10) -> list:
-    """
-    Capture a trace using simulation profiler.
-    
-    Args:
-        duration_ms: Simulated capture duration (used for event timestamps)
-        stream_count: Number of streams to simulate
-        event_count: Number of events to generate
-    
-    Returns:
-        List of TraceEvent objects
-    """
-    profiler = SimulationProfiler()
-    config = ProfilerConfig()
-    config.capture_callstacks = False
-    profiler.initialize(config)
-    profiler.start_capture()
-    
-    # Generate simulated events (no actual waiting)
-    for i in range(event_count):
-        stream_id = i % max(1, stream_count)
-        profiler.generate_kernel_event(f"kernel_{i}", stream_id)
-        if i % 3 == 0:
-            profiler.generate_memcpy_event(EventType.MemcpyH2D, 1024 * (i + 1), stream_id)
-    
-    profiler.stop_capture()
-    return profiler.get_events()
-
 
 def build_timeline(events: list) -> Timeline:
     """
