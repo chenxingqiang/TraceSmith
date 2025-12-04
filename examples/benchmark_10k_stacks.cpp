@@ -167,10 +167,11 @@ int main() {
     std::cout << "GPU Events from CUPTI\n";
     std::cout << "═══════════════════════════════════════════════════════════════\n";
     
-    auto gpu_events = profiler.getEvents();
+    std::vector<TraceEvent> gpu_events;
+    size_t event_count = profiler.getEvents(gpu_events);
     auto stats = profiler.getStatistics();
     
-    std::cout << "  GPU events captured: " << gpu_events.size() << "\n";
+    std::cout << "  GPU events captured: " << event_count << "\n";
     std::cout << "  Events dropped: " << stats.events_dropped << "\n";
     
     // Count event types
