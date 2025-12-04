@@ -252,7 +252,7 @@ def cmd_devices(args):
         print_warning("No supported GPU platforms detected.")
         print("Make sure GPU drivers are installed and accessible.")
     
-    return 0 if found_any else 1
+    return 0  # Always return success - this is just informational
 
 
 # =============================================================================

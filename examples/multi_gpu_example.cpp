@@ -259,7 +259,8 @@ int main() {
     
     const char* output_file = "multi_gpu_trace.json";
     
-    if (PerfettoExporter::exportToFile(all_events, {}, output_file)) {
+    PerfettoExporter exporter;
+    if (exporter.exportToFile(all_events, {}, output_file)) {
         printSuccess("Exported to " + std::string(output_file));
         printInfo("Open in https://ui.perfetto.dev for visualization");
     } else {
