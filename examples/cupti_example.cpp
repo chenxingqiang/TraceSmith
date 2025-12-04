@@ -169,11 +169,11 @@ void printDeviceInfo(const std::vector<DeviceInfo>& devices) {
     std::cout << "\n=== GPU Devices ===\n";
     for (const auto& dev : devices) {
         std::cout << "Device " << dev.device_id << ": " << dev.name << "\n";
-        std::cout << "  Platform: " << static_cast<int>(dev.platform) << "\n";
-        std::cout << "  Driver: " << dev.driver_version << "\n";
+        std::cout << "  Vendor: " << dev.vendor << "\n";
+        std::cout << "  Compute: " << dev.compute_major << "." << dev.compute_minor << "\n";
         std::cout << "  Memory: " << (dev.total_memory / (1024 * 1024 * 1024)) << " GB\n";
-        std::cout << "  Compute Units: " << dev.compute_units << "\n";
-        std::cout << "  Clock: " << dev.max_clock_speed << " MHz\n";
+        std::cout << "  SMs: " << dev.multiprocessor_count << "\n";
+        std::cout << "  Clock: " << (dev.clock_rate / 1000) << " MHz\n";
     }
     std::cout << "\n";
 }
@@ -189,11 +189,8 @@ void printEventSummary(const std::vector<TraceEvent>& events) {
     for (const auto& event : events) {
         type_counts[event.type]++;
         
-        // Get duration if available
-        auto it = event.data.find("duration_ns");
-        if (it != event.data.end() && std::holds_alternative<uint64_t>(it->second)) {
-            type_durations[event.type] += std::get<uint64_t>(it->second);
-        }
+        // Get duration from event
+        type_durations[event.type] += event.duration;
     }
     
     auto typeName = [](EventType t) -> const char* {
