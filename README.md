@@ -376,7 +376,7 @@ TraceSmith is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for 
 | **Throughput** | 93,457 kernels/sec | High performance |
 
 **Verified Capabilities:**
-- ✅ Real CUDA kernels executed on GPU (NO SIMULATION)
+- ✅ Real CUDA kernels executed on GPU )
 - ✅ CUPTI captured instruction-level GPU events
 - ✅ Host call stacks attached to GPU events
 - ✅ Non-intrusive profiling
@@ -511,7 +511,7 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| **v0.6.7** | 2024-12 | **Real GPU benchmark** - 10K+ CUDA kernels with CUPTI (NO SIMULATION) |
+| **v0.6.7** | 2024-12 | **Real GPU benchmark** - 10K+ CUDA kernels with CUPTI  |
 | v0.6.5 | 2024-12 | StackCapture bindings, OverflowPolicy, detect_leaks |
 | v0.6.2 | 2024-12 | PyPI release, Native extension packaging fix |
 | v0.6.0 | 2024-12 | NVIDIA CUPTI integration, Full GPU testing |

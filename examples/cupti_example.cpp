@@ -1,7 +1,7 @@
 /**
  * CUPTI Example - Real NVIDIA GPU Profiling with TraceSmith
  * 
- * This example demonstrates REAL GPU profiling (NO SIMULATION):
+ * This example demonstrates REAL GPU profiling :
  * - Initializing the CUPTI profiler for hardware-level tracing
  * - Running actual CUDA kernels (vectorAdd, matrixMul, ReLU)
  * - Capturing real GPU events (kernels, memory operations, synchronization)

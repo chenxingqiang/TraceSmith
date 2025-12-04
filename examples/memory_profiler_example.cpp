@@ -104,7 +104,7 @@ void runRealGPUMemoryTest(MemoryProfiler& profiler) {
     RealGPUMemoryTest gpu_mem(profiler);
     
     std::cout << "\n" << std::string(60, '=') << "\n";
-    std::cout << "REAL GPU MEMORY OPERATIONS (NO SIMULATION)\n";
+    std::cout << "REAL GPU MEMORY OPERATIONS\n";
     std::cout << std::string(60, '=') << "\n";
     
     // Phase 1: Allocate model parameters (weights)
@@ -215,7 +215,7 @@ void runRealGPUMemoryTest(MemoryProfiler& profiler) {
 int main() {
     std::cout << "╔═══════════════════════════════════════════════════════════╗\n";
     std::cout << "║  TraceSmith Memory Profiler Example                       ║\n";
-    std::cout << "║  REAL GPU Memory Profiling - NO SIMULATION                ║\n";
+    std::cout << "║  REAL GPU Memory Profiling                 ║\n";
     std::cout << "╚═══════════════════════════════════════════════════════════╝\n\n";
     
 #ifndef TRACESMITH_ENABLE_CUDA
