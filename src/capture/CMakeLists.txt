@@ -33,15 +33,15 @@ endif()
 
 if(TRACESMITH_ENABLE_METAL)
     message(STATUS "Building Metal profiler")
-    # Objective-C++ source file
-    target_sources(tracesmith-capture PRIVATE metal_profiler.mm)
+    # Objective-C++ source file (use full path to avoid path resolution issues)
+    target_sources(tracesmith-capture PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/metal_profiler.mm)
     target_link_libraries(tracesmith-capture PRIVATE 
         "-framework Metal" 
         "-framework Foundation"
     )
     target_compile_definitions(tracesmith-capture PRIVATE TRACESMITH_ENABLE_METAL)
     # Enable Objective-C++ for .mm files
-    set_source_files_properties(metal_profiler.mm PROPERTIES
+    set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/metal_profiler.mm PROPERTIES
         COMPILE_FLAGS "-fobjc-arc"  # Enable ARC
     )
 endif()

@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tracesmith"
-version = "0.6.4"
+version = "0.6.5"
 description = "Cross-platform GPU Profiling & Replay System"
 readme = "README.md"
 license = {text = "Apache-2.0"}

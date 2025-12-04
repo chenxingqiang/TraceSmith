@@ -34,7 +34,7 @@ PYBIND11_MODULE(_tracesmith, m) {
     m.doc() = "TraceSmith GPU Profiling & Replay System";
     
     // Version info
-    m.attr("__version__") = "0.6.4";
+    m.attr("__version__") = "0.6.5";
     m.attr("VERSION_MAJOR") = VERSION_MAJOR;
     m.attr("VERSION_MINOR") = VERSION_MINOR;
     m.attr("VERSION_PATCH") = VERSION_PATCH;
@@ -726,6 +726,12 @@ PYBIND11_MODULE(_tracesmith, m) {
     
     m.def("get_cuda_driver_version", &getCUDADriverVersion,
           "Get CUDA driver version");
+    
+    m.def("is_metal_available", &isMetalAvailable,
+          "Check if Metal is available on this system (macOS only)");
+    
+    m.def("get_metal_device_count", &getMetalDeviceCount,
+          "Get number of Metal-capable devices");
     
     m.def("detect_platform", &detectPlatform,
           "Auto-detect the best available GPU platform");

@@ -160,4 +160,14 @@ std::unique_ptr<IPlatformProfiler> createProfiler(PlatformType type = PlatformTy
  */
 PlatformType detectPlatform();
 
+/**
+ * Platform detection functions (always available for Python bindings)
+ */
+bool isCUDAAvailable();
+int getCUDADeviceCount();
+int getCUDADriverVersion();
+
+bool isMetalAvailable();
+int getMetalDeviceCount();
+
 } // namespace tracesmith

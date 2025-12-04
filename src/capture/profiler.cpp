@@ -20,6 +20,12 @@ int getCUDADriverVersion() { return 0; }
 int getCUDADeviceCount() { return 0; }
 #endif
 
+#ifndef TRACESMITH_ENABLE_METAL
+// Stub implementations when Metal is not enabled
+bool isMetalAvailable() { return false; }
+int getMetalDeviceCount() { return 0; }
+#endif
+
 // ============================================================================
 // SimulationProfiler Implementation
 // ============================================================================

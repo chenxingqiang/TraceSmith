@@ -133,6 +133,8 @@ from ._tracesmith import (
     is_cuda_available,
     get_cuda_device_count,
     get_cuda_driver_version,
+    is_metal_available,
+    get_metal_device_count,
     detect_platform,
 )
 
@@ -227,6 +229,8 @@ __all__ = [
     'is_cuda_available',
     'get_cuda_device_count',
     'get_cuda_driver_version',
+    'is_metal_available',
+    'get_metal_device_count',
     'detect_platform',
     
     # High-level convenience functions

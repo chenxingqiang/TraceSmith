@@ -7,7 +7,7 @@ include setup.py
 
 # Include C++ source and headers
 recursive-include include *.hpp *.h
-recursive-include src *.cpp *.c *.hpp *.h CMakeLists.txt
+recursive-include src *.cpp *.c *.hpp *.h *.mm *.m CMakeLists.txt
 
 # Include CMake files
 include CMakeLists.txt
