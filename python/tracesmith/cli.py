@@ -642,7 +642,7 @@ def cmd_benchmark(args):
             is_cuda_available, get_cuda_device_count,
             StackCapture, StackCaptureConfig, CallStack,
             SBTWriter, TraceMetadata, TraceEvent, EventType,
-            ProfilerConfig, getCurrentTimestamp
+            ProfilerConfig, get_current_timestamp
         )
     except ImportError as e:
         print_error(f"Failed to import TraceSmith modules: {e}")
@@ -756,7 +756,7 @@ def cmd_benchmark(args):
             cp, CUPTIProfiler, 
             target_kernels, output_file, 
             capture_stacks, stack_capturer, host_stacks,
-            verbose, SBTWriter, TraceMetadata, TraceEvent, EventType, getCurrentTimestamp
+            verbose, SBTWriter, TraceMetadata, TraceEvent, EventType, get_current_timestamp
         )
     
     # =================================================================
@@ -793,7 +793,7 @@ def cmd_benchmark(args):
             event = TraceEvent()
             event.type = EventType.KernelLaunch
             event.name = f"benchmark_kernel_{i}"
-            event.timestamp = getCurrentTimestamp()
+            event.timestamp = get_current_timestamp()
             event.correlation_id = i
             event.device_id = 0
             event.stream_id = 0
@@ -805,7 +805,7 @@ def cmd_benchmark(args):
             event = TraceEvent()
             event.type = EventType.KernelLaunch
             event.name = f"benchmark_kernel_{i}"
-            event.timestamp = getCurrentTimestamp()
+            event.timestamp = get_current_timestamp()
             event.correlation_id = i
             event.device_id = 0
             event.stream_id = 0
@@ -930,7 +930,7 @@ def cmd_benchmark(args):
 def _run_real_gpu_benchmark(cp, CUPTIProfiler, target_kernels, output_file, 
                             capture_stacks, stack_capturer, host_stacks,
                             verbose, SBTWriter, TraceMetadata, TraceEvent, 
-                            EventType, getCurrentTimestamp):
+                            EventType, get_current_timestamp):
     """Run benchmark with real GPU kernels and CUPTI profiling."""
     import time
     
