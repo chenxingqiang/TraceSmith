@@ -17,10 +17,10 @@ Or via Python module:
     python -m tracesmith <command>
 """
 
-import argparse
+import argparse  # noqa: I001
 import sys
 from pathlib import Path
-from typing import Any, Dict, List  # noqa: I001
+from typing import Any, Dict, List
 
 # =============================================================================
 # ANSI Color Codes
