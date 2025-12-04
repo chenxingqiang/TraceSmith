@@ -292,7 +292,7 @@ std::vector<DeviceInfo> CUPTIProfiler::getDeviceInfo() const {
         
         DeviceInfo info;
         info.device_id = i;
-        info.platform = PlatformType::CUDA;
+        info.vendor = "NVIDIA";
         
         // Device name
         char name[256];
@@ -304,7 +304,8 @@ std::vector<DeviceInfo> CUPTIProfiler::getDeviceInfo() const {
         int major = 0, minor = 0;
         cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device);
         cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device);
-        info.driver_version = "SM " + std::to_string(major) + "." + std::to_string(minor);
+        info.compute_major = major;
+        info.compute_minor = minor;
         
         // Memory
         size_t total_mem = 0;
@@ -314,12 +315,12 @@ std::vector<DeviceInfo> CUPTIProfiler::getDeviceInfo() const {
         // Compute units (SMs)
         int sm_count = 0;
         cuDeviceGetAttribute(&sm_count, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device);
-        info.compute_units = sm_count;
+        info.multiprocessor_count = sm_count;
         
         // Clock speed
-        int clock_rate = 0;
-        cuDeviceGetAttribute(&clock_rate, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, device);
-        info.max_clock_speed = clock_rate / 1000; // MHz
+        int clock_rate_khz = 0;
+        cuDeviceGetAttribute(&clock_rate_khz, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, device);
+        info.clock_rate = clock_rate_khz; // kHz
         
         devices.push_back(info);
     }
