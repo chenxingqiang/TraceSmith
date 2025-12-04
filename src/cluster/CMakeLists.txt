@@ -8,6 +8,11 @@ set(CLUSTER_SOURCES
 
 add_library(tracesmith-cluster STATIC ${CLUSTER_SOURCES})
 
+# Required for linking into Python extension (.so)
+set_target_properties(tracesmith-cluster PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)
+
 target_include_directories(tracesmith-cluster PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
