@@ -20,7 +20,7 @@ Or via Python module:
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List  # noqa: I001
 
 # =============================================================================
 # ANSI Color Codes
@@ -548,7 +548,7 @@ def cmd_analyze(args):
 
         # Sort by total time
         sorted_kernels = sorted(
-            list(kernel_stats.items()),
+            kernel_stats.items(),
             key=lambda x: sum(x[1]),
             reverse=True
         )
@@ -619,7 +619,7 @@ def cmd_replay(args):
 
     print(f"\n{colorize(Color.BOLD)}Replay Results:{colorize(Color.RESET)}")
     success_color = Color.GREEN if result.success else Color.RED
-    print(f"  Success:       {C(success_color)}{result.success}{colorize(Color.RESET)}")
+    print(f"  Success:       {colorize(success_color)}{result.success}{colorize(Color.RESET)}")
     print(f"  Operations:    {result.operations_executed}/{result.operations_total}")
     print(f"  Deterministic: {result.deterministic}")
     print(f"  Duration:      {format_duration(result.replay_duration)}")
@@ -641,7 +641,7 @@ def cmd_benchmark(args):
 
     # Import TraceSmith modules
     try:
-        from . import (
+        from . import (  # noqa: I001
             EventType,
             SBTWriter,
             StackCapture,
@@ -689,9 +689,10 @@ def cmd_benchmark(args):
 
     # Check for CUPTI profiler
     cupti_available = False
-    CUPTIProfiler = None
+    cupti_profiler_cls = None
     try:
-        from . import CUPTIProfiler
+        from . import CUPTIProfiler as _CUPTIProfiler
+        cupti_profiler_cls = _CUPTIProfiler
         cupti_available = True
     except ImportError:
         pass
@@ -900,7 +901,7 @@ def cmd_benchmark(args):
     else:
         color = Color.RED
 
-    print(f"{colorize(Color.BOLD)}{C(color)}")
+    print(f"{colorize(Color.BOLD)}{colorize(color)}")
     print("╔══════════════════════════════════════════════════════════════════════╗")
     print("║                         BENCHMARK SUMMARY                            ║")
     print("╠══════════════════════════════════════════════════════════════════════╣")
@@ -1073,7 +1074,7 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
     else:
         color = Color.RED
 
-    print(f"{colorize(Color.BOLD)}{C(color)}")
+    print(f"{colorize(Color.BOLD)}{colorize(color)}")
     print("╔══════════════════════════════════════════════════════════════════════╗")
     print("║                         BENCHMARK SUMMARY                            ║")
     print("╠══════════════════════════════════════════════════════════════════════╣")
