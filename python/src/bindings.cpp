@@ -13,6 +13,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/chrono.h>
 #include <pybind11/functional.h>
+#include <sstream>
 
 #include "tracesmith/types.hpp"
 #include "tracesmith/profiler.hpp"
@@ -29,6 +30,7 @@
 #include "tracesmith/bpf_types.hpp"
 #include "tracesmith/gpu_state_machine.hpp"
 #include "tracesmith/instruction_stream.hpp"
+#include "tracesmith/stack_capture.hpp"
 
 namespace py = pybind11;
 using namespace tracesmith;
@@ -86,6 +88,66 @@ PYBIND11_MODULE(_tracesmith, m) {
                    " type=" + std::to_string(static_cast<int>(f.type)) +
                    " is_start=" + (f.is_start ? "True" : "False") + ">";
         });
+    
+    // StackFrame struct
+    py::class_<StackFrame>(m, "StackFrame")
+        .def(py::init<>())
+        .def(py::init<uint64_t>())
+        .def_readwrite("address", &StackFrame::address)
+        .def_readwrite("function_name", &StackFrame::function_name)
+        .def_readwrite("file_name", &StackFrame::file_name)
+        .def_readwrite("line_number", &StackFrame::line_number)
+        .def("__repr__", [](const StackFrame& f) {
+            return "<StackFrame 0x" + 
+                   ([](uint64_t v) { 
+                       std::ostringstream os; 
+                       os << std::hex << v; 
+                       return os.str(); 
+                   })(f.address) + 
+                   " " + (f.function_name.empty() ? "<unknown>" : f.function_name) + ">";
+        });
+    
+    // CallStack struct
+    py::class_<CallStack>(m, "CallStack")
+        .def(py::init<>())
+        .def_readwrite("frames", &CallStack::frames)
+        .def_readwrite("thread_id", &CallStack::thread_id)
+        .def("empty", &CallStack::empty)
+        .def("depth", &CallStack::depth)
+        .def("__len__", &CallStack::depth)
+        .def("__repr__", [](const CallStack& cs) {
+            return "<CallStack thread=" + std::to_string(cs.thread_id) + 
+                   " frames=" + std::to_string(cs.frames.size()) + ">";
+        });
+    
+    // StackCaptureConfig struct
+    py::class_<StackCaptureConfig>(m, "StackCaptureConfig")
+        .def(py::init<>())
+        .def_readwrite("max_depth", &StackCaptureConfig::max_depth)
+        .def_readwrite("skip_frames", &StackCaptureConfig::skip_frames)
+        .def_readwrite("async_signal_safe", &StackCaptureConfig::async_signal_safe)
+        .def_readwrite("resolve_symbols", &StackCaptureConfig::resolve_symbols)
+        .def_readwrite("demangle", &StackCaptureConfig::demangle);
+    
+    // StackCapture class
+    py::class_<StackCapture>(m, "StackCapture")
+        .def(py::init<const StackCaptureConfig&>(), py::arg("config") = StackCaptureConfig())
+        .def("capture", [](StackCapture& self) {
+            CallStack cs;
+            self.capture(cs);
+            return cs;
+        }, "Capture the current call stack")
+        .def("capture_with_thread_id", [](StackCapture& self, uint64_t thread_id) {
+            CallStack cs;
+            self.captureWithThreadId(thread_id, cs);
+            return cs;
+        }, py::arg("thread_id"), "Capture call stack with a specific thread ID")
+        .def("resolve_symbols", &StackCapture::resolveSymbols,
+             "Resolve symbols for captured addresses")
+        .def_static("get_current_thread_id", &StackCapture::getCurrentThreadId,
+                    "Get the current thread ID")
+        .def_static("is_available", &StackCapture::isAvailable,
+                    "Check if stack capture is available on this platform");
     
     // TraceEvent class (with Kineto-compatible fields)
     py::class_<TraceEvent>(m, "TraceEvent")

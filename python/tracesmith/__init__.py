@@ -58,6 +58,14 @@ from ._tracesmith import (
     CounterEvent,
     
     # ========================================================================
+    # Stack Capture
+    # ========================================================================
+    StackFrame,
+    CallStack,
+    StackCaptureConfig,
+    StackCapture,
+    
+    # ========================================================================
     # File I/O - SBT Binary Format
     # ========================================================================
     SBTWriter,
@@ -189,6 +197,12 @@ __all__ = [
     'FlowInfo',
     'MemoryEvent',
     'CounterEvent',
+    
+    # Stack Capture
+    'StackFrame',
+    'CallStack',
+    'StackCaptureConfig',
+    'StackCapture',
     
     # File I/O
     'SBTWriter',
