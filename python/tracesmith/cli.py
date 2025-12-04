@@ -386,14 +386,12 @@ def cmd_view(args):
         return 1
     
     result, metadata = reader.read_metadata()
-    events = reader.read_events(0)  # Read all
+    events = reader.read_all()  # Read all events
     
     print_section(f"Trace File: {input_path}")
     
     # Basic info
     print(f"{C(Color.BOLD)}File Info:{C(Color.RESET)}")
-    header = reader.header()
-    print(f"  Version:  {header.version_major}.{header.version_minor}")
     print(f"  Events:   {C(Color.GREEN)}{len(events)}{C(Color.RESET)}")
     if metadata.application_name:
         print(f"  App:      {metadata.application_name}")
@@ -476,7 +474,7 @@ def cmd_export(args):
         print_error(f"Invalid SBT file '{input_path}'")
         return 1
     
-    events = reader.read_events(0)
+    events = reader.read_all()
     print_info(f"Read {len(events)} events")
     
     # Export
@@ -514,7 +512,7 @@ def cmd_analyze(args):
         print_error(f"Invalid SBT file '{input_path}'")
         return 1
     
-    events = reader.read_events(0)
+    events = reader.read_all()
     
     print_section("Performance Analysis")
     
@@ -589,7 +587,7 @@ def cmd_replay(args):
         print_error(f"Invalid SBT file '{input_path}'")
         return 1
     
-    events = reader.read_events(0)
+    events = reader.read_all()
     print_info(f"Loaded {len(events)} events")
     
     # Create replay engine

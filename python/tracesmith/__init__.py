@@ -30,6 +30,7 @@ from ._tracesmith import (
     # ========================================================================
     EventType,
     PlatformType,
+    platform_type_to_string,
     ReplayMode,
     FlowType,
     OverflowPolicy,
@@ -174,6 +175,7 @@ __all__ = [
     # Core Enums
     'EventType',
     'PlatformType',
+    'platform_type_to_string',
     'ReplayMode',
     'FlowType',
     'OverflowPolicy',

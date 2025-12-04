@@ -248,6 +248,10 @@ PYBIND11_MODULE(_tracesmith, m) {
         .value("Metal", PlatformType::Metal)
         .export_values();
     
+    // Platform type to string helper
+    m.def("platform_type_to_string", &platformTypeToString, 
+          "Convert PlatformType to human-readable string");
+    
     // OverflowPolicy enum
     py::enum_<OverflowPolicy>(m, "OverflowPolicy")
         .value("DropOldest", OverflowPolicy::DropOldest)
