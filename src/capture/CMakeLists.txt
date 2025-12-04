@@ -21,8 +21,9 @@ if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
     message(STATUS "Building CUPTI profiler")
     target_sources(tracesmith-capture PRIVATE cupti_profiler.cpp)
     target_include_directories(tracesmith-capture PRIVATE ${CUPTI_INCLUDE_DIRS})
-    target_link_libraries(tracesmith-capture PRIVATE CUPTI::cupti)
-    target_compile_definitions(tracesmith-capture PRIVATE TRACESMITH_ENABLE_CUDA)
+    # Use PUBLIC so downstream targets also link against CUDA
+    target_link_libraries(tracesmith-capture PUBLIC CUPTI::cupti CUDA::cuda_driver)
+    target_compile_definitions(tracesmith-capture PUBLIC TRACESMITH_ENABLE_CUDA)
 endif()
 
 if(TRACESMITH_ENABLE_ROCM)
