@@ -4,12 +4,13 @@ requires = [
     "wheel",
     "cmake>=3.16",
     "pybind11>=2.11.0",
+    "ninja",  # Faster builds
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "tracesmith"
-version = "0.6.3"
+version = "0.6.4"
 description = "Cross-platform GPU Profiling & Replay System"
 readme = "README.md"
 license = {text = "Apache-2.0"}

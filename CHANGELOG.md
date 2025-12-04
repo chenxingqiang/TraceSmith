@@ -5,6 +5,21 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2024-12-04
+
+### Added
+- **Platform-specific builds**: Support compiling for specific GPU platforms
+  - `TRACESMITH_CUDA=1` for NVIDIA CUDA/CUPTI
+  - `TRACESMITH_ROCM=1` for AMD ROCm
+  - `TRACESMITH_METAL=1` for Apple Metal
+- Auto-detection of GPU platform during installation
+- Ninja build system support for faster compilation
+- Added `is_cuda_available()`, `get_cuda_device_count()`, `detect_platform()` to Python API
+
+### Changed
+- Build system now auto-detects CUDA_HOME/CUDA_PATH environment variables
+- Parallel build enabled by default
+
 ## [0.6.3] - 2024-12-04
 
 ### Changed
