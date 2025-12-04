@@ -33,7 +33,7 @@ class CMakeBuild(build_ext):
         cfg = 'Debug' if self.debug else 'Release'
 
         cmake_args = [
-            f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
+            f'-DTRACESMITH_PYTHON_OUTPUT_DIR={extdir}',
             f'-DPYTHON_EXECUTABLE={sys.executable}',
             f'-DCMAKE_BUILD_TYPE={cfg}',
             '-DTRACESMITH_BUILD_TESTS=OFF',
@@ -57,7 +57,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='tracesmith',
-    version='0.6.1',
+    version='0.6.2',
     author='Xingqiang Chen',
     author_email='chenxingqiang@gmail.com',
     description='Cross-platform GPU Profiling & Replay System',
