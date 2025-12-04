@@ -128,7 +128,9 @@ def demo_sbt_file_io(events):
         device.name = "Example GPU"
         device.vendor = "TraceSmith"
         device.total_memory = 8 * 1024 * 1024 * 1024  # 8GB
-        device.compute_units = 80
+        device.multiprocessor_count = 80
+        device.compute_major = 8
+        device.compute_minor = 6
         writer.write_device_info([device])
         
         # Write events
@@ -143,13 +145,12 @@ def demo_sbt_file_io(events):
         reader = ts.SBTReader(filename)
         
         if reader.is_valid():
-            record = ts.TraceRecord()
-            reader.read_all(record)
-            print(f"  Read {record.size()} events")
+            read_events = reader.read_all()
+            print(f"  Read {len(read_events)} events")
             
-            # Filter by type
-            kernel_events = record.filter_by_type(ts.EventType.KernelLaunch)
-            memcpy_events = record.filter_by_type(ts.EventType.MemcpyH2D)
+            # Filter by type manually
+            kernel_events = [e for e in read_events if e.type == ts.EventType.KernelLaunch]
+            memcpy_events = [e for e in read_events if e.type == ts.EventType.MemcpyH2D]
             print(f"  Kernels: {len(kernel_events)}")
             print(f"  Memory copies: {len(memcpy_events)}")
         else:
@@ -188,45 +189,46 @@ def demo_memory_profiler():
     
     # Configure profiler
     config = ts.MemoryProfilerConfig()
-    config.track_allocations = True
-    config.track_peak = True
+    config.track_call_stacks = False
+    config.detect_double_free = True
+    config.snapshot_interval_ms = 100
     
     profiler = ts.MemoryProfiler(config)
+    profiler.start()
     
     # Simulate allocations
     print("Simulating memory operations...")
     
     addresses = []
-    categories = [
-        ts.MemoryCategory.Parameter,
-        ts.MemoryCategory.Activation,
-        ts.MemoryCategory.Gradient,
-    ]
     
     for i in range(5):
         addr = 0x10000000 + i * 0x100000
         size = (1 + i) * 1024 * 1024  # 1-5 MB
-        category = categories[i % len(categories)]
         
-        profiler.record_allocation(addr, size, category, 0)
+        profiler.record_alloc(addr, size, 0)
         addresses.append(addr)
         print(f"  Allocated: 0x{addr:x} ({size // 1024 // 1024} MB)")
     
     # Take snapshot
     snapshot = profiler.take_snapshot()
-    print(f"\nSnapshot: {len(snapshot.allocations)} allocations")
+    print(f"\nSnapshot: {snapshot.live_allocations} live allocations")
+    print(f"  Live bytes: {snapshot.live_bytes // 1024 // 1024} MB")
+    print(f"  Total allocated: {snapshot.total_allocated // 1024 // 1024} MB")
     
     # Free some memory
     for addr in addresses[:2]:
-        profiler.record_deallocation(addr)
+        profiler.record_free(addr)
         print(f"  Freed: 0x{addr:x}")
+    
+    profiler.stop()
     
     # Generate report
     report = profiler.generate_report()
     print(f"\nMemory Report:")
-    print(f"  Current usage: {report.current_usage // 1024 // 1024} MB")
-    print(f"  Peak usage: {report.peak_usage // 1024 // 1024} MB")
-    print(f"  Live allocations: {report.live_allocations}")
+    print(f"  Current usage: {report.current_memory_usage // 1024 // 1024} MB")
+    print(f"  Peak usage: {report.peak_memory_usage // 1024 // 1024} MB")
+    print(f"  Total allocations: {report.total_allocations}")
+    print(f"  Total frees: {report.total_frees}")
     
     # Detect leaks (remaining allocations)
     leaks = profiler.detect_leaks()
@@ -330,9 +332,11 @@ def demo_state_machine(events):
     for device_id, stream_id in state_machine.get_all_streams():
         stream_state = state_machine.get_stream_state(device_id, stream_id)
         if stream_state:
-            state_name = ts.gpu_state_to_string(stream_state.current_state())
+            state = stream_state.current_state()
+            state_name = str(state).split('.')[-1]  # GPUState.Idle -> Idle
+            utilization = min(stream_state.utilization() * 100, 100.0)  # Cap at 100%
             print(f"  Device {device_id}, Stream {stream_id}: {state_name} "
-                  f"({stream_state.utilization() * 100:.1f}% utilized)")
+                  f"({utilization:.1f}% utilized)")
 
 
 def demo_counter_events():
