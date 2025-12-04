@@ -6,6 +6,12 @@
 namespace tracesmith {
 
 bool PerfettoExporter::exportToFile(const std::vector<TraceEvent>& events, const std::string& output_file) {
+    return exportToFile(events, {}, output_file);
+}
+
+bool PerfettoExporter::exportToFile(const std::vector<TraceEvent>& events,
+                                    const std::vector<CounterEvent>& counters,
+                                    const std::string& output_file) {
     std::ofstream out(output_file);
     if (!out) {
         return false;
@@ -21,9 +27,19 @@ bool PerfettoExporter::exportToFile(const std::vector<TraceEvent>& events, const
     // Write metadata events (process/thread names)
     writeMetadataEvents(out, events, first);
     
+    // Write counter track metadata
+    if (enable_counter_tracks_ && !counters.empty()) {
+        writeCounterTrackMetadata(out, counters, first);
+    }
+    
     // Write trace events
     for (const auto& event : events) {
         writeEvent(out, event, first);
+    }
+    
+    // Write counter events
+    if (enable_counter_tracks_ && !counters.empty()) {
+        writeCounterEvents(out, counters, first);
     }
     
     // Write flow events for dependencies
@@ -36,6 +52,11 @@ bool PerfettoExporter::exportToFile(const std::vector<TraceEvent>& events, const
 }
 
 std::string PerfettoExporter::exportToString(const std::vector<TraceEvent>& events) {
+    return exportToString(events, {});
+}
+
+std::string PerfettoExporter::exportToString(const std::vector<TraceEvent>& events,
+                                             const std::vector<CounterEvent>& counters) {
     // Use string stream to build output
     std::ostringstream temp_file;
     
@@ -49,9 +70,19 @@ std::string PerfettoExporter::exportToString(const std::vector<TraceEvent>& even
     // Write metadata events
     writeMetadataEvents(temp_file, events, first);
     
+    // Write counter track metadata
+    if (enable_counter_tracks_ && !counters.empty()) {
+        writeCounterTrackMetadata(temp_file, counters, first);
+    }
+    
     // Write trace events
     for (const auto& event : events) {
         writeEvent(temp_file, event, first);
+    }
+    
+    // Write counter events
+    if (enable_counter_tracks_ && !counters.empty()) {
+        writeCounterEvents(temp_file, counters, first);
     }
     
     // Write flow events
@@ -114,9 +145,93 @@ void PerfettoExporter::writeFooter(std::ostream& out) {
     out << "\n  ],\n";
     out << "  \"displayTimeUnit\": \"ns\",\n";
     out << "  \"otherData\": {\n";
-    out << "    \"version\": \"TraceSmith v0.1.1\"\n";
+    out << "    \"version\": \"TraceSmith v0.5.0\"\n";
     out << "  }\n";
     out << "}\n";
+}
+
+void PerfettoExporter::writeCounterTrackMetadata(std::ostream& out, const std::vector<CounterEvent>& counters, bool& first) {
+    // Collect unique counter names
+    counter_names_.clear();
+    for (const auto& counter : counters) {
+        counter_names_.insert(counter.counter_name);
+    }
+    
+    // Use a separate process for counter tracks to keep them organized
+    const uint32_t counter_pid = 9999; // Special PID for counter tracks
+    
+    // Write process metadata for counter tracks
+    if (!first) {
+        out << ",\n";
+    }
+    first = false;
+    
+    out << "    {\n";
+    out << "      \"name\": \"process_name\",\n";
+    out << "      \"ph\": \"M\",\n";
+    out << "      \"pid\": " << counter_pid << ",\n";
+    out << "      \"args\": {\n";
+    out << "        \"name\": \"Performance Counters\"\n";
+    out << "      }\n";
+    out << "    }";
+    
+    // Write thread metadata for each counter track
+    uint32_t counter_tid = 1;
+    for (const auto& name : counter_names_) {
+        if (!first) {
+            out << ",\n";
+        }
+        first = false;
+        
+        out << "    {\n";
+        out << "      \"name\": \"thread_name\",\n";
+        out << "      \"ph\": \"M\",\n";
+        out << "      \"pid\": " << counter_pid << ",\n";
+        out << "      \"tid\": " << counter_tid << ",\n";
+        out << "      \"args\": {\n";
+        out << "        \"name\": \"" << name << "\"\n";
+        out << "      }\n";
+        out << "    }";
+        
+        counter_tid++;
+    }
+}
+
+void PerfettoExporter::writeCounterEvents(std::ostream& out, const std::vector<CounterEvent>& counters, bool& first) {
+    const uint32_t counter_pid = 9999; // Same as in writeCounterTrackMetadata
+    
+    // Build a map of counter name -> tid
+    std::map<std::string, uint32_t> name_to_tid;
+    uint32_t tid = 1;
+    for (const auto& name : counter_names_) {
+        name_to_tid[name] = tid++;
+    }
+    
+    // Write counter events
+    for (const auto& counter : counters) {
+        if (!first) {
+            out << ",\n";
+        }
+        first = false;
+        
+        out << "    {\n";
+        out << "      \"name\": \"" << counter.counter_name << "\",\n";
+        out << "      \"cat\": \"counter\",\n";
+        out << "      \"ph\": \"C\",\n"; // Counter event
+        out << "      \"ts\": " << eventToMicroseconds(counter.timestamp) << ",\n";
+        out << "      \"pid\": " << counter_pid << ",\n";
+        out << "      \"tid\": " << name_to_tid[counter.counter_name] << ",\n";
+        out << "      \"args\": {\n";
+        out << "        \"" << counter.counter_name << "\": " << std::fixed << std::setprecision(2) << counter.value;
+        
+        // Add unit if present
+        if (!counter.unit.empty()) {
+            out << ",\n        \"unit\": \"" << counter.unit << "\"";
+        }
+        
+        out << "\n      }\n";
+        out << "    }";
+    }
 }
 
 std::string PerfettoExporter::getEventPhase(EventType type) {

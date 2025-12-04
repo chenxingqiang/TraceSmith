@@ -1,7 +1,7 @@
 # TraceSmith Integration Progress
 
-**Last Updated**: December 3, 2024  
-**Version**: v0.1.1
+**Last Updated**: December 4, 2024  
+**Version**: v0.5.0
 
 ## Completed Integrations ✅
 
@@ -242,8 +242,34 @@
 
 ---
 
-### 10. RenderDoc Architecture Study (Priority 2.5)
-**Status**: 📋 Planned for v0.5.0  
+### 10. Counter Track Visualization (v0.5.0)
+**Status**: ✅ Complete  
+**Commit**: (pending)  
+**Effort**: 0.5 days  
+**Impact**: High
+
+**What was done**:
+1. PerfettoExporter counter track support ✅
+2. Counter track metadata (process/thread naming) ✅
+3. Counter event export (ph: "C") ✅
+4. Unit support in counter values ✅
+5. counter_track_example demonstration ✅
+
+**Features**:
+- Counter tracks appear as line graphs in Perfetto UI
+- Separate "Performance Counters" process for organization
+- Support for any metric: occupancy, bandwidth, power, temp, etc.
+- Full unit support (GB/s, %, W, etc.)
+
+**Files**:
+- `include/tracesmith/perfetto_exporter.hpp` (counter API)
+- `src/state/perfetto_exporter.cpp` (counter export)
+- `examples/counter_track_example.cpp`
+
+---
+
+### 11. RenderDoc Architecture Study (Priority 2.5)
+**Status**: 📋 Planned for v0.6.0  
 **Estimated Effort**: 4-6 weeks  
 **Impact**: Medium-High
 

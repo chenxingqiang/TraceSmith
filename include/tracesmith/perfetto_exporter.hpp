@@ -35,7 +35,7 @@ class PerfettoExporter {
 public:
     PerfettoExporter() = default;
     
-    /**
+/**
      * Export events to enhanced Perfetto JSON format
      * 
      * @param events Events to export
@@ -45,12 +45,34 @@ public:
     bool exportToFile(const std::vector<TraceEvent>& events, const std::string& output_file);
     
     /**
+     * Export events with counter tracks to enhanced Perfetto JSON format
+     * 
+     * @param events Events to export
+     * @param counters Counter events for time-series visualization
+     * @param output_file Path to output file
+     * @return true if successful
+     */
+    bool exportToFile(const std::vector<TraceEvent>& events,
+                      const std::vector<CounterEvent>& counters,
+                      const std::string& output_file);
+    
+    /**
      * Export to JSON string
      * 
      * @param events Events to export
      * @return JSON string in Perfetto format
      */
     std::string exportToString(const std::vector<TraceEvent>& events);
+    
+    /**
+     * Export events with counters to JSON string
+     * 
+     * @param events Events to export
+     * @param counters Counter events for time-series visualization
+     * @return JSON string in Perfetto format
+     */
+    std::string exportToString(const std::vector<TraceEvent>& events,
+                               const std::vector<CounterEvent>& counters);
     
     /**
      * Enable GPU-specific track separation
@@ -63,6 +85,11 @@ public:
     void setEnableFlowEvents(bool enable) { enable_flow_events_ = enable; }
     
     /**
+     * Enable counter track visualization
+     */
+    void setEnableCounterTracks(bool enable) { enable_counter_tracks_ = enable; }
+    
+    /**
      * Set custom metadata for process/thread naming
      */
     void setMetadata(const PerfettoMetadata& metadata) { metadata_ = metadata; }
@@ -72,6 +99,8 @@ private:
     void writeMetadataEvents(std::ostream& out, const std::vector<TraceEvent>& events, bool& first);
     void writeEvent(std::ostream& out, const TraceEvent& event, bool& first);
     void writeFlowEvents(std::ostream& out, const std::vector<TraceEvent>& events, bool& first);
+    void writeCounterEvents(std::ostream& out, const std::vector<CounterEvent>& counters, bool& first);
+    void writeCounterTrackMetadata(std::ostream& out, const std::vector<CounterEvent>& counters, bool& first);
     void writeFooter(std::ostream& out);
     
     std::string getEventPhase(EventType type);
@@ -85,9 +114,11 @@ private:
     
     bool enable_gpu_tracks_ = true;
     bool enable_flow_events_ = true;
+    bool enable_counter_tracks_ = true;
     PerfettoMetadata metadata_;
     std::set<uint32_t> device_ids_;
     std::set<uint32_t> stream_ids_;
+    std::set<std::string> counter_names_;  // Track unique counter names
 };
 
 } // namespace tracesmith

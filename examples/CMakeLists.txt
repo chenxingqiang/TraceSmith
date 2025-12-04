@@ -92,6 +92,18 @@ target_link_libraries(realtime_tracing_example PRIVATE
     tracesmith-state
 )
 
+# Counter Track Visualization Example (v0.5.0)
+add_executable(counter_track_example
+    counter_track_example.cpp
+)
+
+target_link_libraries(counter_track_example PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-capture
+    tracesmith-state
+)
+
 # Link Perfetto SDK if enabled
 if(TRACESMITH_USE_PERFETTO_SDK)
     target_link_libraries(perfetto_proto_test PRIVATE perfetto_sdk)

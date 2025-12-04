@@ -1,0 +1,1936 @@
+{
+  "traceEvents": [
+    {
+      "name": "process_name",
+      "ph": "M",
+      "pid": 0,
+      "args": {
+        "name": "GPU Device 0"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 0,
+      "tid": 0,
+      "args": {
+        "name": "Stream 0"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 0,
+      "tid": 1,
+      "args": {
+        "name": "Stream 1"
+      }
+    },
+    {
+      "name": "process_name",
+      "ph": "M",
+      "pid": 9999,
+      "args": {
+        "name": "Performance Counters"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "name": "GPU Memory (GB)"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "name": "Memory Bandwidth"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "name": "Power (W)"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "name": "SM Occupancy"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "name": "TFLOPs"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "name": "Temperature"
+      }
+    },
+    {
+      "name": "compute_kernel_0",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 1000000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 50000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 1,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 0,
+        "grid_dim": [256, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_1",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 1100000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 60000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 2,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "grid_dim": [320, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_2",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 1200000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 70000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 3,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 0,
+        "grid_dim": [384, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_3",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 1300000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 50000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 4,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "grid_dim": [448, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_0",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 1400000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 60000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 5,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 0,
+        "grid_dim": [256, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_1",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 1500000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 70000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 6,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "grid_dim": [320, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_2",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 1600000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 50000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 7,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 0,
+        "grid_dim": [384, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_3",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 1700000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 60000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 8,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "grid_dim": [448, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_0",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 1800000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 70000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 9,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 0,
+        "grid_dim": [256, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_1",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 1900000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 50000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 10,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "grid_dim": [320, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_2",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2000000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 60000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 11,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 0,
+        "grid_dim": [384, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_3",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2100000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 70000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 12,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "grid_dim": [448, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_0",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2200000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 50000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 13,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 0,
+        "grid_dim": [256, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_1",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2300000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 60000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 14,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "grid_dim": [320, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_2",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2400000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 70000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 15,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 0,
+        "grid_dim": [384, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_3",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2500000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 50000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 16,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "grid_dim": [448, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_0",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2600000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 60000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 17,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 0,
+        "grid_dim": [256, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_1",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2700000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 70000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 18,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "grid_dim": [320, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_2",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2800000,
+      "pid": 0,
+      "tid": 0,
+      "dur": 50000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 19,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 0,
+        "grid_dim": [384, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "compute_kernel_3",
+      "cat": "kernel",
+      "ph": "X",
+      "ts": 2900000,
+      "pid": 0,
+      "tid": 1,
+      "dur": 60000,
+      "args": {
+        "track_name": "GPU Compute",
+        "correlation_id": 20,
+        "event_type": "1",
+        "device_id": 0,
+        "stream_id": 1,
+        "grid_dim": [448, 256, 1],
+        "block_dim": [32, 8, 1],
+        "shared_memory_bytes": 0,
+        "registers_per_thread": 0
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1000000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 71.69,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1000000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 3.57,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1000000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 499.81,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1000000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 177.69,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1000000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 65.81,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1000000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 6.10,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1100000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 73.06,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1100000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 4.43,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1100000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 486.56,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1100000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 204.43,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1100000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 64.47,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1100000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 7.29,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1200000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 79.64,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1200000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 5.20,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1200000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 460.10,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1200000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 220.10,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1200000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 67.47,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1200000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 7.02,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1300000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 88.11,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1300000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 5.16,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1300000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 442.57,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1300000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 217.05,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1300000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 68.09,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1300000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 8.94,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1400000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 87.08,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1400000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 5.68,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1400000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 392.59,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1400000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 210.24,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1400000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 67.01,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1400000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 4.65,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1500000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 81.48,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1500000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 5.83,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1500000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 354.07,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1500000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 185.76,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1500000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 68.46,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1500000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 3.97,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1600000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 72.56,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1600000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 5.55,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1600000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 322.14,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1600000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 159.60,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1600000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 69.74,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1600000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 3.57,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1700000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 61.46,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1700000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 6.08,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1700000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 296.16,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1700000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 146.53,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1700000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 67.35,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1700000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 1.62,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1800000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 56.15,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1800000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 5.23,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1800000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 291.78,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1800000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 137.25,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1800000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 66.93,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1800000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 4.58,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1900000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 60.32,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1900000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 5.11,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1900000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 311.39,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1900000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 145.27,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1900000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 68.37,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 1900000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 4.42,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2000000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 51.77,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2000000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 4.54,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2000000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 328.68,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2000000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 169.16,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2000000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 70.16,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2000000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 5.96,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2100000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 59.16,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2100000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 3.73,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2100000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 360.70,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2100000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 194.19,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2100000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 69.53,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2100000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 8.26,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2200000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 63.00,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2200000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 3.23,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2200000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 406.40,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2200000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 214.57,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2200000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 71.57,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2200000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 6.51,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2300000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 77.79,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2300000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 2.95,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2300000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 446.40,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2300000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 215.70,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2300000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 73.17,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2300000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 4.90,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2400000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 74.89,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2400000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 1.86,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2400000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 484.47,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2400000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 216.29,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2400000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 72.54,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2400000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 4.31,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2500000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 84.65,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2500000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 2.34,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2500000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 490.59,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2500000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 195.17,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2500000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 72.15,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2500000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 2.45,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2600000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 83.81,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2600000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 1.62,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2600000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 497.35,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2600000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 173.61,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2600000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 71.85,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2600000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 1.20,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2700000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 79.18,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2700000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 1.95,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2700000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 483.27,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2700000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 147.81,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2700000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 71.60,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2700000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 1.97,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2800000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 76.74,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2800000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 2.05,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2800000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 469.71,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2800000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 142.19,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2800000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 74.07,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2800000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 6.04,
+        "unit": "TFLOPs"
+      }
+    },
+    {
+      "name": "SM Occupancy",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2900000,
+      "pid": 9999,
+      "tid": 4,
+      "args": {
+        "SM Occupancy": 65.50,
+        "unit": "%"
+      }
+    },
+    {
+      "name": "GPU Memory (GB)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2900000,
+      "pid": 9999,
+      "tid": 1,
+      "args": {
+        "GPU Memory (GB)": 3.07,
+        "unit": "GB"
+      }
+    },
+    {
+      "name": "Memory Bandwidth",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2900000,
+      "pid": 9999,
+      "tid": 2,
+      "args": {
+        "Memory Bandwidth": 433.34,
+        "unit": "GB/s"
+      }
+    },
+    {
+      "name": "Power (W)",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2900000,
+      "pid": 9999,
+      "tid": 3,
+      "args": {
+        "Power (W)": 147.76,
+        "unit": "W"
+      }
+    },
+    {
+      "name": "Temperature",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2900000,
+      "pid": 9999,
+      "tid": 6,
+      "args": {
+        "Temperature": 74.69,
+        "unit": "°C"
+      }
+    },
+    {
+      "name": "TFLOPs",
+      "cat": "counter",
+      "ph": "C",
+      "ts": 2900000,
+      "pid": 9999,
+      "tid": 5,
+      "args": {
+        "TFLOPs": 6.04,
+        "unit": "TFLOPs"
+      }
+    }
+  ],
+  "displayTimeUnit": "ns",
+  "otherData": {
+    "version": "TraceSmith v0.5.0"
+  }
+}

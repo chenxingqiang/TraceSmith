@@ -231,12 +231,14 @@ struct CounterEvent {
         , track_id(0)
         , value(0.0) {}
     
-    CounterEvent(const std::string& name, double val, Timestamp ts = 0)
+    CounterEvent(const std::string& name, double val, Timestamp ts = 0, 
+                 const std::string& unit_str = "")
         : timestamp(ts ? ts : getCurrentTimestamp())
         , device_id(0)
         , track_id(0)
         , counter_name(name)
-        , value(val) {}
+        , value(val)
+        , unit(unit_str) {}
 };
 
 /// GPU device information
