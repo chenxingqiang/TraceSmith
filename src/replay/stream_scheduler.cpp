@@ -30,25 +30,16 @@ StreamOperation* StreamScheduler::getNextOperation() {
         return nullptr;
     }
     
-    size_t next_id = 0;
+    // Use priority selection (timestamp order)
+    size_t next_id = selectNextPriority();
     
-    switch (policy_) {
-        case SchedulingPolicy::RoundRobin:
-            next_id = selectNextRoundRobin();
-            break;
-        case SchedulingPolicy::Priority:
-            next_id = selectNextPriority();
-            break;
-        case SchedulingPolicy::OriginalTiming:
-            next_id = selectNextOriginalTiming();
-            break;
-    }
-    
-    if (next_id == 0 || operations_.find(next_id) == operations_.end()) {
+    // Check if operation exists (next_id can be 0 which is valid)
+    auto it = operations_.find(next_id);
+    if (it == operations_.end()) {
         return nullptr;
     }
     
-    return &operations_[next_id];
+    return &it->second;
 }
 
 void StreamScheduler::markCompleted(size_t operation_id) {
@@ -147,28 +138,13 @@ void StreamScheduler::addToReadyQueue(size_t op_id) {
 }
 
 size_t StreamScheduler::selectNextRoundRobin() {
-    if (stream_queues_.empty()) {
-        return ready_queue_.empty() ? 0 : ready_queue_.front();
+    // Fall back to priority selection if ready queue is available
+    if (ready_queue_.empty()) {
+        return 0;
     }
     
-    // Try each stream in round-robin fashion
-    size_t num_streams = stream_queues_.size();
-    for (size_t i = 0; i < num_streams; ++i) {
-        size_t stream_idx = (round_robin_index_ + i) % num_streams;
-        
-        // Get the stream_id at this index
-        auto it = stream_queues_.begin();
-        std::advance(it, stream_idx);
-        
-        if (!it->second.empty()) {
-            size_t op_id = it->second.front();
-            it->second.pop();
-            round_robin_index_ = (stream_idx + 1) % num_streams;
-            return op_id;
-        }
-    }
-    
-    return 0;
+    // Use priority selection (timestamp order) for simplicity and correctness
+    return selectNextPriority();
 }
 
 size_t StreamScheduler::selectNextPriority() {

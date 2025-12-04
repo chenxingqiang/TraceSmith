@@ -141,11 +141,20 @@ ReplayResult ReplayEngine::executeReplay(const ReplayConfig& config) {
         
         if (!op) {
             // No operations ready - check if we're stuck
-            if (scheduler_->pendingCount() > 0 && scheduler_->readyCount() == 0) {
+            size_t pending = scheduler_->pendingCount();
+            size_t ready = scheduler_->readyCount();
+            
+            if (pending > 0 && ready == 0) {
                 result.errors.push_back("Deadlock detected: " + 
-                    std::to_string(scheduler_->pendingCount()) + " operations pending but none ready");
+                    std::to_string(pending) + " operations pending but none ready");
                 break;
             }
+            
+            // No more operations to process
+            if (pending == 0 && ready == 0) {
+                break;
+            }
+            
             continue;
         }
         
