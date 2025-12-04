@@ -2,18 +2,28 @@
 #include <tracesmith/sbt_format.hpp>
 #include <filesystem>
 #include <fstream>
+#include <random>
+#include <sstream>
 
 using namespace tracesmith;
 
 class SBTFormatTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        test_file_ = std::filesystem::temp_directory_path() / "test_trace.sbt";
+        // Generate unique filename to avoid conflicts in parallel test runs
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(10000, 99999);
+        std::ostringstream oss;
+        oss << "test_trace_" << dis(gen) << "_" << ::testing::UnitTest::GetInstance()->current_test_info()->name() << ".sbt";
+        test_file_ = std::filesystem::temp_directory_path() / oss.str();
     }
     
     void TearDown() override {
-        if (std::filesystem::exists(test_file_)) {
-            std::filesystem::remove(test_file_);
+        // Clean up test file
+        std::error_code ec;
+        if (std::filesystem::exists(test_file_, ec)) {
+            std::filesystem::remove(test_file_, ec);
         }
     }
     
@@ -224,6 +234,7 @@ TEST_F(SBTFormatTest, ManyEvents) {
     // Write
     {
         SBTWriter writer(test_file_.string());
+        ASSERT_TRUE(writer.isOpen()) << "Failed to open file for writing: " << test_file_;
         
         for (size_t i = 0; i < num_events; ++i) {
             TraceEvent event(EventType::KernelLaunch, i * 1000);
@@ -238,14 +249,22 @@ TEST_F(SBTFormatTest, ManyEvents) {
         EXPECT_EQ(writer.eventCount(), num_events);
     }
     
+    // Verify file exists and has content
+    ASSERT_TRUE(std::filesystem::exists(test_file_)) << "File not created: " << test_file_;
+    auto file_size = std::filesystem::file_size(test_file_);
+    ASSERT_GT(file_size, 0u) << "File is empty: " << test_file_;
+    
     // Read
     {
         SBTReader reader(test_file_.string());
+        ASSERT_TRUE(reader.isOpen()) << "Failed to open file for reading: " << test_file_;
+        ASSERT_TRUE(reader.isValid()) << "File is not a valid SBT file: " << test_file_;
+        
         TraceRecord record;
         auto result = reader.readAll(record);
         
-        ASSERT_TRUE(result);
-        EXPECT_EQ(record.size(), num_events);
+        ASSERT_TRUE(result) << "Failed to read events from: " << test_file_;
+        EXPECT_EQ(record.size(), num_events) << "Event count mismatch";
     }
 }
 
