@@ -11,7 +11,6 @@
  * - NVIDIA GPU with CUDA support
  * - Build with -DTRACESMITH_ENABLE_CUDA=ON
  * 
- * NO SIMULATION - Uses actual GPU memory!
  */
 
 #include "tracesmith/memory_profiler.hpp"

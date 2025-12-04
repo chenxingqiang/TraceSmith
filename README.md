@@ -406,6 +406,18 @@ make benchmark_10k_stacks -j8
 | relu (1M elements) | 4,704 | 4.70 | 0.0047 |
 | **TOTAL** | **76,929** | **76.93** | **0.0769** |
 
+### Real GPU Memory Profiling Results
+
+| Phase | Operation | Memory |
+|-------|-----------|--------|
+| Parameters | 5× cudaMalloc | 31 MB |
+| Activations | 8× cudaMalloc | 72 MB |
+| Gradients | 5× cudaMalloc | 31 MB |
+| Workspace | 3× cudaMalloc | 96 MB |
+| **Total Allocated** | 21 operations | **230 MB** |
+| **Total Freed** | 16 cudaFree | **199 MB** |
+| **Test Duration** | - | **5 ms** |
+
 ### Performance Characteristics
 
 | Feature | Performance |
