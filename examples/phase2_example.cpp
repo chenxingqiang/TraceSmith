@@ -2,7 +2,7 @@
  * TraceSmith Phase 2 Example
  * 
  * Demonstrates Phase 2 features:
- * - Call stack capture
+ * - Call stack capture with StackCapture
  * - Instruction stream building
  * - Dependency analysis
  * - DOT export for visualization
@@ -14,22 +14,94 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <random>
 
 using namespace tracesmith;
 
-// Example function hierarchy to generate interesting call stacks
-void launchKernel(SimulationProfiler* profiler, const std::string& name) {
-    profiler->generateKernelEvent(name, 0);
-}
-
-void processData(SimulationProfiler* profiler) {
-    launchKernel(profiler, "preprocess_kernel");
-    launchKernel(profiler, "compute_kernel");
-    launchKernel(profiler, "postprocess_kernel");
-}
-
-void runPipeline(SimulationProfiler* profiler) {
-    processData(profiler);
+// Generate sample events that simulate a GPU pipeline
+std::vector<TraceEvent> generatePipelineEvents() {
+    std::vector<TraceEvent> events;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> duration_dist(10000, 100000);  // 10-100 µs
+    
+    Timestamp base_time = getCurrentTimestamp();
+    Timestamp current_time = base_time;
+    uint32_t correlation_id = 1;
+    
+    // Simulate a 3-stage pipeline on multiple streams
+    const int num_iterations = 5;
+    
+    for (int iter = 0; iter < num_iterations; ++iter) {
+        // Stage 1: Preprocess on stream 0
+        TraceEvent preprocess;
+        preprocess.type = EventType::KernelLaunch;
+        preprocess.name = "preprocess_kernel";
+        preprocess.timestamp = current_time;
+        preprocess.duration = duration_dist(gen);
+        preprocess.device_id = 0;
+        preprocess.stream_id = 0;
+        preprocess.correlation_id = correlation_id++;
+        preprocess.kernel_params = KernelParams{256, 1, 1, 256, 1, 1, 0, 32};
+        events.push_back(preprocess);
+        current_time += preprocess.duration + 5000;
+        
+        // Stage 2: Compute on stream 1 (depends on preprocess)
+        TraceEvent compute;
+        compute.type = EventType::KernelLaunch;
+        compute.name = "compute_kernel";
+        compute.timestamp = current_time;
+        compute.duration = duration_dist(gen) * 2;  // Longer
+        compute.device_id = 0;
+        compute.stream_id = 1;
+        compute.correlation_id = correlation_id++;
+        compute.kernel_params = KernelParams{512, 512, 1, 32, 8, 1, 4096, 48};
+        events.push_back(compute);
+        current_time += compute.duration + 5000;
+        
+        // Stage 3: Postprocess on stream 0
+        TraceEvent postprocess;
+        postprocess.type = EventType::KernelLaunch;
+        postprocess.name = "postprocess_kernel";
+        postprocess.timestamp = current_time;
+        postprocess.duration = duration_dist(gen);
+        postprocess.device_id = 0;
+        postprocess.stream_id = 0;
+        postprocess.correlation_id = correlation_id++;
+        postprocess.kernel_params = KernelParams{128, 1, 1, 128, 1, 1, 0, 24};
+        events.push_back(postprocess);
+        current_time += postprocess.duration + 5000;
+        
+        // Memory copy between stages
+        if (iter < num_iterations - 1) {
+            TraceEvent memcpy_event;
+            memcpy_event.type = EventType::MemcpyD2D;
+            memcpy_event.name = "intermediate_copy";
+            memcpy_event.timestamp = current_time;
+            memcpy_event.duration = 20000;
+            memcpy_event.device_id = 0;
+            memcpy_event.stream_id = 2;
+            memcpy_event.correlation_id = correlation_id++;
+            memcpy_event.memory_params = MemoryParams{};
+            memcpy_event.memory_params->size_bytes = 4 * 1024 * 1024;  // 4MB
+            events.push_back(memcpy_event);
+            current_time += memcpy_event.duration + 5000;
+        }
+        
+        // Synchronization point
+        TraceEvent sync;
+        sync.type = EventType::StreamSync;
+        sync.name = "cudaStreamSynchronize";
+        sync.timestamp = current_time;
+        sync.duration = 1000;
+        sync.device_id = 0;
+        sync.stream_id = 0;
+        sync.correlation_id = correlation_id++;
+        events.push_back(sync);
+        current_time += sync.duration + 10000;
+    }
+    
+    return events;
 }
 
 int main() {
@@ -42,31 +114,37 @@ int main() {
     std::cout << "----------------------------\n\n";
     
     if (!StackCapture::isAvailable()) {
-        std::cout << "Stack capture not available on this platform\n";
-        return 1;
+        std::cout << "Note: Stack capture not fully available on this platform\n";
+        std::cout << "      Using fallback implementation\n\n";
+    } else {
+        std::cout << "Stack capture is available!\n";
     }
     
-    std::cout << "Stack capture is available!\n";
     std::cout << "Current thread ID: " << StackCapture::getCurrentThreadId() << "\n\n";
     
     // Capture call stack
     StackCaptureConfig config;
-    config.max_depth = 10;
+    config.max_depth = 16;
     config.resolve_symbols = true;
     config.demangle = true;
+    config.skip_frames = 0;
     
     StackCapture capturer(config);
-    CallStack stack;
+    CallStack stack = capturer.capture();
     
-    size_t frames = capturer.capture(stack);
-    std::cout << "Captured " << frames << " stack frames:\n";
+    std::cout << "Captured " << stack.frames.size() << " stack frames:\n";
     
-    for (size_t i = 0; i < std::min(size_t(5), stack.frames.size()); ++i) {
+    for (size_t i = 0; i < std::min(size_t(8), stack.frames.size()); ++i) {
         const auto& frame = stack.frames[i];
         std::cout << "  [" << i << "] " << std::hex << "0x" << frame.address << std::dec;
         
         if (!frame.function_name.empty()) {
-            std::cout << " " << frame.function_name;
+            // Truncate long names
+            std::string func = frame.function_name;
+            if (func.length() > 50) {
+                func = func.substr(0, 47) + "...";
+            }
+            std::cout << " " << func;
         }
         if (!frame.file_name.empty()) {
             std::cout << " (" << frame.file_name;
@@ -78,38 +156,25 @@ int main() {
         std::cout << "\n";
     }
     
+    if (stack.frames.size() > 8) {
+        std::cout << "  ... and " << (stack.frames.size() - 8) << " more frames\n";
+    }
     std::cout << "\n";
     
     // ================================================================
-    // Part 2: Event Capture with Call Stacks
+    // Part 2: Event Generation with Context
     // ================================================================
-    std::cout << "Part 2: Event Capture with Call Stacks\n";
+    std::cout << "Part 2: Event Generation with Context\n";
     std::cout << "----------------------------------------\n\n";
     
-    auto profiler = std::make_unique<SimulationProfiler>();
+    std::vector<TraceEvent> events = generatePipelineEvents();
     
-    ProfilerConfig prof_config;
-    prof_config.buffer_size = 10000;
-    prof_config.capture_callstacks = true;
-    prof_config.callstack_depth = 16;
+    // Attach call stacks to some events
+    for (size_t i = 0; i < events.size(); i += 3) {
+        events[i].call_stack = capturer.capture();
+    }
     
-    profiler->initialize(prof_config);
-    profiler->setEventRate(50);  // Lower rate for easier analysis
-    
-    profiler->startCapture();
-    
-    // Generate some events with call stacks
-    runPipeline(profiler.get());
-    
-    // Wait a bit for more events
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    
-    profiler->stopCapture();
-    
-    std::vector<TraceEvent> events;
-    profiler->getEvents(events);
-    
-    std::cout << "Captured " << events.size() << " events\n";
+    std::cout << "Generated " << events.size() << " events\n";
     
     // Count events with call stacks
     size_t with_stacks = 0;
@@ -126,6 +191,7 @@ int main() {
         if (event.call_stack.has_value() && !event.call_stack->empty()) {
             std::cout << "\nExample event with call stack:\n";
             std::cout << "  Event: " << event.name << "\n";
+            std::cout << "  Type: " << eventTypeToString(event.type) << "\n";
             std::cout << "  Stream: " << event.stream_id << "\n";
             std::cout << "  Call stack depth: " << event.call_stack->depth() << "\n";
             
@@ -133,7 +199,9 @@ int main() {
                 const auto& frame = event.call_stack->frames[i];
                 std::cout << "    [" << i << "] ";
                 if (!frame.function_name.empty()) {
-                    std::cout << frame.function_name;
+                    std::string func = frame.function_name;
+                    if (func.length() > 40) func = func.substr(0, 37) + "...";
+                    std::cout << func;
                 } else {
                     std::cout << std::hex << "0x" << frame.address << std::dec;
                 }
@@ -142,7 +210,6 @@ int main() {
             break;
         }
     }
-    
     std::cout << "\n";
     
     // ================================================================
@@ -167,7 +234,6 @@ int main() {
     for (const auto& [stream_id, count] : stats.operations_per_stream) {
         std::cout << "    Stream " << stream_id << ": " << count << "\n";
     }
-    
     std::cout << "\n";
     
     // ================================================================
@@ -180,7 +246,7 @@ int main() {
     std::cout << "Found " << dependencies.size() << " dependencies\n";
     
     // Categorize dependencies
-    size_t sequential = 0, sync = 0, other = 0;
+    size_t sequential = 0, sync = 0, memory = 0, other = 0;
     for (const auto& dep : dependencies) {
         switch (dep.type) {
             case DependencyType::Sequential:
@@ -189,15 +255,19 @@ int main() {
             case DependencyType::Synchronization:
                 sync++;
                 break;
+            case DependencyType::MemoryDependency:
+                memory++;
+                break;
             default:
                 other++;
                 break;
         }
     }
     
-    std::cout << "  Sequential:      " << sequential << "\n";
-    std::cout << "  Synchronization: " << sync << "\n";
-    std::cout << "  Other:           " << other << "\n\n";
+    std::cout << "  Sequential:       " << sequential << "\n";
+    std::cout << "  Synchronization:  " << sync << "\n";
+    std::cout << "  Memory:           " << memory << "\n";
+    std::cout << "  Other:            " << other << "\n\n";
     
     // Show first few dependencies
     std::cout << "Sample dependencies:\n";
@@ -212,6 +282,9 @@ int main() {
             case DependencyType::Synchronization:
                 std::cout << " (Sync)";
                 break;
+            case DependencyType::MemoryDependency:
+                std::cout << " (Memory)";
+                break;
             default:
                 break;
         }
@@ -221,7 +294,6 @@ int main() {
         }
         std::cout << "\n";
     }
-    
     std::cout << "\n";
     
     // ================================================================
@@ -239,6 +311,31 @@ int main() {
         std::cout << "Exported dependency graph to: instruction_stream.dot\n";
         std::cout << "Visualize with: dot -Tpng instruction_stream.dot -o graph.png\n";
     }
+    
+    // Also save trace
+    std::cout << "\nSaving trace to phase2_trace.sbt...\n";
+    SBTWriter writer("phase2_trace.sbt");
+    
+    TraceMetadata metadata;
+    metadata.application_name = "Phase2Example";
+    metadata.start_time = events.front().timestamp;
+    metadata.end_time = events.back().timestamp;
+    writer.writeMetadata(metadata);
+    
+    std::vector<DeviceInfo> devices;
+    DeviceInfo device;
+    device.device_id = 0;
+    device.name = "TraceSmith GPU";
+    device.vendor = "TraceSmith";
+    devices.push_back(device);
+    writer.writeDeviceInfo(devices);
+    
+    for (const auto& event : events) {
+        writer.writeEvent(event);
+    }
+    writer.finalize();
+    
+    std::cout << "Saved to: phase2_trace.sbt\n";
     
     std::cout << "\n=== Phase 2 Example Complete ===\n";
     

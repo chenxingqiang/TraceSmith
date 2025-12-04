@@ -12,34 +12,86 @@
 #include "tracesmith/tracesmith.hpp"
 #include "tracesmith/replay_engine.hpp"
 #include <iostream>
+#include <random>
 
 using namespace tracesmith;
 
-// Helper to capture a trace
-std::vector<TraceEvent> captureTrace() {
-    auto profiler = createProfiler(PlatformType::Simulation);
+// Generate a multi-stream trace with dependencies
+std::vector<TraceEvent> generateReplayTrace() {
+    std::vector<TraceEvent> events;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> duration_dist(20000, 200000);  // 20-200 µs
     
-    ProfilerConfig config;
-    config.capture_callstacks = false;
-    profiler->initialize(config);
-    profiler->startCapture();
+    Timestamp base_time = getCurrentTimestamp();
+    std::vector<Timestamp> stream_times(3, base_time);
+    uint32_t correlation_id = 1;
     
     // Generate multi-stream workload
-    auto* sim = dynamic_cast<SimulationProfiler*>(profiler.get());
-    if (sim) {
+    for (int iter = 0; iter < 5; ++iter) {
         for (int stream = 0; stream < 3; ++stream) {
-            for (int i = 0; i < 10; ++i) {
-                std::string name = "kernel_s" + std::to_string(stream) + "_" + std::to_string(i);
-                sim->generateKernelEvent(name, stream);
+            // Kernel launch
+            TraceEvent kernel;
+            kernel.type = EventType::KernelLaunch;
+            kernel.name = "kernel_s" + std::to_string(stream) + "_" + std::to_string(iter);
+            kernel.timestamp = stream_times[stream];
+            kernel.duration = duration_dist(gen);
+            kernel.device_id = 0;
+            kernel.stream_id = stream;
+            kernel.correlation_id = correlation_id++;
+            
+            kernel.kernel_params = KernelParams{};
+            kernel.kernel_params->grid_x = 256 + iter * 32;
+            kernel.kernel_params->grid_y = 128;
+            kernel.kernel_params->grid_z = 1;
+            kernel.kernel_params->block_x = 32;
+            kernel.kernel_params->block_y = 8;
+            kernel.kernel_params->block_z = 1;
+            
+            events.push_back(kernel);
+            stream_times[stream] += kernel.duration + 5000;
+            
+            // Memory copy on some iterations
+            if (iter % 2 == 0 && stream == 0) {
+                TraceEvent memcpy;
+                memcpy.type = EventType::MemcpyH2D;
+                memcpy.name = "upload_iter_" + std::to_string(iter);
+                memcpy.timestamp = stream_times[stream];
+                memcpy.duration = 30000;
+                memcpy.device_id = 0;
+                memcpy.stream_id = stream;
+                memcpy.correlation_id = correlation_id++;
+                memcpy.memory_params = MemoryParams{};
+                memcpy.memory_params->size_bytes = 4 * 1024 * 1024;
+                events.push_back(memcpy);
+                stream_times[stream] += memcpy.duration + 5000;
             }
+        }
+        
+        // Stream synchronization between iterations
+        Timestamp max_time = *std::max_element(stream_times.begin(), stream_times.end());
+        
+        TraceEvent sync;
+        sync.type = EventType::StreamSync;
+        sync.name = "sync_iter_" + std::to_string(iter);
+        sync.timestamp = max_time;
+        sync.duration = 1000;
+        sync.device_id = 0;
+        sync.stream_id = 0;
+        sync.correlation_id = correlation_id++;
+        events.push_back(sync);
+        
+        // Update all stream times to after sync
+        for (auto& t : stream_times) {
+            t = max_time + 5000;
         }
     }
     
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    profiler->stopCapture();
-    
-    std::vector<TraceEvent> events;
-    profiler->getEvents(events, 0);
+    // Sort by timestamp
+    std::sort(events.begin(), events.end(), 
+              [](const TraceEvent& a, const TraceEvent& b) {
+                  return a.timestamp < b.timestamp;
+              });
     
     return events;
 }
@@ -48,10 +100,10 @@ int main() {
     std::cout << "TraceSmith Phase 4 Example\n";
     std::cout << "==========================\n\n";
     
-    // Step 1: Capture a trace
-    std::cout << "1. Capturing trace...\n";
-    auto events = captureTrace();
-    std::cout << "   Captured " << events.size() << " events\n\n";
+    // Step 1: Generate a trace
+    std::cout << "1. Generating trace...\n";
+    auto events = generateReplayTrace();
+    std::cout << "   Generated " << events.size() << " events\n\n";
     
     // Step 2: Full replay
     std::cout << "2. Full Replay\n";
@@ -67,7 +119,8 @@ int main() {
     
     auto result_full = engine.replay(config_full);
     std::cout << result_full.summary();
-    std::cout << "   Replay duration: " << (result_full.replay_duration / 1000000.0) << " ms\n\n";
+    std::cout << "   Replay duration: " << std::fixed << std::setprecision(2) 
+              << (result_full.replay_duration / 1000000.0) << " ms\n\n";
     
     // Step 3: Dry-run mode
     std::cout << "3. Dry-Run Mode (validation without execution)\n";
@@ -80,7 +133,8 @@ int main() {
     
     auto result_dryrun = engine.replay(config_dryrun);
     std::cout << result_dryrun.summary();
-    std::cout << "   Dry-run overhead: " << (result_dryrun.replay_duration / 1000.0) << " µs\n\n";
+    std::cout << "   Dry-run overhead: " << std::fixed << std::setprecision(2) 
+              << (result_dryrun.replay_duration / 1000.0) << " µs\n\n";
     
     // Step 4: Partial replay (first 50% of operations)
     std::cout << "4. Partial Replay (first 50% operations)\n";
@@ -146,8 +200,10 @@ int main() {
     std::vector<DeviceInfo> devices;
     DeviceInfo device;
     device.device_id = 0;
-    device.name = "Simulation GPU";
+    device.name = "TraceSmith GPU";
     device.vendor = "TraceSmith";
+    device.compute_units = 80;
+    device.max_clock_speed = 1700;
     devices.push_back(device);
     writer.writeDeviceInfo(devices);
     

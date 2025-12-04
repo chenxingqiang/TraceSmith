@@ -2,74 +2,135 @@
  * TraceSmith Basic Example
  * 
  * This example demonstrates basic usage of TraceSmith:
- * - Creating a profiler
- * - Capturing GPU events (simulated)
- * - Writing trace to file
+ * - Platform detection
+ * - Creating trace events manually
+ * - Writing trace to SBT file
  * - Reading and analyzing trace
+ * - Exporting to Perfetto format
  */
 
 #include <tracesmith/tracesmith.hpp>
+#include <tracesmith/perfetto_exporter.hpp>
 #include <iostream>
 #include <iomanip>
-#include <thread>
-#include <chrono>
+#include <random>
 
 using namespace tracesmith;
 
-int main() {
-    std::cout << "TraceSmith v" << getVersionString() << " Basic Example\n\n";
+// Helper to generate sample GPU events
+std::vector<TraceEvent> generateSampleEvents(int count) {
+    std::vector<TraceEvent> events;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> duration_dist(50000, 500000);  // 50-500 µs
+    std::uniform_int_distribution<> stream_dist(0, 3);
     
-    // ===========================================
-    // Part 1: Recording Events
-    // ===========================================
-    std::cout << "=== Part 1: Recording Events ===\n\n";
+    Timestamp base_time = getCurrentTimestamp();
+    Timestamp current_time = base_time;
     
-    // Create a simulation profiler (for testing without GPU)
-    auto profiler = createProfiler(PlatformType::Simulation);
-    
-    // Configure the profiler
-    ProfilerConfig config;
-    config.buffer_size = 100000;  // 100K events max
-    
-    profiler->initialize(config);
-    
-    // Set event rate for simulation (events per second)
-    if (auto* sim = dynamic_cast<SimulationProfiler*>(profiler.get())) {
-        sim->setEventRate(5000);  // 5000 events per second
+    for (int i = 0; i < count; ++i) {
+        TraceEvent event;
+        
+        // Vary event types
+        int type_selector = i % 5;
+        switch (type_selector) {
+            case 0:
+            case 1:
+            case 2:
+                event.type = EventType::KernelLaunch;
+                event.name = "compute_kernel_" + std::to_string(i);
+                event.kernel_params = KernelParams{};
+                event.kernel_params->grid_x = 256 + (i % 4) * 64;
+                event.kernel_params->grid_y = 128;
+                event.kernel_params->grid_z = 1;
+                event.kernel_params->block_x = 32;
+                event.kernel_params->block_y = 8;
+                event.kernel_params->block_z = 1;
+                event.kernel_params->shared_mem_bytes = (i % 3) * 1024;
+                event.kernel_params->registers_per_thread = 32;
+                break;
+            case 3:
+                event.type = EventType::MemcpyH2D;
+                event.name = "upload_data_" + std::to_string(i);
+                event.memory_params = MemoryParams{};
+                event.memory_params->size_bytes = (1 + (i % 4)) * 1024 * 1024;
+                event.memory_params->src_address = 0x7fff00000000 + i * 0x100000;
+                event.memory_params->dst_address = 0xb0000000 + i * 0x100000;
+                break;
+            case 4:
+                event.type = EventType::MemcpyD2H;
+                event.name = "download_result_" + std::to_string(i);
+                event.memory_params = MemoryParams{};
+                event.memory_params->size_bytes = (1 + (i % 4)) * 1024 * 1024;
+                event.memory_params->src_address = 0xb0000000 + i * 0x100000;
+                event.memory_params->dst_address = 0x7fff00000000 + i * 0x100000;
+                break;
+        }
+        
+        event.timestamp = current_time;
+        event.duration = duration_dist(gen);
+        event.device_id = 0;
+        event.stream_id = stream_dist(gen);
+        event.correlation_id = i + 1;
+        event.thread_id = std::hash<std::thread::id>{}(std::this_thread::get_id());
+        
+        events.push_back(event);
+        current_time += event.duration + 10000;  // Gap between events
     }
     
-    // Get device info
-    auto devices = profiler->getDeviceInfo();
-    std::cout << "Detected devices:\n";
-    for (const auto& dev : devices) {
-        std::cout << "  [" << dev.device_id << "] " << dev.name 
-                  << " (" << dev.vendor << ")\n";
+    return events;
+}
+
+int main() {
+    std::cout << "TraceSmith v" << getVersionString() << " Basic Example\n";
+    std::cout << std::string(50, '=') << "\n\n";
+    
+    // ===========================================
+    // Part 1: Platform Detection
+    // ===========================================
+    std::cout << "=== Part 1: Platform Detection ===\n\n";
+    
+    PlatformType detected = detectPlatform();
+    std::cout << "Detected platform: ";
+    switch (detected) {
+        case PlatformType::CUDA:
+            std::cout << "NVIDIA CUDA\n";
+            std::cout << "  CUDA available: " << (isCUDAAvailable() ? "Yes" : "No") << "\n";
+            if (isCUDAAvailable()) {
+                std::cout << "  Device count: " << getCUDADeviceCount() << "\n";
+                std::cout << "  Driver version: " << getCUDADriverVersion() << "\n";
+            }
+            break;
+        case PlatformType::Metal:
+            std::cout << "Apple Metal\n";
+            std::cout << "  Metal available: " << (isMetalAvailable() ? "Yes" : "No") << "\n";
+            if (isMetalAvailable()) {
+                std::cout << "  Device count: " << getMetalDeviceCount() << "\n";
+            }
+            break;
+        case PlatformType::ROCm:
+            std::cout << "AMD ROCm\n";
+            break;
+        default:
+            std::cout << "Unknown (no GPU detected)\n";
+            break;
     }
     std::cout << "\n";
     
-    // Start capturing
-    std::cout << "Starting capture for 2 seconds...\n";
-    profiler->startCapture();
+    // ===========================================
+    // Part 2: Creating Events
+    // ===========================================
+    std::cout << "=== Part 2: Creating Events ===\n\n";
     
-    // Wait for some events
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    
-    // Stop capturing
-    profiler->stopCapture();
-    
-    // Get events
-    std::vector<TraceEvent> events;
-    profiler->getEvents(events);
-    
-    std::cout << "Captured " << events.size() << " events\n";
-    std::cout << "Dropped " << profiler->eventsDropped() << " events\n\n";
+    std::vector<TraceEvent> events = generateSampleEvents(50);
+    std::cout << "Generated " << events.size() << " sample events\n\n";
     
     // ===========================================
-    // Part 2: Writing to File
+    // Part 3: Writing to SBT File
     // ===========================================
-    std::cout << "=== Part 2: Writing to File ===\n\n";
+    std::cout << "=== Part 3: Writing to SBT File ===\n\n";
     
-    const std::string filename = "example_trace.sbt";
+    const std::string filename = "basic_trace.sbt";
     
     SBTWriter writer(filename);
     
@@ -81,6 +142,19 @@ int main() {
     metadata.end_time = events.empty() ? 0 : events.back().timestamp;
     metadata.hostname = "localhost";
     metadata.process_id = 12345;
+    
+    // Create device info
+    std::vector<DeviceInfo> devices;
+    DeviceInfo device;
+    device.device_id = 0;
+    device.name = "Example GPU";
+    device.vendor = "TraceSmith";
+    device.platform = detected;
+    device.total_memory = 8ULL * 1024 * 1024 * 1024;  // 8GB
+    device.compute_units = 80;
+    device.max_clock_speed = 1700;
+    devices.push_back(device);
+    
     metadata.devices = devices;
     
     writer.writeMetadata(metadata);
@@ -91,9 +165,9 @@ int main() {
     std::cout << "Wrote " << writer.eventCount() << " events to " << filename << "\n\n";
     
     // ===========================================
-    // Part 3: Reading and Analyzing
+    // Part 4: Reading and Analyzing
     // ===========================================
-    std::cout << "=== Part 3: Reading and Analyzing ===\n\n";
+    std::cout << "=== Part 4: Reading and Analyzing ===\n\n";
     
     SBTReader reader(filename);
     
@@ -112,12 +186,10 @@ int main() {
     auto kernels = record.filterByType(EventType::KernelLaunch);
     auto memcpy_h2d = record.filterByType(EventType::MemcpyH2D);
     auto memcpy_d2h = record.filterByType(EventType::MemcpyD2H);
-    auto syncs = record.filterByType(EventType::StreamSync);
     
     std::cout << "  KernelLaunch:  " << kernels.size() << "\n";
     std::cout << "  MemcpyH2D:     " << memcpy_h2d.size() << "\n";
-    std::cout << "  MemcpyD2H:     " << memcpy_d2h.size() << "\n";
-    std::cout << "  StreamSync:    " << syncs.size() << "\n\n";
+    std::cout << "  MemcpyD2H:     " << memcpy_d2h.size() << "\n\n";
     
     // Analyze by stream
     std::cout << "Events by stream:\n";
@@ -144,11 +216,32 @@ int main() {
                       << ">>>, <<<" << kp.block_x << "," << kp.block_y << "," << kp.block_z << ">>>";
         }
         
+        if (event.memory_params) {
+            const auto& mp = event.memory_params.value();
+            std::cout << " [" << (mp.size_bytes / 1024 / 1024) << " MB]";
+        }
+        
         std::cout << "\n";
         count++;
     }
     
-    std::cout << "\nExample complete!\n";
+    // ===========================================
+    // Part 5: Export to Perfetto
+    // ===========================================
+    std::cout << "\n=== Part 5: Export to Perfetto ===\n\n";
+    
+    PerfettoExporter exporter;
+    exporter.setEnableGPUTracks(true);
+    exporter.setEnableFlowEvents(true);
+    
+    const std::string perfetto_file = "basic_trace.json";
+    if (exporter.exportToFile(events, perfetto_file)) {
+        std::cout << "Exported to " << perfetto_file << "\n";
+        std::cout << "View at: https://ui.perfetto.dev\n";
+    }
+    
+    std::cout << "\n" << std::string(50, '=') << "\n";
+    std::cout << "Example complete!\n";
     
     return 0;
 }

@@ -1,5 +1,10 @@
 # Examples
+# ========
+# This directory contains example programs demonstrating TraceSmith features.
 
+# ----------------------------------------------------------------------------
+# Basic Example - Platform detection, events, SBT I/O, Perfetto export
+# ----------------------------------------------------------------------------
 add_executable(basic_example
     basic_example.cpp
 )
@@ -8,8 +13,12 @@ target_link_libraries(basic_example PRIVATE
     tracesmith-common
     tracesmith-format
     tracesmith-capture
+    tracesmith-state
 )
 
+# ----------------------------------------------------------------------------
+# Phase 2 Example - Stack capture, instruction stream, dependency analysis
+# ----------------------------------------------------------------------------
 add_executable(phase2_example
     phase2_example.cpp
 )
@@ -21,6 +30,9 @@ target_link_libraries(phase2_example PRIVATE
     tracesmith-state
 )
 
+# ----------------------------------------------------------------------------
+# Phase 3 Example - GPU state machine, timeline builder, visualization
+# ----------------------------------------------------------------------------
 add_executable(phase3_example
     phase3_example.cpp
 )
@@ -32,6 +44,9 @@ target_link_libraries(phase3_example PRIVATE
     tracesmith-state
 )
 
+# ----------------------------------------------------------------------------
+# Phase 4 Example - Replay engine, determinism checking
+# ----------------------------------------------------------------------------
 add_executable(phase4_example
     phase4_example.cpp
 )
@@ -44,7 +59,46 @@ target_link_libraries(phase4_example PRIVATE
     tracesmith-replay
 )
 
+# ----------------------------------------------------------------------------
+# Memory Profiler Example - GPU memory tracking, leak detection
+# ----------------------------------------------------------------------------
+add_executable(memory_profiler_example
+    memory_profiler_example.cpp
+)
+
+target_link_libraries(memory_profiler_example PRIVATE
+    tracesmith-common
+    tracesmith-capture
+)
+
+# ----------------------------------------------------------------------------
+# Stack Capture Example - Call stack capture, symbol resolution
+# ----------------------------------------------------------------------------
+add_executable(stack_capture_example
+    stack_capture_example.cpp
+)
+
+target_link_libraries(stack_capture_example PRIVATE
+    tracesmith-common
+    tracesmith-capture
+)
+
+# ----------------------------------------------------------------------------
+# XRay Example - LLVM XRay trace importing
+# ----------------------------------------------------------------------------
+add_executable(xray_example
+    xray_example.cpp
+)
+
+target_link_libraries(xray_example PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-state
+)
+
+# ----------------------------------------------------------------------------
 # Enhanced Perfetto Export Test
+# ----------------------------------------------------------------------------
 add_executable(perfetto_enhanced_test
     perfetto_enhanced_test.cpp
 )
@@ -56,7 +110,9 @@ target_link_libraries(perfetto_enhanced_test PRIVATE
     tracesmith-state
 )
 
-# Kineto Schema Test
+# ----------------------------------------------------------------------------
+# Kineto Schema Test - PyTorch profiler compatibility
+# ----------------------------------------------------------------------------
 add_executable(kineto_schema_test
     kineto_schema_test.cpp
 )
@@ -68,7 +124,9 @@ target_link_libraries(kineto_schema_test PRIVATE
     tracesmith-state
 )
 
+# ----------------------------------------------------------------------------
 # Perfetto ProtoZero Export Test
+# ----------------------------------------------------------------------------
 add_executable(perfetto_proto_test
     perfetto_proto_test.cpp
 )
@@ -80,7 +138,9 @@ target_link_libraries(perfetto_proto_test PRIVATE
     tracesmith-state
 )
 
+# ----------------------------------------------------------------------------
 # Real-time Tracing Example (v0.3.0)
+# ----------------------------------------------------------------------------
 add_executable(realtime_tracing_example
     realtime_tracing_example.cpp
 )
@@ -92,7 +152,9 @@ target_link_libraries(realtime_tracing_example PRIVATE
     tracesmith-state
 )
 
+# ----------------------------------------------------------------------------
 # Counter Track Visualization Example (v0.5.0)
+# ----------------------------------------------------------------------------
 add_executable(counter_track_example
     counter_track_example.cpp
 )
@@ -104,13 +166,31 @@ target_link_libraries(counter_track_example PRIVATE
     tracesmith-state
 )
 
+# ----------------------------------------------------------------------------
+# Frame Capture Example (RenderDoc-inspired) - v0.5.0
+# ----------------------------------------------------------------------------
+add_executable(frame_capture_example
+    frame_capture_example.cpp
+)
+
+target_link_libraries(frame_capture_example PRIVATE
+    tracesmith-common
+    tracesmith-replay
+)
+
+# ----------------------------------------------------------------------------
 # Link Perfetto SDK if enabled
+# ----------------------------------------------------------------------------
 if(TRACESMITH_USE_PERFETTO_SDK)
     target_link_libraries(perfetto_proto_test PRIVATE perfetto_sdk)
     target_link_libraries(realtime_tracing_example PRIVATE perfetto_sdk)
+    target_link_libraries(basic_example PRIVATE perfetto_sdk)
+    target_link_libraries(phase3_example PRIVATE perfetto_sdk)
 endif()
 
+# ----------------------------------------------------------------------------
 # CUPTI Example (requires CUDA)
+# ----------------------------------------------------------------------------
 if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
     # Enable CUDA language for .cu files
     enable_language(CUDA)
@@ -139,17 +219,9 @@ if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
     )
 endif()
 
-# Frame Capture Example (RenderDoc-inspired) - v0.5.0
-add_executable(frame_capture_example
-    frame_capture_example.cpp
-)
-
-target_link_libraries(frame_capture_example PRIVATE
-    tracesmith-common
-    tracesmith-replay
-)
-
+# ----------------------------------------------------------------------------
 # Metal Example (requires macOS)
+# ----------------------------------------------------------------------------
 if(TRACESMITH_ENABLE_METAL AND APPLE)
     add_executable(metal_example
         metal_example.mm
@@ -171,3 +243,38 @@ if(TRACESMITH_ENABLE_METAL AND APPLE)
         COMPILE_FLAGS "-fobjc-arc"
     )
 endif()
+
+# ----------------------------------------------------------------------------
+# Install Python example
+# ----------------------------------------------------------------------------
+install(FILES python_example.py
+    DESTINATION share/tracesmith/examples
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+                GROUP_READ GROUP_EXECUTE
+                WORLD_READ WORLD_EXECUTE
+)
+
+# ----------------------------------------------------------------------------
+# Summary message
+# ----------------------------------------------------------------------------
+message(STATUS "TraceSmith Examples:")
+message(STATUS "  - basic_example (Platform detection, SBT I/O, Perfetto export)")
+message(STATUS "  - phase2_example (Stack capture, instruction stream)")
+message(STATUS "  - phase3_example (GPU state machine, timeline)")
+message(STATUS "  - phase4_example (Replay engine)")
+message(STATUS "  - memory_profiler_example (Memory tracking, leak detection)")
+message(STATUS "  - stack_capture_example (Call stack capture)")
+message(STATUS "  - xray_example (LLVM XRay import)")
+message(STATUS "  - perfetto_enhanced_test (Enhanced Perfetto export)")
+message(STATUS "  - kineto_schema_test (PyTorch compatibility)")
+message(STATUS "  - perfetto_proto_test (ProtoZero export)")
+message(STATUS "  - realtime_tracing_example (Lock-free tracing)")
+message(STATUS "  - counter_track_example (Performance counters)")
+message(STATUS "  - frame_capture_example (RenderDoc-style capture)")
+if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
+    message(STATUS "  - cupti_example (NVIDIA CUPTI profiling)")
+endif()
+if(TRACESMITH_ENABLE_METAL AND APPLE)
+    message(STATUS "  - metal_example (Apple Metal profiling)")
+endif()
+message(STATUS "  - python_example.py (Python API demonstration)")
