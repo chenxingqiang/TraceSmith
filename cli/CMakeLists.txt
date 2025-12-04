@@ -7,6 +7,8 @@ target_link_libraries(tracesmith PRIVATE
     tracesmith-common
     tracesmith-format
     tracesmith-capture
+    tracesmith-state
+    tracesmith-replay
 )
 
 # Install CLI
