@@ -434,8 +434,9 @@ void CUPTIAPI CUPTIProfiler::callbackHandler(void* userdata,
             if (cbInfo->callbackSite == CUPTI_API_ENTER) {
                 // Record correlation ID -> timestamp mapping
                 std::lock_guard<std::mutex> lock(self->correlation_mutex_);
+                auto now = std::chrono::high_resolution_clock::now();
                 self->kernel_start_times_[cbInfo->correlationId] = 
-                    std::chrono::high_resolution_clock::now();
+                    static_cast<Timestamp>(now.time_since_epoch().count());
             }
         }
     }
