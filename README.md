@@ -191,7 +191,7 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
    ██║   ██║  ██║██║  ██║╚██████╗███████╗███████║██║ ╚═╝ ██║██║   ██║   ██║  ██║
    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝
 
-                    GPU Profiling & Replay System v0.6.7
+                    GPU Profiling & Replay System v0.6.8
 ```
 
 **Available Commands:**
@@ -521,7 +521,7 @@ make benchmark_10k_stacks -j8
 [![PyPI version](https://badge.fury.io/py/tracesmith.svg)](https://badge.fury.io/py/tracesmith)
 
 ```bash
-pip install tracesmith==0.6.7
+pip install tracesmith==0.6.8
 ```
 
 **Tested on NVIDIA GPU Server (RTX 4090):**
@@ -581,7 +581,8 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| **v0.6.7** | 2024-12 | **Real GPU benchmark** - 10K+ CUDA kernels with CUPTI  |
+| **v0.6.8** | 2024-12 | **Enhanced CLI** - ASCII banner, all commands, Python CLI |
+| v0.6.7 | 2024-12 | Real GPU benchmark - 10K+ CUDA kernels with CUPTI  |
 | v0.6.5 | 2024-12 | StackCapture bindings, OverflowPolicy, detect_leaks |
 | v0.6.2 | 2024-12 | PyPI release, Native extension packaging fix |
 | v0.6.0 | 2024-12 | NVIDIA CUPTI integration, Full GPU testing |

@@ -4,7 +4,7 @@ TraceSmith - GPU Profiling & Replay System
 A cross-platform GPU profiling and replay system for AI compilers,
 deep learning frameworks, and GPU driver engineers.
 
-Version: 0.6.3
+Version: 0.6.8
 
 Features:
 - Cross-platform GPU profiling (CUDA via CUPTI, ROCm, Metal)
