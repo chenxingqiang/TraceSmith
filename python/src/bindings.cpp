@@ -173,12 +173,29 @@ PYBIND11_MODULE(_tracesmith, m) {
         .export_values();
     
     // ProfilerConfig class
-    py::class_<ProfilerConfig>(m, "ProfilerConfig")
+    py::class_<ProfilerConfig>(m, "ProfilerConfig",
+        "Configuration options for GPU profilers")
         .def(py::init<>())
-        .def_readwrite("buffer_size", &ProfilerConfig::buffer_size)
-        .def_readwrite("capture_callstacks", &ProfilerConfig::capture_callstacks)
-        .def_readwrite("capture_kernels", &ProfilerConfig::capture_kernels)
-        .def_readwrite("capture_memcpy", &ProfilerConfig::capture_memcpy);
+        .def_readwrite("buffer_size", &ProfilerConfig::buffer_size,
+                       "Ring buffer size (number of events)")
+        .def_readwrite("capture_callstacks", &ProfilerConfig::capture_callstacks,
+                       "Whether to capture call stacks")
+        .def_readwrite("callstack_depth", &ProfilerConfig::callstack_depth,
+                       "Maximum call stack depth")
+        .def_readwrite("capture_kernel_params", &ProfilerConfig::capture_kernel_params,
+                       "Whether to capture kernel parameters")
+        .def_readwrite("capture_memory_params", &ProfilerConfig::capture_memory_params,
+                       "Whether to capture memory operation parameters")
+        .def_readwrite("capture_kernels", &ProfilerConfig::capture_kernels,
+                       "Whether to capture kernel events")
+        .def_readwrite("capture_memcpy", &ProfilerConfig::capture_memcpy,
+                       "Whether to capture memory copy events")
+        .def_readwrite("capture_memset", &ProfilerConfig::capture_memset,
+                       "Whether to capture memory set events")
+        .def_readwrite("capture_sync", &ProfilerConfig::capture_sync,
+                       "Whether to capture synchronization events")
+        .def_readwrite("capture_alloc", &ProfilerConfig::capture_alloc,
+                       "Whether to capture allocation events");
     
     // SBTWriter class
     py::class_<SBTWriter>(m, "SBTWriter")
@@ -712,7 +729,41 @@ PYBIND11_MODULE(_tracesmith, m) {
     m.def("event_type_to_string", &eventTypeToString,
           "Convert EventType to string");
     
-    m.def("create_profiler", [](PlatformType type) {
+    // ========================================================================
+    // IPlatformProfiler binding
+    // ========================================================================
+    
+    py::class_<IPlatformProfiler, std::shared_ptr<IPlatformProfiler>>(m, "IPlatformProfiler",
+        "Abstract interface for GPU profilers")
+        .def("platform_type", &IPlatformProfiler::platformType,
+             "Get the platform type")
+        .def("is_available", &IPlatformProfiler::isAvailable,
+             "Check if the platform is available on this system")
+        .def("initialize", &IPlatformProfiler::initialize,
+             py::arg("config"),
+             "Initialize the profiler with configuration")
+        .def("finalize", &IPlatformProfiler::finalize,
+             "Finalize and cleanup the profiler")
+        .def("start_capture", &IPlatformProfiler::startCapture,
+             "Start capturing events")
+        .def("stop_capture", &IPlatformProfiler::stopCapture,
+             "Stop capturing events")
+        .def("is_capturing", &IPlatformProfiler::isCapturing,
+             "Check if currently capturing")
+        .def("get_events", [](IPlatformProfiler& self, size_t max_count) {
+            std::vector<TraceEvent> events;
+            self.getEvents(events, max_count);
+            return events;
+        }, py::arg("max_count") = 0,
+           "Get captured events (drains the internal buffer)")
+        .def("get_device_info", &IPlatformProfiler::getDeviceInfo,
+             "Get device information")
+        .def("events_captured", &IPlatformProfiler::eventsCaptured,
+             "Get number of events captured")
+        .def("events_dropped", &IPlatformProfiler::eventsDropped,
+             "Get number of events dropped");
+    
+    m.def("create_profiler", [](PlatformType type) -> std::shared_ptr<IPlatformProfiler> {
         return createProfiler(type);
     }, py::arg("platform") = PlatformType::Unknown,
     "Create a profiler for the specified platform (CUDA, ROCm, Metal, or auto-detect with Unknown)");
