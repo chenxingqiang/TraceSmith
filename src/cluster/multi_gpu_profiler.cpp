@@ -188,7 +188,7 @@ bool MultiGPUProfiler::addGPU(uint32_t gpu_id) {
     ctx->device_info.name = prop.name;
     ctx->device_info.compute_major = prop.major;
     ctx->device_info.compute_minor = prop.minor;
-    ctx->device_info.memory_total = prop.totalGlobalMem;
+    ctx->device_info.total_memory = prop.totalGlobalMem;
     ctx->device_info.multiprocessor_count = prop.multiProcessorCount;
     ctx->device_info.clock_rate = prop.clockRate;
     ctx->device_info.memory_clock_rate = prop.memoryClockRate;
