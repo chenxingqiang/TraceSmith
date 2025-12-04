@@ -5,6 +5,24 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.7] - 2024-12-04
+
+### Added
+- **StackCapture bindings**: Full Python API for call stack capturing
+  - `StackCapture`, `CallStack`, `StackFrame`, `StackCaptureConfig` classes
+  - `is_available()`, `get_current_thread_id()` static methods
+  - Performance: ~108µs/capture, 9000+ captures/second
+- **OverflowPolicy enum**: `DropOldest`, `DropNewest`, `Block`
+- **ProfilerConfig.overflow_policy**: Configure ring buffer overflow behavior
+- **MemoryProfiler.detect_leaks()**: Detect potential memory leaks
+- Complete SBT format bindings: `DeviceInfo`, `TraceMetadata` full fields
+- Complete Replay module bindings: `ReplayConfig`, `ReplayResult` full fields
+
+### Fixed
+- Fixed missing `SBTReader.read_metadata()` binding
+- Fixed `MemoryProfiler.detect_leaks()` visibility (moved to public)
+- Fixed missing `OverflowPolicy` export in Python
+
 ## [0.6.4] - 2024-12-04
 
 ### Added
