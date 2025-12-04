@@ -245,6 +245,21 @@ if(TRACESMITH_ENABLE_METAL AND APPLE)
 endif()
 
 # ----------------------------------------------------------------------------
+# Goal Validation Example - Validates all project goals from PLANNING.md
+# ----------------------------------------------------------------------------
+add_executable(goal_validation_example
+    goal_validation_example.cpp
+)
+
+target_link_libraries(goal_validation_example PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-capture
+    tracesmith-state
+    tracesmith-replay
+)
+
+# ----------------------------------------------------------------------------
 # Install Python example
 # ----------------------------------------------------------------------------
 install(FILES python_example.py
@@ -278,3 +293,4 @@ if(TRACESMITH_ENABLE_METAL AND APPLE)
     message(STATUS "  - metal_example (Apple Metal profiling)")
 endif()
 message(STATUS "  - python_example.py (Python API demonstration)")
+message(STATUS "  - goal_validation_example (Validates all PLANNING.md goals)")
