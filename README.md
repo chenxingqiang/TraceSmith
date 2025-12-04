@@ -181,17 +181,87 @@ print(f"Events: {stats.events_emitted} emitted, {stats.events_dropped} dropped")
 
 #### Command Line Interface
 
-**Recording a Trace:**
+TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
 
-```bash
-./bin/tracesmith-cli record -o trace.sbt -d 5
+```
+████████╗██████╗  █████╗  ██████╗███████╗███████╗███╗   ███╗██╗████████╗██╗  ██╗
+╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██╔════╝██╔════╝████╗ ████║██║╚══██╔══╝██║  ██║
+   ██║   ██████╔╝███████║██║     █████╗  ███████╗██╔████╔██║██║   ██║   ███████║
+   ██║   ██╔══██╗██╔══██║██║     ██╔══╝  ╚════██║██║╚██╔╝██║██║   ██║   ██╔══██║
+   ██║   ██║  ██║██║  ██║╚██████╗███████╗███████║██║ ╚═╝ ██║██║   ██║   ██║  ██║
+   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝
+
+                    GPU Profiling & Replay System v0.6.7
 ```
 
-**Viewing a Trace:**
+**Available Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `record` | Record GPU events to a trace file |
+| `view` | View contents of a trace file |
+| `info` | Show detailed information about a trace file |
+| `export` | Export trace to Perfetto or other formats |
+| `analyze` | Analyze trace for performance insights |
+| `replay` | Replay a captured trace |
+| `devices` | List available GPU devices |
+| `version` | Show version information |
+| `help` | Show help message |
+
+**C++ CLI Examples:**
 
 ```bash
-./bin/tracesmith-cli view trace.sbt
-./bin/tracesmith-cli info trace.sbt
+# Record a trace (auto-detect GPU platform)
+./bin/tracesmith record -o trace.sbt -d 5
+
+# Record with specific platform
+./bin/tracesmith record -o trace.sbt -d 10 -p cuda
+
+# View trace with statistics
+./bin/tracesmith view trace.sbt --stats
+
+# Show trace file info
+./bin/tracesmith info trace.sbt
+
+# Export to Perfetto (view at ui.perfetto.dev)
+./bin/tracesmith export trace.sbt -f perfetto
+
+# Analyze performance
+./bin/tracesmith analyze trace.sbt
+
+# Replay trace (dry-run)
+./bin/tracesmith replay trace.sbt --mode dry-run
+
+# List available GPUs
+./bin/tracesmith devices
+
+# Disable colored output
+./bin/tracesmith --no-color help
+```
+
+**Python CLI Examples:**
+
+```bash
+# Show system info
+python -m tracesmith info
+
+# List GPU devices
+python -m tracesmith devices
+
+# Record a trace
+python -m tracesmith record -o trace.sbt -d 5
+
+# View trace contents
+python -m tracesmith view trace.sbt --stats
+
+# Export to Perfetto
+python -m tracesmith export trace.sbt -o trace.json
+
+# Analyze trace
+python -m tracesmith analyze trace.sbt
+
+# Replay trace
+python -m tracesmith replay trace.sbt --mode dry-run
 ```
 
 #### C++ API
