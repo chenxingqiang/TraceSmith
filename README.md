@@ -12,6 +12,7 @@
 - **SBT Binary Trace Format**: Compact, efficient binary format with string interning and delta timestamp encoding
 - **Multi-Platform Support**: NVIDIA CUDA (via CUPTI), AMD ROCm, Apple Metal (planned)
 - **Multi-GPU & Multi-Stream**: Full support for complex GPU topologies and async execution
+- **Multi-GPU Cluster Profiling** (v0.7.x): GPUTopology discovery, TimeSync (NTP/PTP/CUDA), NCCLTracker for distributed training
 - **Perfetto SDK Integration**: Native protobuf export (85% smaller files) + JSON fallback
 - **Real-time Tracing**: Thread-safe `TracingSession` with lock-free buffers (9K+ events/sec)
 - **Kineto-Compatible Schema**: PyTorch profiler compatibility with thread tracking, flexible metadata, and structured flows
