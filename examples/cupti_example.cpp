@@ -1,10 +1,12 @@
 /**
  * CUPTI Example - Real NVIDIA GPU Profiling with TraceSmith
  * 
- * This example demonstrates:
- * - Initializing the CUPTI profiler
+ * This example demonstrates REAL GPU profiling (NO SIMULATION):
+ * - Initializing the CUPTI profiler for hardware-level tracing
+ * - Running actual CUDA kernels (vectorAdd, matrixMul, ReLU)
  * - Capturing real GPU events (kernels, memory operations, synchronization)
- * - Exporting to Perfetto trace format
+ * - Multi-stream concurrent execution profiling
+ * - Exporting to SBT and Perfetto trace formats
  * 
  * Requirements:
  * - NVIDIA GPU with CUDA support
@@ -18,6 +20,10 @@
  * 
  * Run:
  *   ./bin/cupti_example
+ * 
+ * Output:
+ *   cupti_trace.sbt - TraceSmith binary trace
+ *   cupti_trace.json - Perfetto JSON (open in ui.perfetto.dev)
  */
 
 #include <iostream>
@@ -125,7 +131,7 @@ void runCUDAWorkload() {
     cudaMemsetAsync(d_B, 0, K * K * sizeof(float), stream2);
     
     dim3 blockDim(16, 16);
-    dim3 gridDim((K + blockDim.x - 1) / blockDim.x, 
+    dim3 gridDim((K + blockDim.x - 1) / blockDim.x,
                  (M + blockDim.y - 1) / blockDim.y);
     matrixMul<<<gridDim, blockDim, 0, stream2>>>(d_A, d_B, d_C, M, K, K);
     
@@ -209,34 +215,44 @@ void printEventSummary(const std::vector<TraceEvent>& events) {
     
     std::cout << std::left << std::setw(20) << "Event Type" 
               << std::setw(10) << "Count" 
-              << "Total Duration\n";
-    std::cout << std::string(50, '-') << "\n";
+              << std::setw(15) << "Total Duration"
+              << "Avg Duration\n";
+    std::cout << std::string(65, '-') << "\n";
     
     for (const auto& [type, count] : type_counts) {
         std::cout << std::left << std::setw(20) << typeName(type)
                   << std::setw(10) << count;
         
-        if (type_durations.count(type)) {
-            double ms = type_durations[type] / 1e6;
-            std::cout << std::fixed << std::setprecision(3) << ms << " ms";
+        if (type_durations.count(type) && type_durations[type] > 0) {
+            double total_us = type_durations[type] / 1e3;  // ns -> us
+            double avg_us = total_us / count;
+            std::cout << std::fixed << std::setprecision(2) 
+                      << std::setw(12) << total_us << " us "
+                      << std::setw(10) << avg_us << " us";
+        } else {
+            std::cout << std::setw(12) << "-" << "    " << std::setw(10) << "-";
         }
         std::cout << "\n";
     }
     
     // Print some sample events
-    std::cout << "\n=== Sample Events ===\n";
+    std::cout << "\n=== Sample Events (first 10) ===\n";
     int shown = 0;
     for (const auto& event : events) {
         if (shown >= 10) break;
         
-        std::cout << "Event: " << event.name << "\n";
-        std::cout << "  Type: " << typeName(event.type) << "\n";
-        std::cout << "  Stream: " << event.stream_id << "\n";
-        std::cout << "  Device: " << event.device_id << "\n";
+        std::cout << "[" << shown + 1 << "] " << event.name << "\n";
+        std::cout << "    Type: " << typeName(event.type) 
+                  << " | Stream: " << event.stream_id 
+                  << " | Device: " << event.device_id << "\n";
+        std::cout << "    Timestamp: " << event.timestamp << " ns\n";
         
         if (event.duration > 0) {
             double us = event.duration / 1e3;
-            std::cout << "  Duration: " << std::fixed << std::setprecision(2) << us << " us\n";
+            double ms = event.duration / 1e6;
+            std::cout << "    Duration: " << event.duration << " ns"
+                      << " (" << std::fixed << std::setprecision(2) << us << " us"
+                      << " / " << std::setprecision(4) << ms << " ms)\n";
         }
         
         std::cout << "\n";
@@ -247,6 +263,7 @@ void printEventSummary(const std::vector<TraceEvent>& events) {
 int main(int argc, char* argv[]) {
     std::cout << "=======================================================\n";
     std::cout << "  TraceSmith CUPTI Profiling Example\n";
+    std::cout << "  REAL GPU Profiling - NO SIMULATION\n";
     std::cout << "=======================================================\n\n";
     
 #ifndef TRACESMITH_ENABLE_CUDA
@@ -330,7 +347,10 @@ int main(int argc, char* argv[]) {
     profiler.finalize();
     
     std::cout << "\n=======================================================\n";
-    std::cout << "  Example completed successfully!\n";
+    std::cout << "  CUPTI Example Completed Successfully!\n";
+    std::cout << "  Verified: Real GPU profiling with CUPTI\n";
+    std::cout << "  - " << events.size() << " real GPU events captured\n";
+    std::cout << "  - Trace files: cupti_trace.sbt, cupti_trace.json\n";
     std::cout << "=======================================================\n";
     
     return 0;

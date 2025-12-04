@@ -1,9 +1,8 @@
 /**
  * TraceSmith Benchmark: 10,000+ GPU Instruction-Level Call Stacks
  * 
- * Validates the core goal from PLANNING.md:
- * "在不中断业务的情况下采集 1 万+ 指令级 GPU 调用栈"
- * (Capture 10,000+ instruction-level GPU call stacks without interrupting business)
+ * Validates the core feature:
+ * Capture 10,000+ instruction-level GPU call stacks without interrupting business
  * 
  * This benchmark uses REAL CUDA kernels and CUPTI profiling - NO SIMULATION!
  */
@@ -68,9 +67,9 @@ int main() {
     std::cout << R"(
 ╔══════════════════════════════════════════════════════════════════════╗
 ║  TraceSmith Benchmark: 10,000+ GPU Instruction-Level Call Stacks     ║
-║  验证目标: 在不中断业务的情况下采集 1 万+ 指令级 GPU 调用栈             ║
+║  Feature: Non-intrusive capture of instruction-level GPU call stacks ║
 ║                                                                      ║
-║  使用真实 CUDA Kernel + CUPTI Profiling - 无任何模拟！                ║
+║           ║
 ╚══════════════════════════════════════════════════════════════════════╝
 )" << "\n";
 
@@ -273,13 +272,13 @@ int main() {
     std::cout << "║                         BENCHMARK SUMMARY                            ║\n";
     std::cout << "╠══════════════════════════════════════════════════════════════════════╣\n";
     std::cout << "║                                                                      ║\n";
-    std::cout << "║  目标: 在不中断业务的情况下采集 1 万+ 指令级 GPU 调用栈                ║\n";
+    std::cout << "║  Feature: Non-intrusive 10K+ instruction-level GPU call stacks       ║\n";
     std::cout << "║                                                                      ║\n";
     
     if (goal_achieved) {
-        std::cout << "║  ✅ 目标达成!                                                        ║\n";
+        std::cout << "║  ✅ VERIFIED!                                                        ║\n";
     } else {
-        std::cout << "║  ❌ 目标未达成                                                        ║\n";
+        std::cout << "║  ❌ NOT VERIFIED                                                     ║\n";
     }
     
     std::cout << "║                                                                      ║\n";
@@ -311,10 +310,10 @@ int main() {
     std::cout << R"(
 ╔══════════════════════════════════════════════════════════════════════╗
 ║  TraceSmith Benchmark: 10,000+ GPU Instruction-Level Call Stacks     ║
-║  验证目标: 在不中断业务的情况下采集 1 万+ 指令级 GPU 调用栈             ║
+║  Feature: Non-intrusive capture of instruction-level GPU call stacks ║
 ╚══════════════════════════════════════════════════════════════════════╝
 
-❌ ERROR: This benchmark requires CUDA support!
+ERROR: This benchmark requires CUDA support!
 
 Please rebuild TraceSmith with CUDA enabled:
   cmake .. -DTRACESMITH_ENABLE_CUDA=ON
