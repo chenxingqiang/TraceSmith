@@ -153,4 +153,5 @@
 * 与 TVM / Triton Compiler 集成
 * GPU 指令级仿真器（类似 GPGPU-Sim 的轻量版本）
 * 全流程自动分析报告生成
-* Web 在线可视化平台# **📌** # **八、总结（一句话定位）**> **TraceSmith = 开源版 Nsight Systems + RenderDoc Replay 的融合体，面向国产 GPU、AI 编译器和深度学习系统的下一代 Profiling 工具。**
+* Web 在线可视化平台# **📌** # **
+八、总结（一句话定位）**> **TraceSmith = 开源版 Nsight Systems + RenderDoc Replay 的融合体，面向国产 GPU、AI 编译器和深度学习系统的下一代 Profiling 工具。**

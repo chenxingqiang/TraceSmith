@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.svg" alt="TraceSmith Logo" width="400">
+  <img src="docs/logo.svg" alt="TraceSmith Logo" >
 </p>
 
 <p align="center">
