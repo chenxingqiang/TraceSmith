@@ -787,8 +787,7 @@ def cmd_benchmark(args):
     for i in range(target_kernels):
         # Capture host call stack
         if capture_stacks and stack_capturer:
-            stack = CallStack()
-            stack_capturer.capture(stack)
+            stack = stack_capturer.capture()
             
             event = TraceEvent()
             event.type = EventType.KernelLaunch
@@ -965,9 +964,7 @@ def _run_real_gpu_benchmark(cp, CUPTIProfiler, target_kernels, output_file,
     for i in range(target_kernels):
         # Capture host call stack before kernel launch
         if capture_stacks and stack_capturer:
-            from . import CallStack
-            stack = CallStack()
-            stack_capturer.capture(stack)
+            stack = stack_capturer.capture()
             host_stacks.append((i, stack))
         
         # Launch REAL CuPy kernel
