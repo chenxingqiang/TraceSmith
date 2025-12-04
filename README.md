@@ -24,30 +24,34 @@
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────┐
-│               TraceSmith                    │
-├─────────────────────────────────────────────┤
-│ 1. Data Capture Layer                       │
-│    - Platform abstraction (CUDA/ROCm/Metal) │
-│    - Ring Buffer (Lock-free)                │
-│    - Event hooks                            │
-├─────────────────────────────────────────────┤
-│ 2. Trace Format Layer                       │
-│    - SBT (TraceSmith Binary Trace)          │
-│    - Event Encoding / Compression           │
-├─────────────────────────────────────────────┤
-│ 3. State Reconstruction (Phase 3)           │
-│    - GPU Timeline Builder                   │
-│    - Stream Dependency Graph                │
-│    - State Machine Generator                │
-├─────────────────────────────────────────────┤
-│ 4. Replay Engine (Phase 4)                  │
-│    - Instruction Replay                     │
-│    - Stream Re-Scheduler                    │
-│    - Deterministic Checker                  │
-└─────────────────────────────────────────────┘
-```
+![TraceSmith Architecture](docs/architecture.svg)
+
+**Core Modules:**
+
+| Module | Description |
+|--------|-------------|
+| **Capture** | GPU profiling backends (CUPTI, Metal, BPF, Memory) |
+| **Common** | Core types, lock-free ring buffer, stack capture, XRay import |
+| **Format** | SBT binary trace format (read/write) |
+| **State** | GPU state machine, timeline builder, Perfetto exporters |
+| **Replay** | Trace replay engine, stream scheduler, determinism checker |
+| **Cluster** | Multi-GPU profiling, time sync, NCCL tracking (v0.7.x) |
+
+**Supported Backends:**
+
+| Platform | Backend | Status |
+|----------|---------|--------|
+| NVIDIA | CUPTI SDK | ✅ Production |
+| Apple | Metal API | ✅ Production |
+| AMD | ROCm | 🔜 Coming Soon |
+| Linux | eBPF | ✅ Available |
+
+**Output Formats:**
+- `.sbt` - TraceSmith Binary Trace (compact, indexed)
+- `.json` - Perfetto JSON (chrome://tracing)
+- `.perfetto` - Perfetto Protobuf (85% smaller)
+- `.dot` - Graphviz dependency graph
+- ASCII Timeline - Terminal visualization
 
 ## Quick Start
 
@@ -253,7 +257,7 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
    ██║   ██║  ██║██║  ██║╚██████╗███████╗███████║██║ ╚═╝ ██║██║   ██║   ██║  ██║
    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝
 
-                    GPU Profiling & Replay System v0.6.9
+                    GPU Profiling & Replay System v0.7.1
 ```
 
 **Available Commands:**
@@ -584,7 +588,7 @@ make benchmark_10k_stacks -j8
 
 ```bash
 # Basic installation
-pip install tracesmith==0.6.9
+pip install tracesmith==0.7.1
 
 # With CuPy for real GPU profiling in Python CLI (choose one):
 pip install tracesmith[cuda12]    # CUDA 12.x
@@ -671,8 +675,10 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| **v0.6.9** | 2024-12 | **Include reorganization** - Directory structure matches `src/` layout |
-| **v0.6.8** | 2024-12 | **Enhanced CLI** - ASCII banner, all commands, Python CLI |
+| **v0.7.1** | 2024-12 | **Multi-GPU Phase 2** - TimeSync, NCCLTracker, ClockCorrelator, CommAnalysis |
+| **v0.7.0** | 2024-12 | **Multi-GPU Cluster** - GPUTopology, MultiGPUProfiler, GitHub Actions CI/CD |
+| v0.6.9 | 2024-12 | Include reorganization - Directory structure matches `src/` layout |
+| v0.6.8 | 2024-12 | Enhanced CLI - ASCII banner, all commands, Python CLI |
 | v0.6.7 | 2024-12 | Real GPU benchmark - 10K+ CUDA kernels with CUPTI  |
 | v0.6.5 | 2024-12 | StackCapture bindings, OverflowPolicy, detect_leaks |
 | v0.6.2 | 2024-12 | PyPI release, Native extension packaging fix |
