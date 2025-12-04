@@ -3,130 +3,163 @@ requires = [
     "setuptools>=45",
     "wheel",
     "cmake>=3.16",
+    "ninja",
     "pybind11>=2.11.0",
-    "ninja",  # Faster builds
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "tracesmith"
 version = "0.7.1"
-description = "Cross-platform GPU Profiling & Replay System"
+authors = [
+    {name = "TraceSmith Authors", email = "tracesmith@example.com"}
+]
+description = "Cross-platform GPU profiling and replay system"
 readme = "README.md"
 license = {text = "Apache-2.0"}
-authors = [
-    {name = "Xingqiang Chen", email = "chenxingqiang@gmail.com"}
-]
-maintainers = [
-    {name = "Xingqiang Chen", email = "chenxingqiang@gmail.com"}
-]
-keywords = [
-    "gpu",
-    "profiling",
-    "tracing",
-    "cuda",
-    "rocm",
-    "metal",
-    "debugging",
-    "replay",
-    "perfetto",
-    "memory-profiler",
-    "frame-capture",
-    "deep-learning",
-    "machine-learning",
-]
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
-    "Programming Language :: C++",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
     "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Debuggers",
     "Topic :: System :: Monitoring",
 ]
-requires-python = ">=3.8"
-dependencies = []
+keywords = [
+    "gpu", "profiling", "cuda", "metal", "rocm",
+    "tracing", "performance", "debugging", "replay"
+]
+
+dependencies = [
+    "numpy>=1.20.0",
+]
 
 [project.optional-dependencies]
+cuda11 = ["cupy-cuda11x>=12.0.0"]
+cuda12 = ["cupy-cuda12x>=12.0.0"]
+cuda118 = ["cupy-cuda118>=12.0.0"]
+cuda120 = ["cupy-cuda120>=12.0.0"]
 dev = [
-    "pytest>=6.0",
-    "numpy",
-    "build",
-    "twine",
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
 ]
-torch = [
-    "torch>=1.9",
-]
-visualization = [
-    "matplotlib",
-    "plotly",
-]
-# CuPy for real GPU profiling in Python CLI
-cuda11 = [
-    "cupy-cuda11x>=12.0.0",
-]
-cuda12 = [
-    "cupy-cuda12x>=12.0.0",
-]
-cuda118 = [
-    "cupy-cuda118>=12.0.0",
-]
-cuda120 = [
-    "cupy-cuda12x>=12.0.0",
-]
-# All extras for full functionality
-all = [
-    "numpy",
-    "matplotlib",
-    "plotly",
+docs = [
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=2.0.0",
+    "myst-parser>=2.0.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/chenxingqiang/TraceSmith"
-Documentation = "https://github.com/chenxingqiang/TraceSmith#readme"
-Repository = "https://github.com/chenxingqiang/TraceSmith.git"
-Issues = "https://github.com/chenxingqiang/TraceSmith/issues"
-Changelog = "https://github.com/chenxingqiang/TraceSmith/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/xingqiangchen/TraceSmith"
+Documentation = "https://github.com/xingqiangchen/TraceSmith#readme"
+Repository = "https://github.com/xingqiangchen/TraceSmith.git"
+Issues = "https://github.com/xingqiangchen/TraceSmith/issues"
+Changelog = "https://github.com/xingqiangchen/TraceSmith/blob/main/CHANGELOG.md"
 
 [project.scripts]
 tracesmith-cli = "tracesmith.cli:main"
 
 [tool.setuptools]
 packages = ["tracesmith"]
-package-dir = {"" = "python"}
+package-dir = {"tracesmith" = "python/tracesmith"}
 
 [tool.setuptools.package-data]
-tracesmith = ["*.so", "*.pyd", "*.dll"]
+tracesmith = ["*.so", "*.pyd", "*.dylib"]
 
-[tool.pytest.ini_options]
-testpaths = ["python/tests"]
-python_files = ["test_*.py"]
-python_functions = ["test_*"]
+# ===========================================================================
+# cibuildwheel configuration
+# ===========================================================================
+[tool.cibuildwheel]
+# Build for Python 3.9-3.12
+build = "cp39-* cp310-* cp311-* cp312-*"
 
-[tool.black]
+# Skip 32-bit builds, musllinux, and PyPy
+skip = "*-win32 *-manylinux_i686 *-musllinux_* pp*"
+
+# Test the wheel
+test-command = "python -c \"import tracesmith; print(tracesmith.__version__)\""
+
+# Build settings
+build-verbosity = 1
+
+[tool.cibuildwheel.linux]
+# Use manylinux2014 for broader compatibility
+manylinux-x86_64-image = "manylinux2014"
+
+# Install build dependencies
+before-all = [
+    "yum install -y epel-release || true",
+    "yum install -y cmake3 ninja-build || true",
+    "ln -sf /usr/bin/cmake3 /usr/local/bin/cmake || true",
+]
+
+# Environment variables
+environment = { CMAKE_BUILD_PARALLEL_LEVEL = "4" }
+
+# Repair wheel to make it manylinux compliant
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+
+[tool.cibuildwheel.macos]
+# Build universal2 wheels for macOS
+# archs = ["x86_64", "arm64", "universal2"]
+archs = ["native"]
+
+# Install build dependencies
+before-all = "brew install cmake ninja || true"
+
+# Environment variables
+environment = { CMAKE_BUILD_PARALLEL_LEVEL = "4", MACOSX_DEPLOYMENT_TARGET = "10.15" }
+
+[tool.cibuildwheel.windows]
+# Build for Windows x64 only
+archs = ["AMD64"]
+
+# Environment variables
+environment = { CMAKE_BUILD_PARALLEL_LEVEL = "4" }
+
+# ===========================================================================
+# Ruff (linter) configuration
+# ===========================================================================
+[tool.ruff]
+target-version = "py39"
 line-length = 100
-target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
-include = '\.pyi?$'
 
-[tool.isort]
-profile = "black"
-line_length = 100
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "B", "C4"]
+ignore = ["E501", "B008", "B905"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["tracesmith"]
+
+# ===========================================================================
+# MyPy configuration
+# ===========================================================================
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
 
+# ===========================================================================
+# Pytest configuration
+# ===========================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests", "python/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

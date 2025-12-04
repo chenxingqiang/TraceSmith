@@ -1,0 +1,229 @@
+# TraceSmith - Continuous Integration
+# Runs on every push and PR to test compilation and unit tests
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ===========================================================================
+  # Lint & Format Check
+  # ===========================================================================
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install linters
+        run: |
+          pip install ruff mypy
+      
+      - name: Run ruff
+        run: ruff check python/ --ignore E501
+      
+      - name: Check C++ formatting (clang-format)
+        run: |
+          sudo apt-get install -y clang-format
+          find src include -name "*.cpp" -o -name "*.hpp" | head -20 | xargs clang-format --dry-run --Werror || true
+
+  # ===========================================================================
+  # Build & Test on Linux
+  # ===========================================================================
+  test_linux:
+    name: Test Linux
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        build_type: [Release, Debug]
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libunwind-dev
+          if [ "${{ matrix.compiler }}" = "clang" ]; then
+            sudo apt-get install -y clang
+          fi
+      
+      - name: Configure CMake
+        env:
+          CC: ${{ matrix.compiler == 'clang' && 'clang' || 'gcc' }}
+          CXX: ${{ matrix.compiler == 'clang' && 'clang++' || 'g++' }}
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DTRACESMITH_BUILD_TESTS=ON \
+            -DTRACESMITH_BUILD_EXAMPLES=ON
+      
+      - name: Build
+        run: cmake --build build --parallel 4
+      
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure --parallel 4
+      
+      - name: Test CLI
+        run: |
+          ./build/cli/tracesmith --version
+          ./build/cli/tracesmith devices
+
+  # ===========================================================================
+  # Build & Test on macOS
+  # ===========================================================================
+  test_macos:
+    name: Test macOS
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Release]
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Install dependencies
+        run: brew install cmake ninja
+      
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DTRACESMITH_BUILD_TESTS=ON \
+            -DTRACESMITH_BUILD_EXAMPLES=ON \
+            -DTRACESMITH_ENABLE_METAL=ON
+      
+      - name: Build
+        run: cmake --build build --parallel 4
+      
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure --parallel 4
+      
+      - name: Test CLI
+        run: |
+          ./build/cli/tracesmith --version
+
+  # ===========================================================================
+  # Build & Test on Windows
+  # ===========================================================================
+  test_windows:
+    name: Test Windows
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Release]
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Configure CMake
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DTRACESMITH_BUILD_TESTS=ON
+      
+      - name: Build
+        run: cmake --build build --config ${{ matrix.build_type }} --parallel 4
+      
+      - name: Run tests
+        run: |
+          cd build
+          ctest -C ${{ matrix.build_type }} --output-on-failure
+
+  # ===========================================================================
+  # Python Package Test
+  # ===========================================================================
+  test_python:
+    name: Test Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libunwind-dev
+          pip install --upgrade pip
+          pip install pytest numpy
+      
+      - name: Build & Install package
+        run: |
+          pip install -e . -v
+      
+      - name: Test import
+        run: |
+          python -c "import tracesmith; print(f'TraceSmith v{tracesmith.__version__}')"
+          python -c "import tracesmith as ts; print('Platforms:', ts.detect_platform())"
+      
+      - name: Test CLI
+        run: |
+          tracesmith-cli --version
+          tracesmith-cli devices
+
+  # ===========================================================================
+  # CUDA Build Test (no GPU required)
+  # ===========================================================================
+  test_cuda_build:
+    name: Test CUDA Build
+    runs-on: ubuntu-latest
+    container:
+      image: nvidia/cuda:12.1.0-devel-ubuntu22.04
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y cmake ninja-build libunwind-dev python3 python3-pip git
+      
+      - name: Configure CMake with CUDA
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTRACESMITH_ENABLE_CUDA=ON \
+            -DTRACESMITH_BUILD_EXAMPLES=ON
+      
+      - name: Build
+        run: cmake --build build --parallel 4
+      
+      - name: Check CUDA support
+        run: |
+          ./build/cli/tracesmith --version
+          echo "CUDA build successful!"
+

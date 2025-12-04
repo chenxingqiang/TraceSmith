@@ -1,0 +1,368 @@
+# TraceSmith - Multi-platform Build & Release Workflow
+# Builds wheels for Linux, macOS (Intel/ARM), Windows
+# Supports CUDA, Metal, ROCm backends
+
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish_pypi:
+        description: 'Publish to PyPI'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  CIBUILDWHEEL_VERSION: "2.16.2"
+
+jobs:
+  # ===========================================================================
+  # Build Source Distribution
+  # ===========================================================================
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+      
+      - name: Build sdist
+        run: python -m build --sdist
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  # ===========================================================================
+  # Build Linux Wheels (x86_64, with optional CUDA)
+  # ===========================================================================
+  build_linux_x86_64:
+    name: Build Linux x86_64 wheels
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["cp39", "cp310", "cp311", "cp312"]
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install cibuildwheel
+        run: pip install cibuildwheel==${{ env.CIBUILDWHEEL_VERSION }}
+      
+      - name: Build wheels
+        env:
+          CIBW_BUILD: "${{ matrix.python }}-manylinux_x86_64"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_BEFORE_ALL_LINUX: |
+            yum install -y epel-release
+            yum install -y cmake3 ninja-build libunwind-devel
+            ln -sf /usr/bin/cmake3 /usr/local/bin/cmake
+          CIBW_ENVIRONMENT: |
+            CMAKE_BUILD_PARALLEL_LEVEL=4
+          CIBW_TEST_COMMAND: |
+            python -c "import tracesmith; print(tracesmith.__version__)"
+        run: python -m cibuildwheel --output-dir wheelhouse
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-x86_64-${{ matrix.python }}
+          path: ./wheelhouse/*.whl
+
+  # ===========================================================================
+  # Build Linux Wheels with CUDA
+  # ===========================================================================
+  build_linux_cuda:
+    name: Build Linux CUDA wheels
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["cp310", "cp311", "cp312"]
+        cuda: ["11.8", "12.1"]
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install cibuildwheel
+        run: pip install cibuildwheel==${{ env.CIBUILDWHEEL_VERSION }}
+      
+      - name: Build CUDA wheels
+        env:
+          CIBW_BUILD: "${{ matrix.python }}-manylinux_x86_64"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_BEFORE_ALL_LINUX: |
+            # Install CUDA toolkit
+            yum install -y epel-release
+            yum install -y cmake3 ninja-build libunwind-devel wget
+            ln -sf /usr/bin/cmake3 /usr/local/bin/cmake
+            
+            # Install CUDA ${{ matrix.cuda }}
+            if [ "${{ matrix.cuda }}" = "11.8" ]; then
+              wget https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda-repo-rhel7-11-8-local-11.8.0_520.61.05-1.x86_64.rpm
+              rpm -i cuda-repo-rhel7-11-8-local-11.8.0_520.61.05-1.x86_64.rpm || true
+              yum install -y cuda-toolkit-11-8 --nogpgcheck || true
+            else
+              wget https://developer.download.nvidia.com/compute/cuda/12.1.0/local_installers/cuda-repo-rhel7-12-1-local-12.1.0_530.30.02-1.x86_64.rpm
+              rpm -i cuda-repo-rhel7-12-1-local-12.1.0_530.30.02-1.x86_64.rpm || true
+              yum install -y cuda-toolkit-12-1 --nogpgcheck || true
+            fi
+          CIBW_ENVIRONMENT: |
+            CMAKE_BUILD_PARALLEL_LEVEL=4
+            TRACESMITH_CUDA=1
+            CUDA_HOME=/usr/local/cuda
+            PATH=/usr/local/cuda/bin:$PATH
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
+            auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libnvidia-ml.so.1
+        run: python -m cibuildwheel --output-dir wheelhouse
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-cuda${{ matrix.cuda }}-${{ matrix.python }}
+          path: ./wheelhouse/*.whl
+
+  # ===========================================================================
+  # Build macOS Wheels (Intel x86_64)
+  # ===========================================================================
+  build_macos_x86_64:
+    name: Build macOS x86_64 wheels
+    runs-on: macos-13  # Intel Mac
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["cp39", "cp310", "cp311", "cp312"]
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install build dependencies
+        run: |
+          brew install cmake ninja
+          pip install cibuildwheel==${{ env.CIBUILDWHEEL_VERSION }}
+      
+      - name: Build wheels
+        env:
+          CIBW_BUILD: "${{ matrix.python }}-macosx_x86_64"
+          CIBW_ENVIRONMENT: |
+            CMAKE_BUILD_PARALLEL_LEVEL=4
+            TRACESMITH_METAL=1
+            MACOSX_DEPLOYMENT_TARGET=10.15
+          CIBW_TEST_COMMAND: |
+            python -c "import tracesmith; print(tracesmith.__version__)"
+        run: python -m cibuildwheel --output-dir wheelhouse
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-x86_64-${{ matrix.python }}
+          path: ./wheelhouse/*.whl
+
+  # ===========================================================================
+  # Build macOS Wheels (Apple Silicon ARM64)
+  # ===========================================================================
+  build_macos_arm64:
+    name: Build macOS ARM64 wheels
+    runs-on: macos-14  # Apple Silicon
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["cp39", "cp310", "cp311", "cp312"]
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install build dependencies
+        run: |
+          brew install cmake ninja
+          pip install cibuildwheel==${{ env.CIBUILDWHEEL_VERSION }}
+      
+      - name: Build wheels
+        env:
+          CIBW_BUILD: "${{ matrix.python }}-macosx_arm64"
+          CIBW_ENVIRONMENT: |
+            CMAKE_BUILD_PARALLEL_LEVEL=4
+            TRACESMITH_METAL=1
+            MACOSX_DEPLOYMENT_TARGET=11.0
+          CIBW_TEST_COMMAND: |
+            python -c "import tracesmith; print(tracesmith.__version__)"
+        run: python -m cibuildwheel --output-dir wheelhouse
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-arm64-${{ matrix.python }}
+          path: ./wheelhouse/*.whl
+
+  # ===========================================================================
+  # Build Windows Wheels
+  # ===========================================================================
+  build_windows:
+    name: Build Windows wheels
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["cp39", "cp310", "cp311", "cp312"]
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install build dependencies
+        run: |
+          pip install cibuildwheel==${{ env.CIBUILDWHEEL_VERSION }}
+      
+      - name: Build wheels
+        env:
+          CIBW_BUILD: "${{ matrix.python }}-win_amd64"
+          CIBW_ENVIRONMENT: |
+            CMAKE_BUILD_PARALLEL_LEVEL=4
+          CIBW_TEST_COMMAND: |
+            python -c "import tracesmith; print(tracesmith.__version__)"
+        run: python -m cibuildwheel --output-dir wheelhouse
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows-${{ matrix.python }}
+          path: ./wheelhouse/*.whl
+
+  # ===========================================================================
+  # Publish to PyPI
+  # ===========================================================================
+  publish:
+    name: Publish to PyPI
+    needs: [build_sdist, build_linux_x86_64, build_macos_x86_64, build_macos_arm64, build_windows]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    permissions:
+      id-token: write  # Required for trusted publishing
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      
+      - name: List artifacts
+        run: ls -la dist/
+      
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          # For test PyPI, uncomment below:
+          # repository-url: https://test.pypi.org/legacy/
+
+  # ===========================================================================
+  # Create GitHub Release
+  # ===========================================================================
+  release:
+    name: Create GitHub Release
+    needs: [build_sdist, build_linux_x86_64, build_linux_cuda, build_macos_x86_64, build_macos_arm64, build_windows]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: TraceSmith v${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          body: |
+            ## TraceSmith v${{ steps.version.outputs.VERSION }}
+            
+            ### Installation
+            
+            ```bash
+            # Standard installation
+            pip install tracesmith==${{ steps.version.outputs.VERSION }}
+            
+            # With CUDA 12.x support
+            pip install tracesmith[cuda12]==${{ steps.version.outputs.VERSION }}
+            
+            # With CUDA 11.x support
+            pip install tracesmith[cuda11]==${{ steps.version.outputs.VERSION }}
+            ```
+            
+            ### Supported Platforms
+            
+            | Platform | Python | Backend |
+            |----------|--------|---------|
+            | Linux x86_64 | 3.9-3.12 | CPU, CUDA 11.8, CUDA 12.1 |
+            | macOS x86_64 | 3.9-3.12 | CPU, Metal |
+            | macOS ARM64 | 3.9-3.12 | CPU, Metal |
+            | Windows x64 | 3.9-3.12 | CPU |
+            
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
