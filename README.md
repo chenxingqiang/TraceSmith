@@ -1,9 +1,19 @@
-# TraceSmith
+<p align="center">
+  <img src="docs/logo.svg" alt="TraceSmith Logo" width="400">
+</p>
 
-**TraceSmith** is an open-source, cross-platform GPU Profiling & Replay system designed for AI compilers, deep learning frameworks, and GPU driver engineers.
+<p align="center">
+  <strong>Open-source, cross-platform GPU Profiling & Replay System</strong><br>
+  Designed for AI compilers, deep learning frameworks, and GPU driver engineers
+</p>
 
-[![Build Status](https://github.com/chenxingqiang/tracesmith/workflows/CI/badge.svg)](https://github.com/chenxingqiang/tracesmith/actions)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/chenxingqiang/tracesmith/actions"><img src="https://github.com/chenxingqiang/tracesmith/workflows/CI/badge.svg" alt="Build Status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
+  <a href="https://pypi.org/project/tracesmith/"><img src="https://badge.fury.io/py/tracesmith.svg" alt="PyPI version"></a>
+</p>
+
+---
 
 ## Features
 
