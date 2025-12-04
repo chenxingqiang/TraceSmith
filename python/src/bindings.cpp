@@ -16,6 +16,7 @@
 
 #include "tracesmith/types.hpp"
 #include "tracesmith/profiler.hpp"
+#include "tracesmith/cupti_profiler.hpp"
 #include "tracesmith/sbt_format.hpp"
 #include "tracesmith/timeline_builder.hpp"
 #include "tracesmith/perfetto_exporter.hpp"
@@ -169,7 +170,6 @@ PYBIND11_MODULE(_tracesmith, m) {
         .value("CUDA", PlatformType::CUDA)
         .value("ROCm", PlatformType::ROCm)
         .value("Metal", PlatformType::Metal)
-        .value("Simulation", PlatformType::Simulation)
         .export_values();
     
     // ProfilerConfig class
@@ -179,26 +179,6 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def_readwrite("capture_callstacks", &ProfilerConfig::capture_callstacks)
         .def_readwrite("capture_kernels", &ProfilerConfig::capture_kernels)
         .def_readwrite("capture_memcpy", &ProfilerConfig::capture_memcpy);
-    
-    // SimulationProfiler class
-    py::class_<SimulationProfiler>(m, "SimulationProfiler")
-        .def(py::init<>())
-        .def("initialize", &SimulationProfiler::initialize)
-        .def("finalize", &SimulationProfiler::finalize)
-        .def("start_capture", &SimulationProfiler::startCapture)
-        .def("stop_capture", &SimulationProfiler::stopCapture)
-        .def("is_capturing", &SimulationProfiler::isCapturing)
-        .def("get_events", [](SimulationProfiler& p) {
-            std::vector<TraceEvent> events;
-            p.getEvents(events, 0);
-            return events;
-        })
-        .def("generate_kernel_event", &SimulationProfiler::generateKernelEvent,
-             py::arg("name"), py::arg("stream_id") = 0)
-        .def("generate_memcpy_event", &SimulationProfiler::generateMemcpyEvent,
-             py::arg("type"), py::arg("size"), py::arg("stream_id") = 0)
-        .def("events_captured", &SimulationProfiler::eventsCaptured)
-        .def("events_dropped", &SimulationProfiler::eventsDropped);
     
     // SBTWriter class
     py::class_<SBTWriter>(m, "SBTWriter")
@@ -734,5 +714,19 @@ PYBIND11_MODULE(_tracesmith, m) {
     
     m.def("create_profiler", [](PlatformType type) {
         return createProfiler(type);
-    }, "Create a profiler for the specified platform");
+    }, py::arg("platform") = PlatformType::Unknown,
+    "Create a profiler for the specified platform (CUDA, ROCm, Metal, or auto-detect with Unknown)");
+    
+    // Platform detection functions
+    m.def("is_cuda_available", &isCUDAAvailable,
+          "Check if CUDA/CUPTI is available on this system");
+    
+    m.def("get_cuda_device_count", &getCUDADeviceCount,
+          "Get number of CUDA-capable devices");
+    
+    m.def("get_cuda_driver_version", &getCUDADriverVersion,
+          "Get CUDA driver version");
+    
+    m.def("detect_platform", &detectPlatform,
+          "Auto-detect the best available GPU platform");
 }

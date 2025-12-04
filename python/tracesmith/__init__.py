@@ -130,6 +130,10 @@ from ._tracesmith import (
     bpf_event_type_to_string,
     bpf_event_to_trace_event,
     create_profiler,
+    is_cuda_available,
+    get_cuda_device_count,
+    get_cuda_driver_version,
+    detect_platform,
 )
 
 __all__ = [
@@ -220,6 +224,10 @@ __all__ = [
     'bpf_event_type_to_string',
     'bpf_event_to_trace_event',
     'create_profiler',
+    'is_cuda_available',
+    'get_cuda_device_count',
+    'get_cuda_driver_version',
+    'detect_platform',
     
     # High-level convenience functions
     'build_timeline',

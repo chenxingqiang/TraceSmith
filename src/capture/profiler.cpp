@@ -1,8 +1,6 @@
 #include "tracesmith/profiler.hpp"
-#include "tracesmith/stack_capture.hpp"
-#ifdef TRACESMITH_ENABLE_CUDA
 #include "tracesmith/cupti_profiler.hpp"
-#endif
+#include "tracesmith/stack_capture.hpp"
 #ifdef TRACESMITH_ENABLE_METAL
 #include "tracesmith/metal_profiler.hpp"
 #endif
@@ -10,6 +8,17 @@
 #include <random>
 
 namespace tracesmith {
+
+// ============================================================================
+// Platform Detection Functions (always available)
+// ============================================================================
+
+#ifndef TRACESMITH_ENABLE_CUDA
+// Stub implementations when CUDA is not enabled
+bool isCUDAAvailable() { return false; }
+int getCUDADriverVersion() { return 0; }
+int getCUDADeviceCount() { return 0; }
+#endif
 
 // ============================================================================
 // SimulationProfiler Implementation
@@ -344,9 +353,6 @@ std::unique_ptr<IPlatformProfiler> createProfiler(PlatformType type) {
     }
     
     switch (type) {
-        case PlatformType::Simulation:
-            return std::make_unique<SimulationProfiler>();
-        
         case PlatformType::CUDA:
 #ifdef TRACESMITH_ENABLE_CUDA
             {
@@ -356,12 +362,11 @@ std::unique_ptr<IPlatformProfiler> createProfiler(PlatformType type) {
                 }
             }
 #endif
-            // Fall back to simulation if CUDA not available
-            return std::make_unique<SimulationProfiler>();
+            return nullptr;  // CUDA not available
         
         case PlatformType::ROCm:
             // TODO: Implement ROCmProfiler
-            return std::make_unique<SimulationProfiler>();
+            return nullptr;
         
         case PlatformType::Metal:
 #ifdef TRACESMITH_ENABLE_METAL
@@ -372,11 +377,10 @@ std::unique_ptr<IPlatformProfiler> createProfiler(PlatformType type) {
                 }
             }
 #endif
-            // Fall back to simulation if Metal not available
-            return std::make_unique<SimulationProfiler>();
+            return nullptr;  // Metal not available
         
         default:
-            return std::make_unique<SimulationProfiler>();
+            return nullptr;  // Unknown platform
     }
 }
 
@@ -398,7 +402,7 @@ PlatformType detectPlatform() {
     // TODO: Check for ROCm
     // if (isROCmAvailable()) return PlatformType::ROCm;
     
-    return PlatformType::Simulation;
+    return PlatformType::Unknown;
 }
 
 } // namespace tracesmith
