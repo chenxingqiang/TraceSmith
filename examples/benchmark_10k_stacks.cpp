@@ -4,7 +4,7 @@
  * Validates the core feature:
  * Capture 10,000+ instruction-level GPU call stacks without interrupting business
  * 
- * This benchmark uses REAL CUDA kernels and CUPTI profiling - NO SIMULATION!
+ * This benchmark uses REAL CUDA kernels and CUPTI profiling !
  */
 
 #include <iostream>
@@ -282,7 +282,7 @@ int main() {
     }
     
     std::cout << "║                                                                      ║\n";
-    std::cout << "║  Results (REAL GPU - NO SIMULATION):                                 ║\n";
+    std::cout << "║  Results (REAL GPU):                                 ║\n";
     std::cout << "║    - CUDA kernels launched: " << std::setw(6) << TARGET_KERNELS << "                             ║\n";
     std::cout << "║    - GPU events (CUPTI):    " << std::setw(6) << gpu_events.size() << "                             ║\n";
     std::cout << "║    - Kernel launches:       " << std::setw(6) << kernel_launches << "                             ║\n";
@@ -294,7 +294,7 @@ int main() {
     std::cout << "║    ✅ Real CUDA kernels executed on GPU                              ║\n";
     std::cout << "║    ✅ CUPTI captured instruction-level GPU events                    ║\n";
     std::cout << "║    ✅ Host call stacks attached to GPU events                        ║\n";
-    std::cout << "║    ✅ Non-intrusive profiling (no simulation)                        ║\n";
+    std::cout << "║    ✅ Non-intrusive profiling (real GPU)                             ║\n";
     std::cout << "║                                                                      ║\n";
     std::cout << "╚══════════════════════════════════════════════════════════════════════╝\n\n";
 
@@ -320,7 +320,6 @@ Please rebuild TraceSmith with CUDA enabled:
   make benchmark_10k_stacks
 
 This benchmark uses REAL CUDA kernels and CUPTI profiling.
-No simulation - actual GPU instruction-level profiling only.
 )" << "\n";
     return 1;
 }

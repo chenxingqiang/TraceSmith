@@ -289,7 +289,7 @@ void printEventSummary(const std::vector<TraceEvent>& events) {
 int main(int argc, char* argv[]) {
     std::cout << "=======================================================\n";
     std::cout << "  TraceSmith CUPTI Profiling Example\n";
-    std::cout << "  REAL GPU Profiling - NO SIMULATION\n";
+    std::cout << "  REAL GPU Profiling with CUPTI\n";
     std::cout << "=======================================================\n\n";
     
 #ifndef TRACESMITH_ENABLE_CUDA

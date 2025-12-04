@@ -267,7 +267,7 @@ target_link_libraries(goal_validation_example PRIVATE
 # ----------------------------------------------------------------------------
 # Benchmark: 10K Call Stacks - Validates core goal
 # "在不中断业务的情况下采集 1 万+ 指令级 GPU 调用栈"
-# Uses REAL CUDA kernels + CUPTI - NO SIMULATION
+# Uses REAL CUDA kernels + CUPTI profiling
 # ----------------------------------------------------------------------------
 if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
     # Build with CUDA support for real GPU profiling

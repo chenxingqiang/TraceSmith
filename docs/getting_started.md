@@ -27,8 +27,8 @@ pip install tracesmith
 #### Command Line
 
 ```bash
-# Record a trace (simulation mode)
-./bin/tracesmith-cli record -o trace.sbt -d 5
+# Record a trace (real GPU profiling)
+./bin/tracesmith-cli record -o trace.sbt -d 5 -p cuda
 
 # View trace contents
 ./bin/tracesmith-cli view trace.sbt
