@@ -262,16 +262,33 @@ target_link_libraries(goal_validation_example PRIVATE
 # ----------------------------------------------------------------------------
 # Benchmark: 10K Call Stacks - Validates core goal
 # "在不中断业务的情况下采集 1 万+ 指令级 GPU 调用栈"
+# Uses REAL CUDA kernels + CUPTI - NO SIMULATION
 # ----------------------------------------------------------------------------
-add_executable(benchmark_10k_stacks
-    benchmark_10k_stacks.cpp
-)
-
-target_link_libraries(benchmark_10k_stacks PRIVATE
-    tracesmith-common
-    tracesmith-format
-    tracesmith-capture
-)
+if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
+    # Build with CUDA support for real GPU profiling
+    add_executable(benchmark_10k_stacks
+        benchmark_10k_stacks.cpp
+    )
+    set_source_files_properties(benchmark_10k_stacks.cpp PROPERTIES LANGUAGE CUDA)
+    target_link_libraries(benchmark_10k_stacks PRIVATE
+        tracesmith-common
+        tracesmith-format
+        tracesmith-capture
+        CUDA::cudart
+        ${CUPTI_LIBRARY}
+    )
+    target_compile_definitions(benchmark_10k_stacks PRIVATE TRACESMITH_ENABLE_CUDA)
+else()
+    # Build without CUDA - will show error message at runtime
+    add_executable(benchmark_10k_stacks
+        benchmark_10k_stacks.cpp
+    )
+    target_link_libraries(benchmark_10k_stacks PRIVATE
+        tracesmith-common
+        tracesmith-format
+        tracesmith-capture
+    )
+endif()
 
 # ----------------------------------------------------------------------------
 # Install Python example
