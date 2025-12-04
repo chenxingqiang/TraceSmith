@@ -25,12 +25,12 @@
 #include <iomanip>
 #include <vector>
 
-#include "tracesmith/profiler.hpp"
-#include "tracesmith/sbt_format.hpp"
-#include "tracesmith/perfetto_exporter.hpp"
+#include "tracesmith/capture/profiler.hpp"
+#include "tracesmith/format/sbt_format.hpp"
+#include "tracesmith/state/perfetto_exporter.hpp"
 
 #ifdef TRACESMITH_ENABLE_METAL
-#include "tracesmith/metal_profiler.hpp"
+#include "tracesmith/capture/metal_profiler.hpp"
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 #endif

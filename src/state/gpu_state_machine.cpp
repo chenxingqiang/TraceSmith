@@ -1,4 +1,4 @@
-#include "tracesmith/gpu_state_machine.hpp"
+#include "tracesmith/state/gpu_state_machine.hpp"
 #include <algorithm>
 
 namespace tracesmith {

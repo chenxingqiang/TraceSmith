@@ -10,7 +10,7 @@
  */
 
 #include <tracesmith/tracesmith.hpp>
-#include <tracesmith/perfetto_exporter.hpp>
+#include <tracesmith/state/perfetto_exporter.hpp>
 #include <iostream>
 #include <iomanip>
 #include <random>

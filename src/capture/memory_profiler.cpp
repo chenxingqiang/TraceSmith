@@ -2,7 +2,7 @@
  * GPU Memory Profiler Implementation
  */
 
-#include "tracesmith/memory_profiler.hpp"
+#include "tracesmith/capture/memory_profiler.hpp"
 #include <algorithm>
 #include <sstream>
 #include <iomanip>

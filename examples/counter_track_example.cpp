@@ -10,8 +10,8 @@
  *   # Then open counter_trace.json in https://ui.perfetto.dev
  */
 
-#include <tracesmith/types.hpp>
-#include <tracesmith/perfetto_exporter.hpp>
+#include <tracesmith/common/types.hpp>
+#include <tracesmith/state/perfetto_exporter.hpp>
 #include <iostream>
 #include <vector>
 #include <cmath>

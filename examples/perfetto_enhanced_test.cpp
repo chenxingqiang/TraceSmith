@@ -8,8 +8,8 @@
  * - Rich event arguments (kernel params, memory params, perf counters)
  */
 
-#include "tracesmith/perfetto_exporter.hpp"
-#include "tracesmith/types.hpp"
+#include "tracesmith/state/perfetto_exporter.hpp"
+#include "tracesmith/common/types.hpp"
 #include <iostream>
 #include <vector>
 #include <memory>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tracesmith/timeline_builder.hpp"
+#include "tracesmith/state/timeline_builder.hpp"
 #include <string>
 #include <vector>
 

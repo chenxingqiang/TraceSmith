@@ -18,7 +18,7 @@
  *   auto report = profiler.generateReport();
  */
 
-#include "tracesmith/types.hpp"
+#include "tracesmith/common/types.hpp"
 #include <vector>
 #include <map>
 #include <unordered_map>

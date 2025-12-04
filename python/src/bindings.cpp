@@ -15,23 +15,34 @@
 #include <pybind11/functional.h>
 #include <sstream>
 
-#include "tracesmith/types.hpp"
-#include "tracesmith/profiler.hpp"
-#include "tracesmith/cupti_profiler.hpp"
-#include "tracesmith/sbt_format.hpp"
-#include "tracesmith/timeline_builder.hpp"
-#include "tracesmith/timeline_viewer.hpp"
-#include "tracesmith/perfetto_exporter.hpp"
-#include "tracesmith/perfetto_proto_exporter.hpp"
-#include "tracesmith/replay_engine.hpp"
-#include "tracesmith/frame_capture.hpp"
-#include "tracesmith/memory_profiler.hpp"
-#include "tracesmith/xray_importer.hpp"
-#include "tracesmith/bpf_types.hpp"
-#include "tracesmith/gpu_state_machine.hpp"
-#include "tracesmith/instruction_stream.hpp"
-#include "tracesmith/stack_capture.hpp"
-#include "tracesmith/ring_buffer.hpp"
+// Common
+#include "tracesmith/common/types.hpp"
+
+// Capture
+#include "tracesmith/capture/profiler.hpp"
+#include "tracesmith/capture/cupti_profiler.hpp"
+#include "tracesmith/capture/memory_profiler.hpp"
+#include "tracesmith/capture/bpf_types.hpp"
+
+// Format
+#include "tracesmith/format/sbt_format.hpp"
+
+// State
+#include "tracesmith/state/timeline_builder.hpp"
+#include "tracesmith/state/timeline_viewer.hpp"
+#include "tracesmith/state/perfetto_exporter.hpp"
+#include "tracesmith/state/perfetto_proto_exporter.hpp"
+
+// Replay
+#include "tracesmith/replay/replay_engine.hpp"
+#include "tracesmith/replay/frame_capture.hpp"
+
+// Common (additional)
+#include "tracesmith/common/xray_importer.hpp"
+#include "tracesmith/state/gpu_state_machine.hpp"
+#include "tracesmith/state/instruction_stream.hpp"
+#include "tracesmith/common/stack_capture.hpp"
+#include "tracesmith/common/ring_buffer.hpp"
 
 namespace py = pybind11;
 using namespace tracesmith;
@@ -40,7 +51,7 @@ PYBIND11_MODULE(_tracesmith, m) {
     m.doc() = "TraceSmith GPU Profiling & Replay System";
     
     // Version info
-    m.attr("__version__") = "0.6.8";
+    m.attr("__version__") = "0.6.9";
     m.attr("VERSION_MAJOR") = VERSION_MAJOR;
     m.attr("VERSION_MINOR") = VERSION_MINOR;
     m.attr("VERSION_PATCH") = VERSION_PATCH;

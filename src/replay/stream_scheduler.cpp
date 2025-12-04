@@ -1,4 +1,4 @@
-#include "tracesmith/stream_scheduler.hpp"
+#include "tracesmith/replay/stream_scheduler.hpp"
 #include <algorithm>
 
 namespace tracesmith {

@@ -16,7 +16,7 @@
  * - Support for out-of-order execution analysis
  */
 
-#include "tracesmith/types.hpp"
+#include "tracesmith/common/types.hpp"
 #include <vector>
 #include <map>
 #include <memory>

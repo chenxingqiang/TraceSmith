@@ -1,4 +1,4 @@
-#include "tracesmith/sbt_format.hpp"
+#include "tracesmith/format/sbt_format.hpp"
 #include <iostream>
 
 namespace tracesmith {

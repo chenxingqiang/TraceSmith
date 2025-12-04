@@ -10,7 +10,7 @@
  */
 
 #include "tracesmith/tracesmith.hpp"
-#include "tracesmith/replay_engine.hpp"
+#include "tracesmith/replay/replay_engine.hpp"
 #include <iostream>
 #include <random>
 

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <tracesmith/sbt_format.hpp>
+#include <tracesmith/format/sbt_format.hpp>
 #include <filesystem>
 #include <fstream>
 #include <random>

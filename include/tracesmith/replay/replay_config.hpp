@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tracesmith/types.hpp"
+#include "tracesmith/common/types.hpp"
 #include <string>
 #include <vector>
 #include <optional>

@@ -17,8 +17,8 @@
 #include <chrono>
 #include <random>
 
-#include "tracesmith/frame_capture.hpp"
-#include "tracesmith/types.hpp"
+#include "tracesmith/replay/frame_capture.hpp"
+#include "tracesmith/common/types.hpp"
 
 using namespace tracesmith;
 

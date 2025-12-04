@@ -1,4 +1,4 @@
-#include "tracesmith/timeline_viewer.hpp"
+#include "tracesmith/state/timeline_viewer.hpp"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>

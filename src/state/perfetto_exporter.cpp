@@ -1,5 +1,5 @@
-#include "tracesmith/perfetto_exporter.hpp"
-#include "tracesmith/types.hpp"
+#include "tracesmith/state/perfetto_exporter.hpp"
+#include "tracesmith/common/types.hpp"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>

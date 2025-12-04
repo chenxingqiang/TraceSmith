@@ -1,4 +1,4 @@
-#include "tracesmith/instruction_stream.hpp"
+#include "tracesmith/state/instruction_stream.hpp"
 #include <algorithm>
 #include <sstream>
 

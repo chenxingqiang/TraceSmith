@@ -253,7 +253,7 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
    ██║   ██║  ██║██║  ██║╚██████╗███████╗███████║██║ ╚═╝ ██║██║   ██║   ██║  ██║
    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝
 
-                    GPU Profiling & Replay System v0.6.8
+                    GPU Profiling & Replay System v0.6.9
 ```
 
 **Available Commands:**
@@ -367,9 +367,9 @@ int main() {
 
 ```cpp
 #include <tracesmith/tracesmith.hpp>
-#include <tracesmith/timeline_builder.hpp>
-#include <tracesmith/timeline_viewer.hpp>
-#include <tracesmith/perfetto_exporter.hpp>
+#include <tracesmith/state/timeline_builder.hpp>
+#include <tracesmith/state/timeline_viewer.hpp>
+#include <tracesmith/state/perfetto_exporter.hpp>
 
 using namespace tracesmith;
 
@@ -583,7 +583,7 @@ make benchmark_10k_stacks -j8
 [![PyPI version](https://badge.fury.io/py/tracesmith.svg)](https://badge.fury.io/py/tracesmith)
 
 ```bash
-pip install tracesmith==0.6.8
+pip install tracesmith==0.6.9
 ```
 
 **Tested on NVIDIA GPU Server (RTX 4090):**
@@ -643,6 +643,7 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v0.6.9** | 2024-12 | **Include reorganization** - Directory structure matches `src/` layout |
 | **v0.6.8** | 2024-12 | **Enhanced CLI** - ASCII banner, all commands, Python CLI |
 | v0.6.7 | 2024-12 | Real GPU benchmark - 10K+ CUDA kernels with CUPTI  |
 | v0.6.5 | 2024-12 | StackCapture bindings, OverflowPolicy, detect_leaks |

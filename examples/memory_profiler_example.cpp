@@ -13,9 +13,9 @@
  * 
  */
 
-#include "tracesmith/memory_profiler.hpp"
-#include "tracesmith/types.hpp"
-#include "tracesmith/profiler.hpp"
+#include "tracesmith/capture/memory_profiler.hpp"
+#include "tracesmith/common/types.hpp"
+#include "tracesmith/capture/profiler.hpp"
 #include <iostream>
 #include <iomanip>
 #include <vector>

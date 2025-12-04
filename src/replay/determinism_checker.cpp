@@ -1,4 +1,4 @@
-#include "tracesmith/determinism_checker.hpp"
+#include "tracesmith/replay/determinism_checker.hpp"
 #include <sstream>
 
 namespace tracesmith {

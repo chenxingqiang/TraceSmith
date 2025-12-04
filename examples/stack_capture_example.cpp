@@ -9,8 +9,8 @@
  * - Performance considerations
  */
 
-#include "tracesmith/stack_capture.hpp"
-#include "tracesmith/types.hpp"
+#include "tracesmith/common/stack_capture.hpp"
+#include "tracesmith/common/types.hpp"
 #include <iostream>
 #include <iomanip>
 #include <chrono>

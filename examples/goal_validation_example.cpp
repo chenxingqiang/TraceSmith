@@ -19,19 +19,19 @@
 #include <random>
 #include <fstream>
 
-#include "tracesmith/types.hpp"
-#include "tracesmith/profiler.hpp"
-#include "tracesmith/sbt_format.hpp"
-#include "tracesmith/perfetto_exporter.hpp"
-#include "tracesmith/stack_capture.hpp"
-#include "tracesmith/instruction_stream.hpp"
-#include "tracesmith/gpu_state_machine.hpp"
-#include "tracesmith/timeline_builder.hpp"
-#include "tracesmith/timeline_viewer.hpp"
-#include "tracesmith/replay_engine.hpp"
-#include "tracesmith/determinism_checker.hpp"
-#include "tracesmith/xray_importer.hpp"
-#include "tracesmith/memory_profiler.hpp"
+#include "tracesmith/common/types.hpp"
+#include "tracesmith/capture/profiler.hpp"
+#include "tracesmith/format/sbt_format.hpp"
+#include "tracesmith/state/perfetto_exporter.hpp"
+#include "tracesmith/common/stack_capture.hpp"
+#include "tracesmith/state/instruction_stream.hpp"
+#include "tracesmith/state/gpu_state_machine.hpp"
+#include "tracesmith/state/timeline_builder.hpp"
+#include "tracesmith/state/timeline_viewer.hpp"
+#include "tracesmith/replay/replay_engine.hpp"
+#include "tracesmith/replay/determinism_checker.hpp"
+#include "tracesmith/common/xray_importer.hpp"
+#include "tracesmith/capture/memory_profiler.hpp"
 
 using namespace tracesmith;
 

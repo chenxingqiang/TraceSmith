@@ -10,7 +10,7 @@
  * - CAP_BPF or root privileges
  */
 
-#include "tracesmith/bpf_types.hpp"
+#include "tracesmith/capture/bpf_types.hpp"
 #include <algorithm>
 #include <fstream>
 #include <cstring>

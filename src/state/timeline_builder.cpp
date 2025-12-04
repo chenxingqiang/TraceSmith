@@ -1,4 +1,4 @@
-#include "tracesmith/timeline_builder.hpp"
+#include "tracesmith/state/timeline_builder.hpp"
 #include <algorithm>
 #include <map>
 

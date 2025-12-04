@@ -15,13 +15,13 @@
 #include <atomic>
 #include <cstring>
 
-#include "tracesmith/types.hpp"
-#include "tracesmith/stack_capture.hpp"
-#include "tracesmith/sbt_format.hpp"
-#include "tracesmith/profiler.hpp"
+#include "tracesmith/common/types.hpp"
+#include "tracesmith/common/stack_capture.hpp"
+#include "tracesmith/format/sbt_format.hpp"
+#include "tracesmith/capture/profiler.hpp"
 
 #ifdef TRACESMITH_ENABLE_CUDA
-#include "tracesmith/cupti_profiler.hpp"
+#include "tracesmith/capture/cupti_profiler.hpp"
 #include <cuda_runtime.h>
 #endif
 

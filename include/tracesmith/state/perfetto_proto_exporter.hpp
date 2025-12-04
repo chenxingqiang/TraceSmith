@@ -1,7 +1,7 @@
 #pragma once
 
-#include "tracesmith/types.hpp"
-#include "tracesmith/ring_buffer.hpp"
+#include "tracesmith/common/types.hpp"
+#include "tracesmith/common/ring_buffer.hpp"
 #include <vector>
 #include <string>
 #include <memory>

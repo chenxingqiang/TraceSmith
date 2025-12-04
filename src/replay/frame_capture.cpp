@@ -4,8 +4,8 @@
  * RenderDoc-inspired frame-based GPU capture system.
  */
 
-#include "tracesmith/frame_capture.hpp"
-#include "tracesmith/perfetto_exporter.hpp"
+#include "tracesmith/replay/frame_capture.hpp"
+#include "tracesmith/state/perfetto_exporter.hpp"
 #include <algorithm>
 #include <fstream>
 #include <cstring>

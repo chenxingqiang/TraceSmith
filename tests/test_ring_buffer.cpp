@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <tracesmith/ring_buffer.hpp>
+#include <tracesmith/common/ring_buffer.hpp>
 #include <thread>
 #include <vector>
 

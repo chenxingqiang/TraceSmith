@@ -9,10 +9,10 @@
  */
 
 #include "tracesmith/tracesmith.hpp"
-#include "tracesmith/gpu_state_machine.hpp"
-#include "tracesmith/timeline_builder.hpp"
-#include "tracesmith/perfetto_exporter.hpp"
-#include "tracesmith/timeline_viewer.hpp"
+#include "tracesmith/state/gpu_state_machine.hpp"
+#include "tracesmith/state/timeline_builder.hpp"
+#include "tracesmith/state/perfetto_exporter.hpp"
+#include "tracesmith/state/timeline_viewer.hpp"
 #include <iostream>
 #include <random>
 

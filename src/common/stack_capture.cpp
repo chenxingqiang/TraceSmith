@@ -1,4 +1,4 @@
-#include "tracesmith/stack_capture.hpp"
+#include "tracesmith/common/stack_capture.hpp"
 #include <cstring>
 #include <sstream>
 #include <thread>

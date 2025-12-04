@@ -1,4 +1,4 @@
-#include "tracesmith/xray_importer.hpp"
+#include "tracesmith/common/xray_importer.hpp"
 #include <fstream>
 #include <algorithm>
 #include <cstring>

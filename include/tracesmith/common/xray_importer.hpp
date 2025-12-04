@@ -24,7 +24,7 @@
  *   auto events = importer.importFile("xray-log.target.xray");
  */
 
-#include "tracesmith/types.hpp"
+#include "tracesmith/common/types.hpp"
 #include <vector>
 #include <string>
 #include <cstdint>

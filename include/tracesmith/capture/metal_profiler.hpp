@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tracesmith/profiler.hpp"
+#include "tracesmith/capture/profiler.hpp"
 #include <mutex>
 #include <unordered_map>
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "tracesmith/replay_config.hpp"
-#include "tracesmith/types.hpp"
+#include "tracesmith/replay/replay_config.hpp"
+#include "tracesmith/common/types.hpp"
 #include <map>
 #include <queue>
 #include <vector>

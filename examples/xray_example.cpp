@@ -9,9 +9,9 @@
  * - Exporting to Perfetto format
  */
 
-#include "tracesmith/xray_importer.hpp"
-#include "tracesmith/perfetto_exporter.hpp"
-#include "tracesmith/types.hpp"
+#include "tracesmith/common/xray_importer.hpp"
+#include "tracesmith/state/perfetto_exporter.hpp"
+#include "tracesmith/common/types.hpp"
 #include <iostream>
 #include <iomanip>
 #include <fstream>

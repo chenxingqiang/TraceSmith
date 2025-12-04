@@ -65,7 +65,7 @@ TRACESMITH_METAL=1 pip install tracesmith  # Apple
 #### C++ API
 
 ```cpp
-#include <tracesmith/tracesmith.hpp>
+#include <tracesmith/tracesmith.hpp>  // Main header includes all modules
 
 using namespace tracesmith;
 

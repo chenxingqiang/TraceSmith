@@ -23,7 +23,7 @@
  * Note: eBPF requires Linux kernel >= 4.14 and root/CAP_BPF privileges.
  */
 
-#include "tracesmith/types.hpp"
+#include "tracesmith/common/types.hpp"
 #include <vector>
 #include <string>
 #include <cstdint>

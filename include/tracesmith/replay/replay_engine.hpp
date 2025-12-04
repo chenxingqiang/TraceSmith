@@ -1,10 +1,10 @@
 #pragma once
 
-#include "tracesmith/replay_config.hpp"
-#include "tracesmith/stream_scheduler.hpp"
-#include "tracesmith/operation_executor.hpp"
-#include "tracesmith/determinism_checker.hpp"
-#include "tracesmith/sbt_format.hpp"
+#include "tracesmith/replay/replay_config.hpp"
+#include "tracesmith/replay/stream_scheduler.hpp"
+#include "tracesmith/replay/operation_executor.hpp"
+#include "tracesmith/replay/determinism_checker.hpp"
+#include "tracesmith/format/sbt_format.hpp"
 #include <string>
 #include <memory>
 

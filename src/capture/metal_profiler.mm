@@ -1,4 +1,4 @@
-#include "tracesmith/metal_profiler.hpp"
+#include "tracesmith/capture/metal_profiler.hpp"
 #include <iostream>
 
 #ifdef TRACESMITH_ENABLE_METAL

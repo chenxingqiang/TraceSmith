@@ -11,15 +11,15 @@
  * - Build with -DTRACESMITH_ENABLE_CUDA=ON
  */
 
-#include "tracesmith/types.hpp"
-#include "tracesmith/perfetto_proto_exporter.hpp"
-#include "tracesmith/profiler.hpp"
+#include "tracesmith/common/types.hpp"
+#include "tracesmith/state/perfetto_proto_exporter.hpp"
+#include "tracesmith/capture/profiler.hpp"
 #include <iostream>
 #include <thread>
 #include <chrono>
 
 #ifdef TRACESMITH_ENABLE_CUDA
-#include "tracesmith/cupti_profiler.hpp"
+#include "tracesmith/capture/cupti_profiler.hpp"
 #include <cuda_runtime.h>
 
 // Real CUDA kernel for tracing

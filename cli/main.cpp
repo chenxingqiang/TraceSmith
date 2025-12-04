@@ -6,9 +6,9 @@
  */
 
 #include <tracesmith/tracesmith.hpp>
-#include <tracesmith/perfetto_exporter.hpp>
-#include <tracesmith/timeline_builder.hpp>
-#include <tracesmith/replay_engine.hpp>
+#include <tracesmith/state/perfetto_exporter.hpp>
+#include <tracesmith/state/timeline_builder.hpp>
+#include <tracesmith/replay/replay_engine.hpp>
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -96,7 +96,7 @@ std::string formatTimestamp(Timestamp ts) {
     return oss.str();
 }
 
-std::string formatDuration(Timestamp dur) {
+std::string formatTimeDuration(Timestamp dur) {
     if (dur < 1000) {
         return std::to_string(dur) + " ns";
     } else if (dur < 1000000) {
@@ -114,7 +114,7 @@ std::string formatDuration(Timestamp dur) {
     }
 }
 
-std::string formatBytes(uint64_t bytes) {
+std::string formatByteSize(uint64_t bytes) {
     if (bytes < 1024) {
         return std::to_string(bytes) + " B";
     } else if (bytes < 1024 * 1024) {
@@ -298,7 +298,7 @@ int cmdDevices([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
                               << C(Reset) << dev.name << "\n";
                     std::cout << "    Vendor:     " << dev.vendor << "\n";
                     std::cout << "    Compute:    " << dev.compute_major << "." << dev.compute_minor << "\n";
-                    std::cout << "    Memory:     " << formatBytes(dev.total_memory) << "\n";
+                    std::cout << "    Memory:     " << formatByteSize(dev.total_memory) << "\n";
                     std::cout << "    SMs:        " << dev.multiprocessor_count << "\n";
                     std::cout << "    Clock:      " << (dev.clock_rate / 1000) << " MHz\n";
                 }
@@ -386,7 +386,7 @@ int cmdRecord(int argc, char* argv[]) {
     std::cout << C(Bold) << "Configuration:" << C(Reset) << "\n";
     std::cout << "  Output:      " << C(Cyan) << output_file << C(Reset) << "\n";
     std::cout << "  Duration:    " << duration_sec << " seconds\n";
-    std::cout << "  Buffer:      " << formatBytes(buffer_size * sizeof(TraceEvent)) << "\n";
+    std::cout << "  Buffer:      " << formatByteSize(buffer_size * sizeof(TraceEvent)) << "\n";
     std::cout << "  Platform:    " << platform_name << "\n";
     std::cout << "  Call stacks: " << (capture_stacks ? "enabled" : "disabled") << "\n\n";
     
@@ -512,7 +512,7 @@ int cmdRecord(int argc, char* argv[]) {
     std::cout << "  Platform:     " << platform_name << "\n";
     std::cout << "  Total events: " << C(Green) << total_events << C(Reset) << "\n";
     std::cout << "  Dropped:      " << profiler->eventsDropped() << "\n";
-    std::cout << "  File size:    " << formatBytes(writer.fileSize()) << "\n";
+    std::cout << "  File size:    " << formatByteSize(writer.fileSize()) << "\n";
     std::cout << "  Output:       " << C(Cyan) << output_file << C(Reset) << "\n\n";
     
     printSuccess("Trace saved to " + output_file);
@@ -607,8 +607,8 @@ int cmdView(int argc, char* argv[]) {
     
     // Statistics
     std::cout << "\n" << C(Bold) << "Statistics:" << C(Reset) << "\n";
-    std::cout << "  Time span:      " << formatDuration(max_ts - min_ts) << "\n";
-    std::cout << "  Total duration: " << formatDuration(total_duration) << "\n";
+    std::cout << "  Time span:      " << formatTimeDuration(max_ts - min_ts) << "\n";
+    std::cout << "  Total duration: " << formatTimeDuration(total_duration) << "\n";
     std::cout << "  Streams:        " << stream_counts.size() << "\n";
     
     // Events by type
@@ -623,8 +623,8 @@ int cmdView(int argc, char* argv[]) {
         std::cout << "  " << std::left << std::setw(20) << eventTypeToString(type)
                   << std::setw(10) << count;
         if (type_durations[type] > 0) {
-            std::cout << std::setw(15) << formatDuration(type_durations[type])
-                      << formatDuration(type_durations[type] / count);
+            std::cout << std::setw(15) << formatTimeDuration(type_durations[type])
+                      << formatTimeDuration(type_durations[type] / count);
         }
         std::cout << "\n";
     }
@@ -648,7 +648,7 @@ int cmdView(int argc, char* argv[]) {
         std::cout << "  " << C(Cyan) << "[" << std::setw(5) << count << "]" << C(Reset) << " ";
         std::cout << std::setw(16) << std::left << eventTypeToString(event.type);
         std::cout << " | Stream " << event.stream_id;
-        std::cout << " | " << std::setw(12) << formatDuration(event.duration);
+        std::cout << " | " << std::setw(12) << formatTimeDuration(event.duration);
         std::cout << " | " << event.name;
         std::cout << "\n";
         
@@ -864,7 +864,7 @@ int cmdAnalyze(int argc, char* argv[]) {
     std::cout << "  Overall:        " << C(Green) << std::fixed << std::setprecision(1)
               << (timeline.gpu_utilization * 100) << "%" << C(Reset) << "\n";
     std::cout << "  Max concurrent: " << timeline.max_concurrent_ops << " ops\n";
-    std::cout << "  Total duration: " << formatDuration(timeline.total_duration) << "\n";
+    std::cout << "  Total duration: " << formatTimeDuration(timeline.total_duration) << "\n";
     
     // Kernel analysis
     std::map<std::string, std::pair<size_t, uint64_t>> kernel_stats;  // name -> (count, total_duration)
@@ -897,8 +897,8 @@ int cmdAnalyze(int argc, char* argv[]) {
             std::string short_name = name.length() > 32 ? name.substr(0, 32) + "..." : name;
             std::cout << "  " << std::left << std::setw(35) << short_name
                       << std::setw(10) << stats.first
-                      << std::setw(15) << formatDuration(stats.second)
-                      << formatDuration(stats.second / stats.first) << "\n";
+                      << std::setw(15) << formatTimeDuration(stats.second)
+                      << formatTimeDuration(stats.second / stats.first) << "\n";
         }
     }
     
@@ -981,7 +981,7 @@ int cmdReplay(int argc, char* argv[]) {
     std::cout << "  Operations:   " << result.operations_executed << "/" 
               << result.operations_total << "\n";
     std::cout << "  Deterministic: " << (result.deterministic ? "Yes" : "No") << "\n";
-    std::cout << "  Duration:     " << formatDuration(result.replay_duration) << "\n";
+    std::cout << "  Duration:     " << formatTimeDuration(result.replay_duration) << "\n";
     
     if (result.success) {
         printSuccess("Replay completed");

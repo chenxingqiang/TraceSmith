@@ -9,8 +9,8 @@
  */
 
 #include <tracesmith/tracesmith.hpp>
-#include <tracesmith/stack_capture.hpp>
-#include <tracesmith/instruction_stream.hpp>
+#include <tracesmith/common/stack_capture.hpp>
+#include <tracesmith/state/instruction_stream.hpp>
 #include <iostream>
 #include <iomanip>
 #include <fstream>

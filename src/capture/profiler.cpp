@@ -7,12 +7,12 @@
  * - Metal (Apple)
  */
 
-#include "tracesmith/profiler.hpp"
+#include "tracesmith/capture/profiler.hpp"
 #ifdef TRACESMITH_ENABLE_CUDA
-#include "tracesmith/cupti_profiler.hpp"
+#include "tracesmith/capture/cupti_profiler.hpp"
 #endif
 #ifdef TRACESMITH_ENABLE_METAL
-#include "tracesmith/metal_profiler.hpp"
+#include "tracesmith/capture/metal_profiler.hpp"
 #endif
 
 namespace tracesmith {

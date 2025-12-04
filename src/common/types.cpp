@@ -1,4 +1,4 @@
-#include "tracesmith/types.hpp"
+#include "tracesmith/common/types.hpp"
 #include <algorithm>
 
 namespace tracesmith {

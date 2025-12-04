@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include <tracesmith/types.hpp>
-#include <tracesmith/perfetto_proto_exporter.hpp>
-#include <tracesmith/xray_importer.hpp>
-#include <tracesmith/bpf_types.hpp>
+#include <tracesmith/common/types.hpp>
+#include <tracesmith/state/perfetto_proto_exporter.hpp>
+#include <tracesmith/common/xray_importer.hpp>
+#include <tracesmith/capture/bpf_types.hpp>
 #include <thread>
 #include <atomic>
 
@@ -643,7 +643,7 @@ TEST(BPFTypesTest, BPFProgramInfo) {
 // Frame Capture Tests (v0.5.0 - RenderDoc-inspired)
 // ============================================================
 
-#include "tracesmith/frame_capture.hpp"
+#include "tracesmith/replay/frame_capture.hpp"
 
 TEST(FrameCaptureTest, DefaultConstruction) {
     FrameCapture capture;
@@ -842,7 +842,7 @@ TEST(FrameCaptureTest, ClearCapture) {
 // Memory Profiler Tests (v0.6.0)
 // ============================================================
 
-#include "tracesmith/memory_profiler.hpp"
+#include "tracesmith/capture/memory_profiler.hpp"
 
 TEST(MemoryProfilerTest, DefaultConstruction) {
     MemoryProfiler profiler;

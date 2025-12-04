@@ -31,12 +31,12 @@
 #include <chrono>
 #include <thread>
 
-#include "tracesmith/profiler.hpp"
-#include "tracesmith/sbt_format.hpp"
-#include "tracesmith/perfetto_exporter.hpp"
+#include "tracesmith/capture/profiler.hpp"
+#include "tracesmith/format/sbt_format.hpp"
+#include "tracesmith/state/perfetto_exporter.hpp"
 
 #ifdef TRACESMITH_ENABLE_CUDA
-#include "tracesmith/cupti_profiler.hpp"
+#include "tracesmith/capture/cupti_profiler.hpp"
 #include <cuda_runtime.h>
 #endif
 

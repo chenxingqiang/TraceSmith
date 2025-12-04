@@ -5,6 +5,18 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.9] - 2024-12-04
+
+### Changed
+- **Reorganized include directory structure** to match `src/` layout:
+  - `include/tracesmith/capture/` - GPU profiling backends (profiler, cupti, metal, memory, bpf)
+  - `include/tracesmith/common/` - Core utilities (types, ring_buffer, stack_capture, xray_importer)
+  - `include/tracesmith/format/` - Trace file I/O (sbt_format)
+  - `include/tracesmith/state/` - State analysis (gpu_state_machine, instruction_stream, timeline, perfetto)
+  - `include/tracesmith/replay/` - Replay engine (replay_engine, frame_capture, determinism_checker)
+- Updated all source files, examples, tests, and Python bindings to use new paths
+- Main `tracesmith.hpp` header remains at top level and includes all modules
+
 ## [0.6.8] - 2024-12-04
 
 ### Added

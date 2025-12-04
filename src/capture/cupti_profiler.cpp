@@ -1,4 +1,4 @@
-#include "tracesmith/cupti_profiler.hpp"
+#include "tracesmith/capture/cupti_profiler.hpp"
 #include <iostream>
 #include <cstring>
 #include <algorithm>
