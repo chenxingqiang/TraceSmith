@@ -19,6 +19,7 @@
 #include "tracesmith/cupti_profiler.hpp"
 #include "tracesmith/sbt_format.hpp"
 #include "tracesmith/timeline_builder.hpp"
+#include "tracesmith/timeline_viewer.hpp"
 #include "tracesmith/perfetto_exporter.hpp"
 #include "tracesmith/perfetto_proto_exporter.hpp"
 #include "tracesmith/replay_engine.hpp"
@@ -26,6 +27,8 @@
 #include "tracesmith/memory_profiler.hpp"
 #include "tracesmith/xray_importer.hpp"
 #include "tracesmith/bpf_types.hpp"
+#include "tracesmith/gpu_state_machine.hpp"
+#include "tracesmith/instruction_stream.hpp"
 
 namespace py = pybind11;
 using namespace tracesmith;
@@ -796,4 +799,140 @@ PYBIND11_MODULE(_tracesmith, m) {
     
     m.def("detect_platform", &detectPlatform,
           "Auto-detect the best available GPU platform");
+    
+    // ============================================================================
+    // State Module Bindings (v0.6.6)
+    // ============================================================================
+    
+    // GPUState enum
+    py::enum_<GPUState>(m, "GPUState")
+        .value("Idle", GPUState::Idle)
+        .value("Queued", GPUState::Queued)
+        .value("Running", GPUState::Running)
+        .value("Waiting", GPUState::Waiting)
+        .value("Complete", GPUState::Complete)
+        .export_values();
+    
+    // StateTransition struct
+    py::class_<StateTransition>(m, "StateTransition")
+        .def(py::init<>())
+        .def_readwrite("from_state", &StateTransition::from)
+        .def_readwrite("to_state", &StateTransition::to)
+        .def_readwrite("when", &StateTransition::when)
+        .def_readwrite("correlation_id", &StateTransition::correlation_id)
+        .def_readwrite("reason", &StateTransition::reason);
+    
+    // GPUStreamState class
+    py::class_<GPUStreamState>(m, "GPUStreamState")
+        .def(py::init<uint32_t, uint32_t>(),
+             py::arg("stream_id"), py::arg("device_id") = 0)
+        .def("current_state", &GPUStreamState::currentState)
+        .def("transition_to", &GPUStreamState::transitionTo,
+             py::arg("new_state"), py::arg("when"),
+             py::arg("correlation_id") = 0, py::arg("reason") = "")
+        .def("process_event", &GPUStreamState::processEvent)
+        .def("state_at", &GPUStreamState::stateAt)
+        .def("transitions", &GPUStreamState::transitions)
+        .def("time_in_states", &GPUStreamState::timeInStates)
+        .def("utilization", &GPUStreamState::utilization)
+        .def("stream_id", &GPUStreamState::streamId)
+        .def("device_id", &GPUStreamState::deviceId)
+        .def("reset", &GPUStreamState::reset);
+    
+    // GPUStateMachine::Statistics
+    py::class_<GPUStateMachine::Statistics>(m, "GPUStateMachineStatistics")
+        .def(py::init<>())
+        .def_readwrite("total_events", &GPUStateMachine::Statistics::total_events)
+        .def_readwrite("total_transitions", &GPUStateMachine::Statistics::total_transitions)
+        .def_readwrite("transitions_per_stream", &GPUStateMachine::Statistics::transitions_per_stream)
+        .def_readwrite("total_time_per_state", &GPUStateMachine::Statistics::total_time_per_state)
+        .def_readwrite("overall_utilization", &GPUStateMachine::Statistics::overall_utilization);
+    
+    // GPUStateMachine::StateHistory
+    py::class_<GPUStateMachine::StateHistory>(m, "GPUStateHistory")
+        .def(py::init<>())
+        .def_readwrite("device_id", &GPUStateMachine::StateHistory::device_id)
+        .def_readwrite("stream_id", &GPUStateMachine::StateHistory::stream_id)
+        .def_readwrite("transitions", &GPUStateMachine::StateHistory::transitions);
+    
+    // GPUStateMachine class
+    py::class_<GPUStateMachine>(m, "GPUStateMachine")
+        .def(py::init<>())
+        .def("process_event", &GPUStateMachine::processEvent)
+        .def("process_events", &GPUStateMachine::processEvents)
+        .def("get_stream_state", 
+             static_cast<GPUStreamState* (GPUStateMachine::*)(uint32_t, uint32_t)>(&GPUStateMachine::getStreamState),
+             py::return_value_policy::reference_internal,
+             py::arg("device_id"), py::arg("stream_id"))
+        .def("get_all_streams", &GPUStateMachine::getAllStreams)
+        .def("get_statistics", &GPUStateMachine::getStatistics)
+        .def("export_history", &GPUStateMachine::exportHistory)
+        .def("reset", &GPUStateMachine::reset);
+    
+    // DependencyType enum
+    py::enum_<DependencyType>(m, "DependencyType")
+        .value("None_", DependencyType::None)
+        .value("Sequential", DependencyType::Sequential)
+        .value("Synchronization", DependencyType::Synchronization)
+        .value("HostBarrier", DependencyType::HostBarrier)
+        .value("Memory", DependencyType::Memory)
+        .export_values();
+    
+    // OperationDependency struct
+    py::class_<OperationDependency>(m, "OperationDependency")
+        .def(py::init<uint64_t, uint64_t, DependencyType, const std::string&>(),
+             py::arg("from_id"), py::arg("to_id"), py::arg("type"), py::arg("desc") = "")
+        .def_readwrite("from_correlation_id", &OperationDependency::from_correlation_id)
+        .def_readwrite("to_correlation_id", &OperationDependency::to_correlation_id)
+        .def_readwrite("type", &OperationDependency::type)
+        .def_readwrite("description", &OperationDependency::description);
+    
+    // InstructionNode struct
+    py::class_<InstructionNode>(m, "InstructionNode")
+        .def(py::init<>())
+        .def(py::init<const TraceEvent&>())
+        .def_readwrite("event", &InstructionNode::event)
+        .def_readwrite("dependencies", &InstructionNode::dependencies)
+        .def_readwrite("dependents", &InstructionNode::dependents);
+    
+    // InstructionStreamBuilder::Statistics
+    py::class_<InstructionStreamBuilder::Statistics>(m, "InstructionStreamStatistics")
+        .def(py::init<>())
+        .def_readwrite("total_operations", &InstructionStreamBuilder::Statistics::total_operations)
+        .def_readwrite("kernel_launches", &InstructionStreamBuilder::Statistics::kernel_launches)
+        .def_readwrite("memory_operations", &InstructionStreamBuilder::Statistics::memory_operations)
+        .def_readwrite("synchronizations", &InstructionStreamBuilder::Statistics::synchronizations)
+        .def_readwrite("total_dependencies", &InstructionStreamBuilder::Statistics::total_dependencies)
+        .def_readwrite("operations_per_stream", &InstructionStreamBuilder::Statistics::operations_per_stream);
+    
+    // InstructionStreamBuilder class
+    py::class_<InstructionStreamBuilder>(m, "InstructionStreamBuilder")
+        .def(py::init<>())
+        .def("add_event", &InstructionStreamBuilder::addEvent)
+        .def("add_events", &InstructionStreamBuilder::addEvents)
+        .def("analyze", &InstructionStreamBuilder::analyze)
+        .def("get_execution_order", &InstructionStreamBuilder::getExecutionOrder)
+        .def("get_dependencies", &InstructionStreamBuilder::getDependencies)
+        .def("get_stream_operations", &InstructionStreamBuilder::getStreamOperations)
+        .def("has_dependency", &InstructionStreamBuilder::hasDependency)
+        .def("get_statistics", &InstructionStreamBuilder::getStatistics)
+        .def("export_to_dot", &InstructionStreamBuilder::exportToDot)
+        .def("clear", &InstructionStreamBuilder::clear);
+    
+    // TimelineViewer::ViewConfig
+    py::class_<TimelineViewer::ViewConfig>(m, "TimelineViewConfig")
+        .def(py::init<>())
+        .def_readwrite("width", &TimelineViewer::ViewConfig::width)
+        .def_readwrite("max_rows", &TimelineViewer::ViewConfig::max_rows)
+        .def_readwrite("show_timestamps", &TimelineViewer::ViewConfig::show_timestamps)
+        .def_readwrite("show_duration", &TimelineViewer::ViewConfig::show_duration)
+        .def_readwrite("fill_char", &TimelineViewer::ViewConfig::fill_char);
+    
+    // TimelineViewer class
+    py::class_<TimelineViewer>(m, "TimelineViewer")
+        .def(py::init<>())
+        .def(py::init<const TimelineViewer::ViewConfig&>())
+        .def("render", &TimelineViewer::render)
+        .def("render_stream", &TimelineViewer::renderStream)
+        .def("render_stats", &TimelineViewer::renderStats);
 }

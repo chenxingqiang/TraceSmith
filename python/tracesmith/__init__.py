@@ -43,6 +43,8 @@ from ._tracesmith import (
     XRayFunctionRecord,
     XRayStatistics,
     BPFEventType,
+    GPUState,
+    DependencyType,
     
     # ========================================================================
     # Core Classes
@@ -120,6 +122,21 @@ from ._tracesmith import (
     ReplayEngine,
     
     # ========================================================================
+    # State Module (GPU State Machine, Instruction Stream, Timeline Viewer)
+    # ========================================================================
+    StateTransition,
+    GPUStreamState,
+    GPUStateMachine,
+    GPUStateMachineStatistics,
+    GPUStateHistory,
+    OperationDependency,
+    InstructionNode,
+    InstructionStreamBuilder,
+    InstructionStreamStatistics,
+    TimelineViewConfig,
+    TimelineViewer,
+    
+    # ========================================================================
     # Utility Functions
     # ========================================================================
     get_current_timestamp,
@@ -161,6 +178,8 @@ __all__ = [
     'XRayFunctionRecord',
     'XRayStatistics',
     'BPFEventType',
+    'GPUState',
+    'DependencyType',
     
     # Core Classes
     'TraceEvent',
@@ -216,6 +235,19 @@ __all__ = [
     'ReplayConfig',
     'ReplayResult',
     'ReplayEngine',
+    
+    # State Module
+    'StateTransition',
+    'GPUStreamState',
+    'GPUStateMachine',
+    'GPUStateMachineStatistics',
+    'GPUStateHistory',
+    'OperationDependency',
+    'InstructionNode',
+    'InstructionStreamBuilder',
+    'InstructionStreamStatistics',
+    'TimelineViewConfig',
+    'TimelineViewer',
     
     # Functions
     'get_current_timestamp',
