@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <fstream>
 #include <cstring>
+#include <cstdio>
 
 #ifdef __linux__
 #include <unistd.h>

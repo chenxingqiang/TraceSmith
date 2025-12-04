@@ -474,38 +474,38 @@ void CUPTIProfiler::processKernelActivity(const CUpti_ActivityKernel4* kernel) {
     // Create kernel launch event
     TraceEvent launch_event;
     launch_event.type = EventType::KernelLaunch;
-    launch_event.timestamp = Timestamp(std::chrono::nanoseconds(kernel->start));
+    launch_event.timestamp = static_cast<Timestamp>(kernel->start);
     launch_event.correlation_id = kernel->correlationId;
     launch_event.device_id = kernel->deviceId;
     launch_event.stream_id = kernel->streamId;
     launch_event.name = kernel->name ? kernel->name : "unknown_kernel";
     
     // Kernel parameters
-    launch_event.data["gridDimX"] = kernel->gridX;
-    launch_event.data["gridDimY"] = kernel->gridY;
-    launch_event.data["gridDimZ"] = kernel->gridZ;
-    launch_event.data["blockDimX"] = kernel->blockX;
-    launch_event.data["blockDimY"] = kernel->blockY;
-    launch_event.data["blockDimZ"] = kernel->blockZ;
-    launch_event.data["dynamicSharedMemory"] = kernel->dynamicSharedMemory;
-    launch_event.data["staticSharedMemory"] = kernel->staticSharedMemory;
-    launch_event.data["localMemoryPerThread"] = kernel->localMemoryPerThread;
-    launch_event.data["localMemoryTotal"] = kernel->localMemoryTotal;
-    launch_event.data["registersPerThread"] = kernel->registersPerThread;
+    launch_event.metadata["gridDimX"] = std::to_string(kernel->gridX);
+    launch_event.metadata["gridDimY"] = std::to_string(kernel->gridY);
+    launch_event.metadata["gridDimZ"] = std::to_string(kernel->gridZ);
+    launch_event.metadata["blockDimX"] = std::to_string(kernel->blockX);
+    launch_event.metadata["blockDimY"] = std::to_string(kernel->blockY);
+    launch_event.metadata["blockDimZ"] = std::to_string(kernel->blockZ);
+    launch_event.metadata["dynamicSharedMemory"] = std::to_string(kernel->dynamicSharedMemory);
+    launch_event.metadata["staticSharedMemory"] = std::to_string(kernel->staticSharedMemory);
+    launch_event.metadata["localMemoryPerThread"] = std::to_string(kernel->localMemoryPerThread);
+    launch_event.metadata["localMemoryTotal"] = std::to_string(kernel->localMemoryTotal);
+    launch_event.metadata["registersPerThread"] = std::to_string(kernel->registersPerThread);
     
     addEvent(std::move(launch_event));
     
     // Create kernel completion event
     TraceEvent complete_event;
     complete_event.type = EventType::KernelComplete;
-    complete_event.timestamp = Timestamp(std::chrono::nanoseconds(kernel->end));
+    complete_event.timestamp = static_cast<Timestamp>(kernel->end);
     complete_event.correlation_id = kernel->correlationId;
     complete_event.device_id = kernel->deviceId;
     complete_event.stream_id = kernel->streamId;
     complete_event.name = kernel->name ? kernel->name : "unknown_kernel";
     
     // Duration in nanoseconds
-    complete_event.data["duration_ns"] = kernel->end - kernel->start;
+    complete_event.metadata["duration_ns"] = std::to_string(kernel->end - kernel->start);
     
     addEvent(std::move(complete_event));
 }
@@ -537,22 +537,22 @@ void CUPTIProfiler::processMemcpyActivity(const CUpti_ActivityMemcpy* memcpy) {
             break;
     }
     
-    event.timestamp = Timestamp(std::chrono::nanoseconds(memcpy->start));
+    event.timestamp = static_cast<Timestamp>(memcpy->start);
     event.correlation_id = memcpy->correlationId;
     event.device_id = memcpy->deviceId;
     event.stream_id = memcpy->streamId;
     
     // Memory transfer details
-    event.data["bytes"] = memcpy->bytes;
-    event.data["duration_ns"] = memcpy->end - memcpy->start;
-    event.data["srcKind"] = static_cast<uint32_t>(memcpy->srcKind);
-    event.data["dstKind"] = static_cast<uint32_t>(memcpy->dstKind);
+    event.metadata["bytes"] = std::to_string(memcpy->bytes);
+    event.metadata["duration_ns"] = std::to_string(memcpy->end - memcpy->start);
+    event.metadata["srcKind"] = std::to_string(static_cast<uint32_t>(memcpy->srcKind));
+    event.metadata["dstKind"] = std::to_string(static_cast<uint32_t>(memcpy->dstKind));
     
     // Bandwidth calculation (bytes per second)
     uint64_t duration_ns = memcpy->end - memcpy->start;
     if (duration_ns > 0) {
         double bandwidth_gbps = (double)memcpy->bytes / duration_ns; // GB/s
-        event.data["bandwidth_gbps"] = bandwidth_gbps;
+        event.metadata["bandwidth_gbps"] = std::to_string(bandwidth_gbps);
     }
     
     addEvent(std::move(event));
@@ -562,14 +562,14 @@ void CUPTIProfiler::processMemsetActivity(const CUpti_ActivityMemset* memset) {
     TraceEvent event;
     event.type = EventType::MemsetDevice;
     event.name = "cudaMemset";
-    event.timestamp = Timestamp(std::chrono::nanoseconds(memset->start));
+    event.timestamp = static_cast<Timestamp>(memset->start);
     event.correlation_id = memset->correlationId;
     event.device_id = memset->deviceId;
     event.stream_id = memset->streamId;
     
-    event.data["bytes"] = memset->bytes;
-    event.data["value"] = memset->value;
-    event.data["duration_ns"] = memset->end - memset->start;
+    event.metadata["bytes"] = std::to_string(memset->bytes);
+    event.metadata["value"] = std::to_string(memset->value);
+    event.metadata["duration_ns"] = std::to_string(memset->end - memset->start);
     
     addEvent(std::move(event));
 }
@@ -596,11 +596,11 @@ void CUPTIProfiler::processSyncActivity(const CUpti_ActivitySynchronization* syn
             break;
     }
     
-    event.timestamp = Timestamp(std::chrono::nanoseconds(sync->start));
+    event.timestamp = static_cast<Timestamp>(sync->start);
     event.correlation_id = sync->correlationId;
     event.stream_id = sync->streamId;
     
-    event.data["duration_ns"] = sync->end - sync->start;
+    event.metadata["duration_ns"] = std::to_string(sync->end - sync->start);
     
     addEvent(std::move(event));
 }
