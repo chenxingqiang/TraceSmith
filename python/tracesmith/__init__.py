@@ -23,7 +23,7 @@ Features:
 - Python and C++ APIs
 """
 
-from ._tracesmith import (
+from ._tracesmith import (  # noqa: I001 - imports organized by category
     # Version info
     __version__,
     VERSION_MAJOR,

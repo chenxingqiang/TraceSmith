@@ -10,7 +10,6 @@ Demonstrates basic usage of TraceSmith Python bindings for:
 """
 
 import tracesmith as ts
-import sys
 
 
 def main():

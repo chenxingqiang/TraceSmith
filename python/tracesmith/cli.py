@@ -19,9 +19,8 @@ Or via Python module:
 
 import argparse
 import sys
-import os
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 # =============================================================================
 # ANSI Color Codes
@@ -48,7 +47,8 @@ class Color:
         return color if cls._enabled else ""
 
 
-def C(color: str) -> str:
+def colorize(color: str) -> str:
+    """Apply color code if colors are enabled."""
     return Color.get(color)
 
 
@@ -66,15 +66,15 @@ BANNER = """
 
 def print_banner():
     """Print the TraceSmith ASCII art banner."""
-    print(C(Color.CYAN) + BANNER + C(Color.RESET))
+    print(colorize(Color.CYAN) + BANNER + colorize(Color.RESET))
     version = get_version()
-    print(f"{C(Color.YELLOW)}                    GPU Profiling & Replay System v{version}{C(Color.RESET)}\n")
+    print(f"{colorize(Color.YELLOW)}                    GPU Profiling & Replay System v{version}{colorize(Color.RESET)}\n")
 
 
 def print_compact_banner():
     """Print a compact banner."""
     version = get_version()
-    print(f"{C(Color.CYAN)}{C(Color.BOLD)}TraceSmith{C(Color.RESET)} v{version} - GPU Profiling & Replay System\n")
+    print(f"{colorize(Color.CYAN)}{colorize(Color.BOLD)}TraceSmith{colorize(Color.RESET)} v{version} - GPU Profiling & Replay System\n")
 
 
 # =============================================================================
@@ -90,23 +90,23 @@ def get_version() -> str:
 
 
 def print_success(msg: str):
-    print(f"{C(Color.GREEN)}✓ {C(Color.RESET)}{msg}")
+    print(f"{colorize(Color.GREEN)}✓ {colorize(Color.RESET)}{msg}")
 
 
 def print_error(msg: str):
-    print(f"{C(Color.RED)}✗ Error: {C(Color.RESET)}{msg}", file=sys.stderr)
+    print(f"{colorize(Color.RED)}✗ Error: {colorize(Color.RESET)}{msg}", file=sys.stderr)
 
 
 def print_warning(msg: str):
-    print(f"{C(Color.YELLOW)}⚠ Warning: {C(Color.RESET)}{msg}")
+    print(f"{colorize(Color.YELLOW)}⚠ Warning: {colorize(Color.RESET)}{msg}")
 
 
 def print_info(msg: str):
-    print(f"{C(Color.BLUE)}ℹ {C(Color.RESET)}{msg}")
+    print(f"{colorize(Color.BLUE)}ℹ {colorize(Color.RESET)}{msg}")
 
 
 def print_section(title: str):
-    print(f"\n{C(Color.BOLD)}{C(Color.CYAN)}═══ {title} ═══{C(Color.RESET)}\n")
+    print(f"\n{colorize(Color.BOLD)}{colorize(Color.CYAN)}═══ {title} ═══{colorize(Color.RESET)}\n")
 
 
 def format_bytes(size: int) -> str:
@@ -138,46 +138,46 @@ def cmd_info(args):
     print_section("TraceSmith System Information")
 
     from . import (
-        __version__,
         VERSION_MAJOR,
         VERSION_MINOR,
         VERSION_PATCH,
-        is_protobuf_available,
+        __version__,
+        detect_platform,
+        get_cuda_device_count,
+        get_metal_device_count,
         is_bpf_available,
         is_cuda_available,
         is_metal_available,
-        get_cuda_device_count,
-        get_metal_device_count,
-        detect_platform,
+        is_protobuf_available,
         platform_type_to_string,
     )
 
-    print(f"{C(Color.BOLD)}Version:{C(Color.RESET)}")
-    print(f"  TraceSmith:  {C(Color.GREEN)}{__version__}{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}Version:{colorize(Color.RESET)}")
+    print(f"  TraceSmith:  {colorize(Color.GREEN)}{__version__}{colorize(Color.RESET)}")
     print(f"  Components:  {VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}")
     print()
 
     # Platform detection
-    print(f"{C(Color.BOLD)}Platform Detection:{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}Platform Detection:{colorize(Color.RESET)}")
     platform = detect_platform()
-    print(f"  Active Platform: {C(Color.CYAN)}{platform_type_to_string(platform)}{C(Color.RESET)}")
+    print(f"  Active Platform: {colorize(Color.CYAN)}{platform_type_to_string(platform)}{colorize(Color.RESET)}")
     print()
 
-    print(f"{C(Color.BOLD)}GPU Support:{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}GPU Support:{colorize(Color.RESET)}")
     cuda_avail = is_cuda_available()
     metal_avail = is_metal_available()
 
-    cuda_status = f"{C(Color.GREEN)}✓ Available ({get_cuda_device_count()} devices){C(Color.RESET)}" if cuda_avail else f"{C(Color.YELLOW)}✗ Not available{C(Color.RESET)}"
-    metal_status = f"{C(Color.GREEN)}✓ Available ({get_metal_device_count()} devices){C(Color.RESET)}" if metal_avail else f"{C(Color.YELLOW)}✗ Not available{C(Color.RESET)}"
+    cuda_status = f"{colorize(Color.GREEN)}✓ Available ({get_cuda_device_count()} devices){colorize(Color.RESET)}" if cuda_avail else f"{colorize(Color.YELLOW)}✗ Not available{colorize(Color.RESET)}"
+    metal_status = f"{colorize(Color.GREEN)}✓ Available ({get_metal_device_count()} devices){colorize(Color.RESET)}" if metal_avail else f"{colorize(Color.YELLOW)}✗ Not available{colorize(Color.RESET)}"
 
     print(f"  NVIDIA CUDA:  {cuda_status}")
     print(f"  Apple Metal:  {metal_status}")
-    print(f"  AMD ROCm:     {C(Color.YELLOW)}Coming soon{C(Color.RESET)}")
+    print(f"  AMD ROCm:     {colorize(Color.YELLOW)}Coming soon{colorize(Color.RESET)}")
     print()
 
-    print(f"{C(Color.BOLD)}Features:{C(Color.RESET)}")
-    proto_status = f"{C(Color.GREEN)}✓{C(Color.RESET)}" if is_protobuf_available() else f"{C(Color.YELLOW)}✗{C(Color.RESET)}"
-    bpf_status = f"{C(Color.GREEN)}✓{C(Color.RESET)}" if is_bpf_available() else f"{C(Color.YELLOW)}✗ (Linux only){C(Color.RESET)}"
+    print(f"{colorize(Color.BOLD)}Features:{colorize(Color.RESET)}")
+    proto_status = f"{colorize(Color.GREEN)}✓{colorize(Color.RESET)}" if is_protobuf_available() else f"{colorize(Color.YELLOW)}✗{colorize(Color.RESET)}"
+    bpf_status = f"{colorize(Color.GREEN)}✓{colorize(Color.RESET)}" if is_bpf_available() else f"{colorize(Color.YELLOW)}✗ (Linux only){colorize(Color.RESET)}"
 
     print(f"  Perfetto Protobuf: {proto_status}")
     print(f"  BPF Tracing:       {bpf_status}")
@@ -194,19 +194,19 @@ def cmd_devices(args):
     print_section("GPU Device Detection")
 
     from . import (
+        PlatformType,
+        create_profiler,
+        get_cuda_device_count,
+        get_cuda_driver_version,
+        get_metal_device_count,
         is_cuda_available,
         is_metal_available,
-        get_cuda_device_count,
-        get_metal_device_count,
-        get_cuda_driver_version,
-        create_profiler,
-        PlatformType,
     )
 
     found_any = False
 
     # Check CUDA
-    print(f"{C(Color.BOLD)}NVIDIA CUDA:{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}NVIDIA CUDA:{colorize(Color.RESET)}")
     if is_cuda_available():
         count = get_cuda_device_count()
         driver = get_cuda_driver_version()
@@ -223,28 +223,28 @@ def cmd_devices(args):
                 if profiler.initialize(config):
                     devices = profiler.get_device_info()
                     for dev in devices:
-                        print(f"\n  {C(Color.CYAN)}Device {dev.device_id}: {C(Color.RESET)}{dev.name}")
+                        print(f"\n  {colorize(Color.CYAN)}Device {dev.device_id}: {colorize(Color.RESET)}{dev.name}")
                         print(f"    Vendor:  {dev.vendor}")
                         print(f"    Memory:  {format_bytes(dev.total_memory)}")
                         print(f"    SMs:     {dev.multiprocessor_count}")
         except Exception:
             pass
     else:
-        print(f"  {C(Color.YELLOW)}Not available{C(Color.RESET)}")
+        print(f"  {colorize(Color.YELLOW)}Not available{colorize(Color.RESET)}")
 
     # Check Metal
-    print(f"\n{C(Color.BOLD)}Apple Metal:{C(Color.RESET)}")
+    print(f"\n{colorize(Color.BOLD)}Apple Metal:{colorize(Color.RESET)}")
     if is_metal_available():
         count = get_metal_device_count()
         print_success("Metal available")
         print(f"  Devices: {count}")
         found_any = True
     else:
-        print(f"  {C(Color.YELLOW)}Not available{C(Color.RESET)}")
+        print(f"  {colorize(Color.YELLOW)}Not available{colorize(Color.RESET)}")
 
     # Check ROCm
-    print(f"\n{C(Color.BOLD)}AMD ROCm:{C(Color.RESET)}")
-    print(f"  {C(Color.YELLOW)}Coming soon{C(Color.RESET)}")
+    print(f"\n{colorize(Color.BOLD)}AMD ROCm:{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.YELLOW)}Coming soon{colorize(Color.RESET)}")
 
     print()
 
@@ -262,21 +262,22 @@ def cmd_record(args):
     """Record GPU events to a trace file."""
     print_section("Recording GPU Trace")
 
+    import time
+
     from . import (
-        detect_platform,
-        platform_type_to_string,
-        create_profiler,
+        PlatformType,
         ProfilerConfig,
         SBTWriter,
-        PlatformType,
+        create_profiler,
+        detect_platform,
+        platform_type_to_string,
     )
-    import time
 
     output_file = args.output or "trace.sbt"
     duration_sec = args.duration
 
-    print(f"{C(Color.BOLD)}Configuration:{C(Color.RESET)}")
-    print(f"  Output:   {C(Color.CYAN)}{output_file}{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
+    print(f"  Output:   {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
     print(f"  Duration: {duration_sec} seconds")
     print()
 
@@ -314,7 +315,7 @@ def cmd_record(args):
         return 1
 
     # Start capture
-    print(f"\n{C(Color.GREEN)}▶ Recording...{C(Color.RESET)} (Press Ctrl+C to stop)\n")
+    print(f"\n{colorize(Color.GREEN)}▶ Recording...{colorize(Color.RESET)} (Press Ctrl+C to stop)\n")
 
     profiler.start_capture()
 
@@ -333,7 +334,7 @@ def cmd_record(args):
             progress = min(elapsed / duration_sec, 1.0)
             bar_width = 40
             filled = int(bar_width * progress)
-            bar = f"{C(Color.GREEN)}{'█' * filled}{C(Color.RESET)}{'░' * (bar_width - filled)}"
+            bar = f"{colorize(Color.GREEN)}{'█' * filled}{colorize(Color.RESET)}{'░' * (bar_width - filled)}"
             print(f"\r  [{bar}] {progress*100:.0f}% | Events: {total_events}     ", end='', flush=True)
 
             time.sleep(0.1)
@@ -355,16 +356,16 @@ def cmd_record(args):
     print("\n")
     print_section("Recording Complete")
 
-    print(f"{C(Color.BOLD)}Summary:{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
     print(f"  Platform:     {platform_name}")
-    print(f"  Total events: {C(Color.GREEN)}{total_events}{C(Color.RESET)}")
-    print(f"  Output:       {C(Color.CYAN)}{output_file}{C(Color.RESET)}")
+    print(f"  Total events: {colorize(Color.GREEN)}{total_events}{colorize(Color.RESET)}")
+    print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
     print()
 
     print_success(f"Trace saved to {output_file}")
-    print(f"\nNext steps:")
-    print(f"  {C(Color.CYAN)}tracesmith-cli view {output_file} --stats{C(Color.RESET)}")
-    print(f"  {C(Color.CYAN)}tracesmith-cli export {output_file}{C(Color.RESET)}")
+    print("\nNext steps:")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
 
     return 0
 
@@ -374,8 +375,9 @@ def cmd_record(args):
 # =============================================================================
 def cmd_view(args):
     """View trace file contents."""
-    from . import SBTReader, event_type_to_string
     from collections import Counter
+
+    from . import SBTReader, event_type_to_string
 
     input_path = Path(args.input)
 
@@ -395,8 +397,8 @@ def cmd_view(args):
     print_section(f"Trace File: {input_path}")
 
     # Basic info
-    print(f"{C(Color.BOLD)}File Info:{C(Color.RESET)}")
-    print(f"  Events:   {C(Color.GREEN)}{len(events)}{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}File Info:{colorize(Color.RESET)}")
+    print(f"  Events:   {colorize(Color.GREEN)}{len(events)}{colorize(Color.RESET)}")
     if metadata.application_name:
         print(f"  App:      {metadata.application_name}")
 
@@ -414,13 +416,13 @@ def cmd_view(args):
         min_ts = min(min_ts, e.timestamp)
         max_ts = max(max_ts, e.timestamp)
 
-    print(f"\n{C(Color.BOLD)}Statistics:{C(Color.RESET)}")
+    print(f"\n{colorize(Color.BOLD)}Statistics:{colorize(Color.RESET)}")
     if events:
         print(f"  Time span: {format_duration(int(max_ts - min_ts))}")
     print(f"  Streams:   {len(stream_counts)}")
 
     # Events by type
-    print(f"\n{C(Color.BOLD)}Events by Type:{C(Color.RESET)}")
+    print(f"\n{colorize(Color.BOLD)}Events by Type:{colorize(Color.RESET)}")
     print(f"  {'Type':<20} {'Count':>8} {'Total Time':>12} {'Avg Time':>12}")
     print(f"  {'-'*52}")
 
@@ -432,18 +434,18 @@ def cmd_view(args):
 
     if args.stats:
         # Stream breakdown
-        print(f"\n{C(Color.BOLD)}Events by Stream:{C(Color.RESET)}")
+        print(f"\n{colorize(Color.BOLD)}Events by Stream:{colorize(Color.RESET)}")
         for stream_id, count in sorted(stream_counts.items()):
             print(f"  Stream {stream_id}: {count} events")
         return 0
 
     # Show events
     limit = args.limit or 20
-    print(f"\n{C(Color.BOLD)}Events (first {limit}):{C(Color.RESET)}")
+    print(f"\n{colorize(Color.BOLD)}Events (first {limit}):{colorize(Color.RESET)}")
 
     for i, event in enumerate(events[:limit]):
         type_name = event_type_to_string(event.type)
-        print(f"  {C(Color.CYAN)}[{i:>5}]{C(Color.RESET)} {type_name:<16} | Stream {event.stream_id} | {format_duration(event.duration):>10} | {event.name}")
+        print(f"  {colorize(Color.CYAN)}[{i:>5}]{colorize(Color.RESET)} {type_name:<16} | Stream {event.stream_id} | {format_duration(event.duration):>10} | {event.name}")
 
     if len(events) > limit:
         print(f"\n  ... and {len(events) - limit} more events")
@@ -456,7 +458,7 @@ def cmd_view(args):
 # =============================================================================
 def cmd_export(args):
     """Export trace to Perfetto format."""
-    from . import SBTReader, PerfettoExporter
+    from . import PerfettoExporter, SBTReader
 
     input_path = Path(args.input)
     output_path = Path(args.output) if args.output else input_path.with_suffix('.json')
@@ -467,9 +469,9 @@ def cmd_export(args):
 
     print_section("Exporting Trace")
 
-    print(f"Input:  {C(Color.CYAN)}{input_path}{C(Color.RESET)}")
-    print(f"Output: {C(Color.CYAN)}{output_path}{C(Color.RESET)}")
-    print(f"Format: Perfetto JSON")
+    print(f"Input:  {colorize(Color.CYAN)}{input_path}{colorize(Color.RESET)}")
+    print(f"Output: {colorize(Color.CYAN)}{output_path}{colorize(Color.RESET)}")
+    print("Format: Perfetto JSON")
     print()
 
     # Read SBT file
@@ -489,7 +491,7 @@ def cmd_export(args):
 
     if exporter.export_to_file(events, str(output_path)):
         print_success(f"Exported to {output_path}")
-        print(f"\nView at: {C(Color.CYAN)}https://ui.perfetto.dev/{C(Color.RESET)}")
+        print(f"\nView at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
         return 0
     else:
         print_error(f"Failed to export to '{output_path}'")
@@ -501,8 +503,9 @@ def cmd_export(args):
 # =============================================================================
 def cmd_analyze(args):
     """Analyze a trace file for performance insights."""
-    from . import SBTReader, build_timeline, event_type_to_string, EventType
-    from collections import Counter, defaultdict
+    from collections import defaultdict
+
+    from . import EventType, SBTReader, build_timeline
 
     input_path = Path(args.input)
 
@@ -520,7 +523,7 @@ def cmd_analyze(args):
 
     print_section("Performance Analysis")
 
-    print(f"File: {C(Color.CYAN)}{input_path}{C(Color.RESET)}")
+    print(f"File: {colorize(Color.CYAN)}{input_path}{colorize(Color.RESET)}")
     print(f"Events: {len(events)}")
     print()
 
@@ -528,8 +531,8 @@ def cmd_analyze(args):
     timeline = build_timeline(events)
 
     # GPU Utilization
-    print(f"{C(Color.BOLD)}GPU Utilization:{C(Color.RESET)}")
-    print(f"  Overall:        {C(Color.GREEN)}{timeline.gpu_utilization * 100:.1f}%{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}GPU Utilization:{colorize(Color.RESET)}")
+    print(f"  Overall:        {colorize(Color.GREEN)}{timeline.gpu_utilization * 100:.1f}%{colorize(Color.RESET)}")
     print(f"  Max concurrent: {timeline.max_concurrent_ops} ops")
     print(f"  Total duration: {format_duration(timeline.total_duration)}")
 
@@ -541,11 +544,11 @@ def cmd_analyze(args):
             kernel_stats[event.name].append(event.duration)
 
     if kernel_stats:
-        print(f"\n{C(Color.BOLD)}Top Kernels by Time:{C(Color.RESET)}")
+        print(f"\n{colorize(Color.BOLD)}Top Kernels by Time:{colorize(Color.RESET)}")
 
         # Sort by total time
         sorted_kernels = sorted(
-            [(name, durations) for name, durations in kernel_stats.items()],
+            list(kernel_stats.items()),
             key=lambda x: sum(x[1]),
             reverse=True
         )
@@ -571,7 +574,7 @@ def cmd_analyze(args):
 # =============================================================================
 def cmd_replay(args):
     """Replay a captured trace."""
-    from . import SBTReader, ReplayEngine, ReplayConfig, ReplayMode
+    from . import ReplayConfig, ReplayEngine, ReplayMode, SBTReader
 
     input_path = Path(args.input)
 
@@ -581,7 +584,7 @@ def cmd_replay(args):
 
     print_section("Replay Trace")
 
-    print(f"File: {C(Color.CYAN)}{input_path}{C(Color.RESET)}")
+    print(f"File: {colorize(Color.CYAN)}{input_path}{colorize(Color.RESET)}")
     print(f"Mode: {args.mode}")
     print()
 
@@ -614,9 +617,9 @@ def cmd_replay(args):
     print("Replaying...")
     result = engine.replay(config)
 
-    print(f"\n{C(Color.BOLD)}Replay Results:{C(Color.RESET)}")
+    print(f"\n{colorize(Color.BOLD)}Replay Results:{colorize(Color.RESET)}")
     success_color = Color.GREEN if result.success else Color.RED
-    print(f"  Success:       {C(success_color)}{result.success}{C(Color.RESET)}")
+    print(f"  Success:       {C(success_color)}{result.success}{colorize(Color.RESET)}")
     print(f"  Operations:    {result.operations_executed}/{result.operations_total}")
     print(f"  Deterministic: {result.deterministic}")
     print(f"  Duration:      {format_duration(result.replay_duration)}")
@@ -639,10 +642,15 @@ def cmd_benchmark(args):
     # Import TraceSmith modules
     try:
         from . import (
-            is_cuda_available, get_cuda_device_count,
-            StackCapture, StackCaptureConfig, CallStack,
-            SBTWriter, TraceMetadata, TraceEvent, EventType,
-            ProfilerConfig, get_current_timestamp
+            EventType,
+            SBTWriter,
+            StackCapture,
+            StackCaptureConfig,
+            TraceEvent,
+            TraceMetadata,
+            get_current_timestamp,
+            get_cuda_device_count,
+            is_cuda_available,
         )
     except ImportError as e:
         print_error(f"Failed to import TraceSmith modules: {e}")
@@ -652,16 +660,16 @@ def cmd_benchmark(args):
     cuda_available = False
     try:
         cuda_available = is_cuda_available()
-    except:
+    except Exception:
         pass
 
     if not cuda_available:
         print()
-        print(f"{C(Color.BOLD)}{C(Color.RED)}")
+        print(f"{colorize(Color.BOLD)}{colorize(Color.RED)}")
         print("╔══════════════════════════════════════════════════════════════════════╗")
         print("║  ERROR: CUDA support not available                                   ║")
         print("╚══════════════════════════════════════════════════════════════════════╝")
-        print(f"{C(Color.RESET)}")
+        print(f"{colorize(Color.RESET)}")
         print()
         print("This benchmark requires CUDA support.")
         print("Please ensure:")
@@ -693,12 +701,12 @@ def cmd_benchmark(args):
 
     # Print banner
     print()
-    print(f"{C(Color.BOLD)}{C(Color.CYAN)}")
+    print(f"{colorize(Color.BOLD)}{colorize(Color.CYAN)}")
     print("╔══════════════════════════════════════════════════════════════════════╗")
     print("║  TraceSmith Benchmark: 10,000+ GPU Instruction-Level Call Stacks     ║")
     print("║  Feature: Non-intrusive capture of instruction-level GPU call stacks ║")
     print("╚══════════════════════════════════════════════════════════════════════╝")
-    print(f"{C(Color.RESET)}")
+    print(f"{colorize(Color.RESET)}")
     print()
 
     # Configuration
@@ -730,7 +738,7 @@ def cmd_benchmark(args):
         print_success("Stack capture available")
 
     print()
-    print(f"{C(Color.BOLD)}Configuration:{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
     print(f"  Target kernels: {target_kernels}")
     print(f"  Output file:    {output_file}")
     print(f"  Capture stacks: {'Yes' if capture_stacks else 'No'}")
@@ -753,7 +761,7 @@ def cmd_benchmark(args):
     # =================================================================
     if use_real_gpu:
         return _run_real_gpu_benchmark(
-            cp, CUPTIProfiler,
+            cp, cupti_profiler_cls,
             target_kernels, output_file,
             capture_stacks, stack_capturer, host_stacks,
             verbose, SBTWriter, TraceMetadata, TraceEvent, EventType, get_current_timestamp
@@ -830,7 +838,7 @@ def cmd_benchmark(args):
     duration_ms = (end_time - start_time) * 1000
 
     if verbose:
-        print(f"\r  Progress: [████████████████████] 100%")
+        print("\r  Progress: [████████████████████] 100%")
 
     print_success(f"Captured {target_kernels} events")
     print(f"  Total time:    {duration_ms:.0f} ms")
@@ -842,7 +850,7 @@ def cmd_benchmark(args):
     # =================================================================
     print_section("Results")
 
-    print(f"{C(Color.BOLD)}Events:{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}Events:{colorize(Color.RESET)}")
     print(f"  Total events:    {len(events)}")
 
     if capture_stacks:
@@ -851,7 +859,7 @@ def cmd_benchmark(args):
         avg_depth = total_frames / stacks_captured if stacks_captured > 0 else 0
 
         print()
-        print(f"{C(Color.BOLD)}Host Call Stacks:{C(Color.RESET)}")
+        print(f"{colorize(Color.BOLD)}Host Call Stacks:{colorize(Color.RESET)}")
         print(f"  Stacks captured: {stacks_captured}")
         print(f"  Average depth:   {avg_depth:.1f} frames")
         print(f"  Total frames:    {total_frames}")
@@ -892,7 +900,7 @@ def cmd_benchmark(args):
     else:
         color = Color.RED
 
-    print(f"{C(Color.BOLD)}{C(color)}")
+    print(f"{colorize(Color.BOLD)}{C(color)}")
     print("╔══════════════════════════════════════════════════════════════════════╗")
     print("║                         BENCHMARK SUMMARY                            ║")
     print("╠══════════════════════════════════════════════════════════════════════╣")
@@ -918,7 +926,7 @@ def cmd_benchmark(args):
         print("║                                                                      ║")
 
     print("╚══════════════════════════════════════════════════════════════════════╝")
-    print(f"{C(Color.RESET)}")
+    print(f"{colorize(Color.RESET)}")
     print()
 
     return 0 if goal_achieved else 1
@@ -988,7 +996,7 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
     profiler.stop_capture()
 
     if verbose:
-        print(f"\r  Progress: [████████████████████] 100%")
+        print("\r  Progress: [████████████████████] 100%")
 
     print_success(f"Launched {target_kernels} real CUDA kernels")
     print(f"  Total time:   {duration_ms:.0f} ms")
@@ -1005,11 +1013,11 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
     events_dropped = profiler.events_dropped()
 
     # Count event types
-    kernel_launches = sum(1 for e in gpu_events if e.type == EventType.KernelLaunch)
-    kernel_completes = sum(1 for e in gpu_events if e.type == EventType.KernelComplete)
+    kernel_launches = sum(1 for e in gpu_events if e.type == event_type_cls.KernelLaunch)
+    kernel_completes = sum(1 for e in gpu_events if e.type == event_type_cls.KernelComplete)
     other = len(gpu_events) - kernel_launches - kernel_completes
 
-    print(f"{C(Color.BOLD)}GPU Events (CUPTI):{C(Color.RESET)}")
+    print(f"{colorize(Color.BOLD)}GPU Events (CUPTI):{colorize(Color.RESET)}")
     print(f"  Events captured:   {event_count}")
     print(f"  Events dropped:    {events_dropped}")
     print(f"  Kernel launches:   {kernel_launches}")
@@ -1019,14 +1027,14 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
 
     # Attach host stacks to GPU events
     if capture_stacks and host_stacks:
-        stack_map = {corr_id: stack for corr_id, stack in host_stacks}
+        stack_map = dict(host_stacks)
         attached = 0
         for event in gpu_events:
             if event.correlation_id in stack_map:
                 event.call_stack = stack_map[event.correlation_id]
                 attached += 1
 
-        print(f"{C(Color.BOLD)}Host Call Stacks:{C(Color.RESET)}")
+        print(f"{colorize(Color.BOLD)}Host Call Stacks:{colorize(Color.RESET)}")
         print(f"  Stacks captured:        {len(host_stacks)}")
         print(f"  GPU events with stacks: {attached}")
         print()
@@ -1035,8 +1043,8 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
     # Save to file
     # =================================================================
     try:
-        writer = SBTWriter(output_file)
-        meta = TraceMetadata()
+        writer = sbt_writer_cls(output_file)
+        meta = trace_metadata_cls()
         meta.application_name = "TraceSmith Python Benchmark (Real GPU)"
         meta.command_line = f"tracesmith-cli benchmark -n {target_kernels} --real-gpu"
         writer.write_metadata(meta)
@@ -1065,7 +1073,7 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
     else:
         color = Color.RED
 
-    print(f"{C(Color.BOLD)}{C(color)}")
+    print(f"{colorize(Color.BOLD)}{C(color)}")
     print("╔══════════════════════════════════════════════════════════════════════╗")
     print("║                         BENCHMARK SUMMARY                            ║")
     print("╠══════════════════════════════════════════════════════════════════════╣")
@@ -1089,7 +1097,7 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
     print("║  ✅ This is REAL GPU profiling - same as C++ CLI!                    ║")
     print("║                                                                      ║")
     print("╚══════════════════════════════════════════════════════════════════════╝")
-    print(f"{C(Color.RESET)}")
+    print(f"{colorize(Color.RESET)}")
     print()
 
     return 0 if goal_achieved else 1
@@ -1110,7 +1118,7 @@ def main():
         description='TraceSmith GPU Profiling & Replay System (Python CLI)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
-{C(Color.BOLD)}Examples:{C(Color.RESET)}
+{colorize(Color.BOLD)}Examples:{colorize(Color.RESET)}
   tracesmith-cli record -o trace.sbt -d 5  # Record for 5 seconds
   tracesmith-cli view trace.sbt --stats    # Show statistics
   tracesmith-cli export trace.sbt          # Export to Perfetto
@@ -1118,7 +1126,7 @@ def main():
   tracesmith-cli benchmark -n 10000        # Run 10K benchmark
   tracesmith-cli devices                   # List GPUs
 
-Run '{C(Color.CYAN)}tracesmith-cli <command> --help{C(Color.RESET)}' for more information.
+Run '{colorize(Color.CYAN)}tracesmith-cli <command> --help{colorize(Color.RESET)}' for more information.
 """
     )
     parser.add_argument('--version', action='store_true', help='Show version')
