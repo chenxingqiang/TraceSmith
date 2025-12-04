@@ -268,10 +268,36 @@
 
 ---
 
-### 11. RenderDoc Architecture Study (Priority 2.5)
-**Status**: 📋 Planned for v0.6.0  
-**Estimated Effort**: 4-6 weeks  
-**Impact**: Medium-High
+### 11. RenderDoc-inspired Frame Capture (v0.5.0)
+**Status**: ✅ Complete  
+**Commit**: d667398  
+**Effort**: 0.5 days  
+**Impact**: High
+
+**What was done**:
+1. FrameCapture class with F12-style trigger ✅
+2. ResourceTracker for GPU resource lifecycle ✅
+3. DrawCallInfo for detailed recording ✅
+4. State snapshots at each draw call ✅
+5. Export to Perfetto format ✅
+6. 12 unit tests ✅
+
+**Key Features**:
+- Frame boundary detection (Present/SwapBuffers)
+- Resource state history for step-by-step debugging
+- Buffer/texture content capture (configurable)
+- Callback support for live inspection
+
+**Files**:
+- `include/tracesmith/frame_capture.hpp`
+- `src/replay/frame_capture.cpp`
+
+---
+
+### 12. Future Work
+**Status**: 📋 Planned for v0.6.0+  
+**Estimated Effort**: Ongoing  
+**Impact**: High
 
 ---
 

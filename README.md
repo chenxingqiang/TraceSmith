@@ -18,6 +18,7 @@
 - **Memory & Counter Profiling**: `MemoryEvent` and `CounterEvent` for detailed resource tracking
 - **LLVM XRay Support**: Import compiler-instrumented function traces
 - **eBPF Types** (Linux): Kernel-level GPU event tracing support
+- **RenderDoc-style Frame Capture**: F12-trigger capture with resource state snapshots
 - **CLI Tools**: Easy-to-use command-line interface for recording and viewing traces
 - **Simulation Mode**: Test and develop without GPU hardware
 
@@ -338,6 +339,7 @@ TraceSmith is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for 
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v0.5.0 | 2024-12 | RenderDoc-style frame capture, Resource tracking |
 | v0.4.0 | 2024-12 | LLVM XRay, eBPF types, TracingSession, Counter tracks |
 | v0.3.0 | 2024-12 | Real-time tracing, Counter events, Memory events |
 | v0.2.0 | 2024-12 | Perfetto SDK (85% smaller traces), Kineto schema |
