@@ -101,7 +101,7 @@ Issues = "https://github.com/chenxingqiang/TraceSmith/issues"
 Changelog = "https://github.com/chenxingqiang/TraceSmith/blob/main/CHANGELOG.md"
 
 [project.scripts]
-tracesmith = "tracesmith.cli:main"
+tracesmith-cli = "tracesmith.cli:main"
 
 [tool.setuptools]
 packages = ["tracesmith"]
