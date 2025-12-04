@@ -61,19 +61,19 @@ target_link_libraries(phase4_example PRIVATE
 
 # ----------------------------------------------------------------------------
 # Memory Profiler Example - REAL GPU memory tracking, leak detection
+# Requires CUDA for real cudaMalloc/cudaFree tracking
 # ----------------------------------------------------------------------------
-add_executable(memory_profiler_example
-    memory_profiler_example.cpp
-)
-
-target_link_libraries(memory_profiler_example PRIVATE
-    tracesmith-common
-    tracesmith-capture
-)
-
-# Link CUDA if available for real GPU memory profiling
-if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
-    target_link_libraries(memory_profiler_example PRIVATE CUDA::cudart)
+if(CUDA_EXAMPLES_ENABLED)
+    add_executable(memory_profiler_example
+        memory_profiler_example.cpp
+    )
+    set_source_files_properties(memory_profiler_example.cpp PROPERTIES LANGUAGE CUDA)
+    target_link_libraries(memory_profiler_example PRIVATE
+        tracesmith-common
+        tracesmith-capture
+        CUDA::cudart
+    )
+    target_compile_definitions(memory_profiler_example PRIVATE TRACESMITH_ENABLE_CUDA)
 endif()
 
 # ----------------------------------------------------------------------------
@@ -144,18 +144,22 @@ target_link_libraries(perfetto_proto_test PRIVATE
 )
 
 # ----------------------------------------------------------------------------
-# Real-time Tracing Example (v0.3.0)
+# Real-time Tracing Example (v0.3.0) - Requires CUDA for real GPU workload
 # ----------------------------------------------------------------------------
-add_executable(realtime_tracing_example
-    realtime_tracing_example.cpp
-)
-
-target_link_libraries(realtime_tracing_example PRIVATE
-    tracesmith-common
-    tracesmith-format
-    tracesmith-capture
-    tracesmith-state
-)
+if(CUDA_EXAMPLES_ENABLED)
+    add_executable(realtime_tracing_example
+        realtime_tracing_example.cpp
+    )
+    set_source_files_properties(realtime_tracing_example.cpp PROPERTIES LANGUAGE CUDA)
+    target_link_libraries(realtime_tracing_example PRIVATE
+        tracesmith-common
+        tracesmith-format
+        tracesmith-capture
+        tracesmith-state
+        CUDA::cudart
+    )
+    target_compile_definitions(realtime_tracing_example PRIVATE TRACESMITH_ENABLE_CUDA)
+endif()
 
 # ----------------------------------------------------------------------------
 # Counter Track Visualization Example (v0.5.0)
@@ -188,17 +192,32 @@ target_link_libraries(frame_capture_example PRIVATE
 # ----------------------------------------------------------------------------
 if(TRACESMITH_USE_PERFETTO_SDK)
     target_link_libraries(perfetto_proto_test PRIVATE perfetto_sdk)
-    target_link_libraries(realtime_tracing_example PRIVATE perfetto_sdk)
     target_link_libraries(basic_example PRIVATE perfetto_sdk)
     target_link_libraries(phase3_example PRIVATE perfetto_sdk)
+    if(CUDA_EXAMPLES_ENABLED)
+        target_link_libraries(realtime_tracing_example PRIVATE perfetto_sdk)
+    endif()
 endif()
 
 # ----------------------------------------------------------------------------
 # CUPTI Example (requires CUDA)
 # ----------------------------------------------------------------------------
 if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
-    # Enable CUDA language for .cu files
-    enable_language(CUDA)
+    # Check if CUDA compiler is available before enabling
+    include(CheckLanguage)
+    check_language(CUDA)
+    if(NOT CMAKE_CUDA_COMPILER)
+        message(WARNING "CUDA compiler not found, skipping CUDA examples")
+        set(CUDA_EXAMPLES_ENABLED OFF)
+    else()
+        enable_language(CUDA)
+        set(CUDA_EXAMPLES_ENABLED ON)
+    endif()
+else()
+    set(CUDA_EXAMPLES_ENABLED OFF)
+endif()
+
+if(CUDA_EXAMPLES_ENABLED)
     
     # cupti_example.cpp contains __global__ kernels, treat as CUDA source
     set_source_files_properties(cupti_example.cpp PROPERTIES LANGUAGE CUDA)
@@ -266,10 +285,10 @@ target_link_libraries(goal_validation_example PRIVATE
 
 # ----------------------------------------------------------------------------
 # Benchmark: 10K Call Stacks - Validates core goal
-# "在不中断业务的情况下采集 1 万+ 指令级 GPU 调用栈"
+# "Capture 10K+ instruction-level GPU call stacks without interrupting business"
 # Uses REAL CUDA kernels + CUPTI profiling
 # ----------------------------------------------------------------------------
-if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
+if(CUDA_EXAMPLES_ENABLED)
     # Build with CUDA support for real GPU profiling
     add_executable(benchmark_10k_stacks
         benchmark_10k_stacks.cpp
@@ -309,25 +328,32 @@ install(FILES python_example.py
 # Summary message
 # ----------------------------------------------------------------------------
 message(STATUS "TraceSmith Examples:")
-message(STATUS "  - basic_example (Platform detection, SBT I/O, Perfetto export)")
-message(STATUS "  - phase2_example (Stack capture, instruction stream)")
-message(STATUS "  - phase3_example (GPU state machine, timeline)")
-message(STATUS "  - phase4_example (Replay engine)")
-message(STATUS "  - memory_profiler_example (Memory tracking, leak detection)")
-message(STATUS "  - stack_capture_example (Call stack capture)")
-message(STATUS "  - xray_example (LLVM XRay import)")
-message(STATUS "  - perfetto_enhanced_test (Enhanced Perfetto export)")
-message(STATUS "  - kineto_schema_test (PyTorch compatibility)")
-message(STATUS "  - perfetto_proto_test (ProtoZero export)")
-message(STATUS "  - realtime_tracing_example (Lock-free tracing)")
-message(STATUS "  - counter_track_example (Performance counters)")
-message(STATUS "  - frame_capture_example (RenderDoc-style capture)")
-if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
-    message(STATUS "  - cupti_example (NVIDIA CUPTI profiling)")
+message(STATUS "  Core examples (no GPU required):")
+message(STATUS "    - basic_example (Platform detection, SBT I/O, Perfetto export)")
+message(STATUS "    - phase2_example (Stack capture, instruction stream)")
+message(STATUS "    - phase3_example (GPU state machine, timeline)")
+message(STATUS "    - phase4_example (Replay engine)")
+message(STATUS "    - stack_capture_example (Call stack capture)")
+message(STATUS "    - xray_example (LLVM XRay import)")
+message(STATUS "    - perfetto_enhanced_test (Enhanced Perfetto export)")
+message(STATUS "    - kineto_schema_test (PyTorch compatibility)")
+message(STATUS "    - perfetto_proto_test (ProtoZero export)")
+message(STATUS "    - counter_track_example (Performance counters)")
+message(STATUS "    - frame_capture_example (RenderDoc-style capture)")
+message(STATUS "    - goal_validation_example (Validates all PLANNING.md goals)")
+if(CUDA_EXAMPLES_ENABLED)
+    message(STATUS "  CUDA examples (NVIDIA GPU):")
+    message(STATUS "    - cupti_example (NVIDIA CUPTI profiling)")
+    message(STATUS "    - memory_profiler_example (Real GPU memory tracking)")
+    message(STATUS "    - realtime_tracing_example (Real GPU workload tracing)")
+    message(STATUS "    - benchmark_10k_stacks (10K GPU call stack capture)")
+else()
+    message(STATUS "  CUDA examples: SKIPPED (CUDA compiler not found)")
+    message(STATUS "    Note: benchmark_10k_stacks built without GPU support")
 endif()
 if(TRACESMITH_ENABLE_METAL AND APPLE)
-    message(STATUS "  - metal_example (Apple Metal profiling)")
+    message(STATUS "  Metal examples (Apple GPU):")
+    message(STATUS "    - metal_example (Apple Metal profiling)")
 endif()
-message(STATUS "  - python_example.py (Python API demonstration)")
-message(STATUS "  - goal_validation_example (Validates all PLANNING.md goals)")
-message(STATUS "  - benchmark_10k_stacks (10K call stack capture benchmark)")
+message(STATUS "  Python examples:")
+message(STATUS "    - python_example.py (Python API demonstration)")
