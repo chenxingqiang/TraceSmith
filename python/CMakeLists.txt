@@ -30,10 +30,17 @@ target_include_directories(_tracesmith PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
-# Set output directory
-set_target_properties(_tracesmith PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tracesmith
-)
+# Set output directory - use CMAKE_LIBRARY_OUTPUT_DIRECTORY if set (from setup.py),
+# otherwise use source directory for local development
+if(CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+    set_target_properties(_tracesmith PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+    )
+else()
+    set_target_properties(_tracesmith PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tracesmith
+    )
+endif()
 
 # Copy Python files after build
 add_custom_command(TARGET _tracesmith POST_BUILD
