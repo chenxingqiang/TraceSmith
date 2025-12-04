@@ -63,7 +63,7 @@ setup(
     description='GPU Profiling & Replay System',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/your-org/tracesmith',
+    url='https://github.com/chenxingqiang/tracesmith',
     license='Apache-2.0',
     
     packages=find_packages(where='python'),

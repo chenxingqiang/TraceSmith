@@ -9,7 +9,7 @@ TraceSmith is a cross-platform GPU profiling and replay system designed for AI c
 #### From Source (C++)
 
 ```bash
-git clone https://github.com/your-org/tracesmith.git
+git clone https://github.com/chenxingqiang/tracesmith.git
 cd tracesmith
 mkdir build && cd build
 cmake ..
