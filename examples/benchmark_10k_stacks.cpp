@@ -169,10 +169,10 @@ int main() {
     
     std::vector<TraceEvent> gpu_events;
     size_t event_count = profiler.getEvents(gpu_events);
-    auto stats = profiler.getStatistics();
+    uint64_t events_dropped = profiler.eventsDropped();
     
     std::cout << "  GPU events captured: " << event_count << "\n";
-    std::cout << "  Events dropped: " << stats.events_dropped << "\n";
+    std::cout << "  Events dropped: " << events_dropped << "\n";
     
     // Count event types
     size_t kernel_launches = 0, kernel_completes = 0, other = 0;
