@@ -57,11 +57,15 @@
 #### Python (Recommended)
 
 ```bash
-# Install from PyPI (when published)
+# Install from PyPI
 pip install tracesmith
 
+# Verify installation
+python -c "import tracesmith; print(tracesmith.__version__)"
+# Output: 0.6.2
+
 # Or install from source
-git clone https://github.com/xingqiangchen/TraceSmith.git
+git clone https://github.com/chenxingqiang/TraceSmith.git
 cd TraceSmith
 pip install .
 ```
@@ -371,10 +375,30 @@ Tested on **NVIDIA GeForce RTX 4090 D** with CUDA 12.8 (Driver 570.124.06):
 ✅ MemoryProfiler Tests  (12/12) - GPU memory tracking
 ```
 
+## PyPI Package
+
+[![PyPI version](https://badge.fury.io/py/tracesmith.svg)](https://badge.fury.io/py/tracesmith)
+
+```bash
+pip install tracesmith==0.6.2
+```
+
+**Tested on NVIDIA GPU Server (RTX 4090):**
+
+| Feature | Status |
+|---------|--------|
+| Core Types (69 exports) | ✅ |
+| SimulationProfiler | ✅ |
+| MemoryProfiler | ✅ |
+| Frame Capture | ✅ |
+| BPF Tracing | ✅ (Linux) |
+| CLI Tools | ✅ |
+
 ## Version History
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v0.6.2 | 2024-12 | **PyPI release**, Native extension packaging fix |
 | v0.6.0 | 2024-12 | NVIDIA CUPTI integration, Full GPU testing |
 | v0.5.0 | 2024-12 | RenderDoc-style frame capture, Resource tracking |
 | v0.4.0 | 2024-12 | LLVM XRay, eBPF types, TracingSession, Counter tracks |
