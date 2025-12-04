@@ -37,8 +37,7 @@ void printRecordUsage(const char* program) {
     std::cout << "  -o, --output <file>     Output trace file (default: trace.sbt)\n";
     std::cout << "  -d, --duration <sec>    Recording duration in seconds (default: 5)\n";
     std::cout << "  -b, --buffer <size>     Ring buffer size in events (default: 1M)\n";
-    std::cout << "  -r, --rate <rate>       Event generation rate for simulation (default: 1000)\n";
-    std::cout << "  -s, --simulate          Use simulation profiler (for testing)\n";
+    std::cout << "  -p, --platform <type>   GPU platform: cuda, rocm, metal, auto (default: auto)\n";
     std::cout << "  -h, --help              Show this help message\n";
 }
 
@@ -96,8 +95,7 @@ int cmdRecord(int argc, char* argv[]) {
     std::string output_file = "trace.sbt";
     double duration_sec = 5.0;
     size_t buffer_size = 1024 * 1024;
-    double event_rate = 1000.0;
-    bool use_simulation = true;  // Default to simulation for now
+    std::string platform_str = "auto";
     
     // Parse arguments
     for (int i = 2; i < argc; ++i) {
@@ -112,24 +110,51 @@ int cmdRecord(int argc, char* argv[]) {
             duration_sec = std::stod(argv[++i]);
         } else if ((arg == "-b" || arg == "--buffer") && i + 1 < argc) {
             buffer_size = std::stoull(argv[++i]);
-        } else if ((arg == "-r" || arg == "--rate") && i + 1 < argc) {
-            event_rate = std::stod(argv[++i]);
-        } else if (arg == "-s" || arg == "--simulate") {
-            use_simulation = true;
+        } else if ((arg == "-p" || arg == "--platform") && i + 1 < argc) {
+            platform_str = argv[++i];
         }
     }
     
-    std::cout << "TraceSmith Record\n";
+    // Determine platform type
+    PlatformType platform = PlatformType::Unknown;
+    if (platform_str == "cuda") {
+        platform = PlatformType::CUDA;
+    } else if (platform_str == "rocm") {
+        platform = PlatformType::ROCm;
+    } else if (platform_str == "metal") {
+        platform = PlatformType::Metal;
+    } else if (platform_str == "auto") {
+        platform = detectPlatform();
+    }
+    
+    // Get platform name for display
+    std::string platform_name;
+    switch (platform) {
+        case PlatformType::CUDA: platform_name = "CUDA (CUPTI)"; break;
+        case PlatformType::ROCm: platform_name = "ROCm"; break;
+        case PlatformType::Metal: platform_name = "Metal"; break;
+        default: platform_name = "Unknown"; break;
+    }
+    
+    std::cout << "TraceSmith Record - Real GPU Profiling\n";
     std::cout << "  Output:   " << output_file << "\n";
     std::cout << "  Duration: " << duration_sec << " seconds\n";
     std::cout << "  Buffer:   " << buffer_size << " events\n";
-    std::cout << "  Platform: " << (use_simulation ? "Simulation" : "Auto-detect") << "\n\n";
+    std::cout << "  Platform: " << platform_name << "\n\n";
     
-    // Create profiler
-    auto profiler = createProfiler(use_simulation ? PlatformType::Simulation : PlatformType::Unknown);
+    // Check platform availability
+    if (platform == PlatformType::Unknown) {
+        std::cerr << "Error: No supported GPU platform detected.\n";
+        std::cerr << "Supported platforms: CUDA (NVIDIA), ROCm (AMD), Metal (Apple)\n";
+        return 1;
+    }
+    
+    // Create profiler for real GPU
+    auto profiler = createProfiler(platform);
     
     if (!profiler) {
-        std::cerr << "Error: Failed to create profiler\n";
+        std::cerr << "Error: Failed to create profiler for " << platform_name << "\n";
+        std::cerr << "Make sure the GPU drivers are installed and accessible.\n";
         return 1;
     }
     
@@ -139,12 +164,8 @@ int cmdRecord(int argc, char* argv[]) {
     
     if (!profiler->initialize(config)) {
         std::cerr << "Error: Failed to initialize profiler\n";
+        std::cerr << "This may be due to insufficient permissions or missing drivers.\n";
         return 1;
-    }
-    
-    // Set event rate for simulation
-    if (auto* sim = dynamic_cast<SimulationProfiler*>(profiler.get())) {
-        sim->setEventRate(event_rate);
     }
     
     // Set up signal handler
@@ -216,6 +237,7 @@ int cmdRecord(int argc, char* argv[]) {
     writer.finalize();
     
     std::cout << "\n\nRecording complete!\n";
+    std::cout << "  Platform:     " << platform_name << "\n";
     std::cout << "  Total events: " << total_events << "\n";
     std::cout << "  Dropped:      " << profiler->eventsDropped() << "\n";
     std::cout << "  File size:    " << formatBytes(writer.fileSize()) << "\n";
