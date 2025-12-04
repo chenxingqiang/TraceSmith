@@ -14,6 +14,8 @@
 #include "tracesmith/state/perfetto_exporter.hpp"
 #include "tracesmith/state/timeline_viewer.hpp"
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <random>
 
 using namespace tracesmith;

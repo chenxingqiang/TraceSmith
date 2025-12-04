@@ -13,6 +13,7 @@
 #include <tracesmith/common/types.hpp>
 #include <tracesmith/state/perfetto_exporter.hpp>
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <cmath>
 #include <random>
