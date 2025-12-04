@@ -8,6 +8,7 @@
 #include "tracesmith/perfetto_exporter.hpp"
 #include <algorithm>
 #include <fstream>
+#include <cstring>
 
 namespace tracesmith {
 

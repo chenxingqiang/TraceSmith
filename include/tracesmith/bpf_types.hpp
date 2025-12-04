@@ -27,6 +27,7 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <cstring>
 
 namespace tracesmith {
 
