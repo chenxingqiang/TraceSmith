@@ -32,7 +32,7 @@ void simulateMemoryOperations(MemoryProfiler& profiler) {
     for (int i = 0; i < 5; ++i) {
         uint64_t addr = addr_dist(gen);
         size_t size = size_dist(gen);
-        profiler.recordAllocation(addr, size, MemoryCategory::Parameter, 0);
+        profiler.recordAlloc(addr, size, 0);
         allocated_addresses.push_back(addr);
         std::cout << "  Allocated parameter: 0x" << std::hex << addr << std::dec 
                   << " (" << (size / 1024) << " KB)\n";
@@ -43,7 +43,7 @@ void simulateMemoryOperations(MemoryProfiler& profiler) {
     for (int i = 0; i < 8; ++i) {
         uint64_t addr = addr_dist(gen);
         size_t size = size_dist(gen);
-        profiler.recordAllocation(addr, size, MemoryCategory::Activation, 0);
+        profiler.recordAlloc(addr, size, 0);
         allocated_addresses.push_back(addr);
         std::cout << "  Allocated activation: 0x" << std::hex << addr << std::dec 
                   << " (" << (size / 1024) << " KB)\n";
@@ -58,7 +58,7 @@ void simulateMemoryOperations(MemoryProfiler& profiler) {
     for (int i = 0; i < 5; ++i) {
         uint64_t addr = addr_dist(gen);
         size_t size = size_dist(gen);
-        profiler.recordAllocation(addr, size, MemoryCategory::Gradient, 0);
+        profiler.recordAlloc(addr, size, 0);
         allocated_addresses.push_back(addr);
         std::cout << "  Allocated gradient: 0x" << std::hex << addr << std::dec 
                   << " (" << (size / 1024) << " KB)\n";
@@ -71,7 +71,7 @@ void simulateMemoryOperations(MemoryProfiler& profiler) {
     size_t to_free = allocated_addresses.size() / 2;
     for (size_t i = 0; i < to_free; ++i) {
         uint64_t addr = allocated_addresses[i];
-        profiler.recordDeallocation(addr);
+        profiler.recordFree(addr);
         std::cout << "  Freed: 0x" << std::hex << addr << std::dec << "\n";
     }
     
@@ -80,7 +80,7 @@ void simulateMemoryOperations(MemoryProfiler& profiler) {
     for (int i = 0; i < 3; ++i) {
         uint64_t addr = addr_dist(gen);
         size_t size = 32 * 1024 * 1024;  // 32MB workspace
-        profiler.recordAllocation(addr, size, MemoryCategory::Workspace, 0);
+        profiler.recordAlloc(addr, size, 0);
         std::cout << "  Allocated workspace: 0x" << std::hex << addr << std::dec 
                   << " (" << (size / 1024 / 1024) << " MB)\n";
     }
@@ -92,18 +92,18 @@ int main() {
     
     // Create and configure memory profiler
     MemoryProfiler::Config config;
-    config.track_allocations = true;
-    config.track_peak = true;
-    config.detect_leaks = true;
-    config.alignment = 256;  // Typical GPU alignment
+    config.snapshot_interval_ms = 100;
+    config.leak_threshold_ns = 5000000000ULL;  // 5 seconds
+    config.track_call_stacks = false;
+    config.detect_double_free = true;
     
     MemoryProfiler profiler(config);
     
     std::cout << "\nMemory Profiler Configuration:\n";
-    std::cout << "  Track allocations: " << (config.track_allocations ? "Yes" : "No") << "\n";
-    std::cout << "  Track peak: " << (config.track_peak ? "Yes" : "No") << "\n";
-    std::cout << "  Detect leaks: " << (config.detect_leaks ? "Yes" : "No") << "\n";
-    std::cout << "  Alignment: " << config.alignment << " bytes\n";
+    std::cout << "  Snapshot interval: " << config.snapshot_interval_ms << " ms\n";
+    std::cout << "  Leak threshold: " << (config.leak_threshold_ns / 1000000000) << " seconds\n";
+    std::cout << "  Track call stacks: " << (config.track_call_stacks ? "Yes" : "No") << "\n";
+    std::cout << "  Detect double free: " << (config.detect_double_free ? "Yes" : "No") << "\n";
     
     // Run simulated memory operations
     simulateMemoryOperations(profiler);
@@ -116,41 +116,27 @@ int main() {
     auto report = profiler.generateReport();
     
     std::cout << "\nSummary:\n";
-    std::cout << "  Total allocated:     " << std::setw(12) << report.total_allocated 
-              << " bytes (" << (report.total_allocated / 1024 / 1024) << " MB)\n";
-    std::cout << "  Total freed:         " << std::setw(12) << report.total_freed 
-              << " bytes (" << (report.total_freed / 1024 / 1024) << " MB)\n";
-    std::cout << "  Current usage:       " << std::setw(12) << report.current_usage 
-              << " bytes (" << (report.current_usage / 1024 / 1024) << " MB)\n";
-    std::cout << "  Peak usage:          " << std::setw(12) << report.peak_usage 
-              << " bytes (" << (report.peak_usage / 1024 / 1024) << " MB)\n";
-    std::cout << "  Allocation count:    " << std::setw(12) << report.allocation_count << "\n";
-    std::cout << "  Deallocation count:  " << std::setw(12) << report.deallocation_count << "\n";
-    std::cout << "  Live allocations:    " << std::setw(12) << report.live_allocations << "\n";
+    std::cout << "  Total allocated:     " << std::setw(12) << report.total_bytes_allocated 
+              << " bytes (" << (report.total_bytes_allocated / 1024 / 1024) << " MB)\n";
+    std::cout << "  Total freed:         " << std::setw(12) << report.total_bytes_freed 
+              << " bytes (" << (report.total_bytes_freed / 1024 / 1024) << " MB)\n";
+    std::cout << "  Current usage:       " << std::setw(12) << report.current_memory_usage 
+              << " bytes (" << (report.current_memory_usage / 1024 / 1024) << " MB)\n";
+    std::cout << "  Peak usage:          " << std::setw(12) << report.peak_memory_usage 
+              << " bytes (" << (report.peak_memory_usage / 1024 / 1024) << " MB)\n";
+    std::cout << "  Allocation count:    " << std::setw(12) << report.total_allocations << "\n";
+    std::cout << "  Deallocation count:  " << std::setw(12) << report.total_frees << "\n";
+    std::cout << "  Min alloc size:      " << std::setw(12) << report.min_allocation_size << " bytes\n";
+    std::cout << "  Max alloc size:      " << std::setw(12) << report.max_allocation_size << " bytes\n";
+    std::cout << "  Avg alloc size:      " << std::setw(12) << std::fixed << std::setprecision(0) 
+              << report.avg_allocation_size << " bytes\n";
     
-    // Category breakdown
-    std::cout << "\nUsage by Category:\n";
-    for (const auto& [category, usage] : report.usage_by_category) {
-        std::string cat_name;
-        switch (category) {
-            case MemoryCategory::Parameter: cat_name = "Parameter"; break;
-            case MemoryCategory::Activation: cat_name = "Activation"; break;
-            case MemoryCategory::Gradient: cat_name = "Gradient"; break;
-            case MemoryCategory::Workspace: cat_name = "Workspace"; break;
-            case MemoryCategory::Optimizer: cat_name = "Optimizer"; break;
-            default: cat_name = "Other"; break;
-        }
-        std::cout << "  " << std::setw(12) << std::left << cat_name << ": " 
-                  << std::setw(12) << std::right << usage 
-                  << " bytes (" << (usage / 1024 / 1024) << " MB)\n";
-    }
-    
-    // Leak detection
+    // Leak detection (from report)
     std::cout << "\n" << std::string(60, '-') << "\n";
     std::cout << "Leak Detection\n";
     std::cout << std::string(60, '-') << "\n";
     
-    auto leaks = profiler.detectLeaks();
+    const auto& leaks = report.potential_leaks;
     if (leaks.empty()) {
         std::cout << "  ✓ No memory leaks detected\n";
     } else {
@@ -161,17 +147,12 @@ int main() {
                 std::cout << "  ... and " << (leaks.size() - 5) << " more\n";
                 break;
             }
-            std::cout << "    - 0x" << std::hex << leak.address << std::dec 
+            std::cout << "    - 0x" << std::hex << leak.ptr << std::dec 
                       << " (" << (leak.size / 1024) << " KB)";
-            std::string cat_name;
-            switch (leak.category) {
-                case MemoryCategory::Parameter: cat_name = "Parameter"; break;
-                case MemoryCategory::Activation: cat_name = "Activation"; break;
-                case MemoryCategory::Gradient: cat_name = "Gradient"; break;
-                case MemoryCategory::Workspace: cat_name = "Workspace"; break;
-                default: cat_name = "Other"; break;
+            if (!leak.tag.empty()) {
+                std::cout << " [" << leak.tag << "]";
             }
-            std::cout << " [" << cat_name << "]\n";
+            std::cout << " lifetime: " << (leak.lifetime_ns / 1000000) << " ms\n";
         }
     }
     
@@ -182,8 +163,9 @@ int main() {
     
     auto final_snapshot = profiler.takeSnapshot();
     std::cout << "  Timestamp: " << final_snapshot.timestamp << "\n";
-    std::cout << "  Total size: " << (final_snapshot.total_size / 1024 / 1024) << " MB\n";
-    std::cout << "  Allocation count: " << final_snapshot.allocations.size() << "\n";
+    std::cout << "  Live bytes: " << (final_snapshot.live_bytes / 1024 / 1024) << " MB\n";
+    std::cout << "  Live allocations: " << final_snapshot.live_allocations << "\n";
+    std::cout << "  Peak bytes: " << (final_snapshot.peak_bytes / 1024 / 1024) << " MB\n";
     
     std::cout << "\n" << std::string(60, '=') << "\n";
     std::cout << "Memory Profiler Example Complete!\n";

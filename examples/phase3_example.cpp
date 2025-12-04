@@ -158,7 +158,6 @@ int main() {
     TimelineViewer::ViewConfig view_config;
     view_config.width = 60;
     view_config.max_rows = 12;
-    view_config.show_legend = true;
     TimelineViewer viewer(view_config);
     
     std::string ascii_timeline = viewer.render(timeline);
@@ -207,8 +206,8 @@ int main() {
     device.device_id = 0;
     device.name = "TraceSmith GPU";
     device.vendor = "TraceSmith";
-    device.compute_units = 80;
-    device.max_clock_speed = 1700;
+    device.multiprocessor_count = 80;
+    device.clock_rate = 1700000;  // kHz
     devices.push_back(device);
     writer.writeDeviceInfo(devices);
     

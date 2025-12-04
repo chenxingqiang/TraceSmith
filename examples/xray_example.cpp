@@ -102,13 +102,12 @@ int main() {
     std::cout << "Part 1: XRay Importer Configuration\n";
     std::cout << "------------------------------------\n";
     
-    XRayImporterConfig config;
-    config.convert_to_nanoseconds = true;
-    config.tsc_frequency = 2400000000;  // 2.4 GHz
-    config.function_map_file = "";  // No symbol map for this demo
+    XRayImporter::Config config;
+    config.resolve_symbols = false;  // No symbol resolution for this demo
+    config.filter_short_calls = false;
     
-    std::cout << "  TSC frequency: " << config.tsc_frequency << " Hz\n";
-    std::cout << "  Convert to nanoseconds: " << (config.convert_to_nanoseconds ? "Yes" : "No") << "\n\n";
+    std::cout << "  Resolve symbols: " << (config.resolve_symbols ? "Yes" : "No") << "\n";
+    std::cout << "  Filter short calls: " << (config.filter_short_calls ? "Yes" : "No") << "\n\n";
     
     XRayImporter importer(config);
     
@@ -123,18 +122,20 @@ int main() {
     std::cout << "  Generated " << xray_data.size() << " bytes of synthetic XRay data\n";
     
     // Import from buffer
-    if (importer.importFromBuffer(xray_data.data(), xray_data.size())) {
-        std::cout << "  ✓ Successfully imported XRay data\n";
+    auto imported_events = importer.importBuffer(xray_data.data(), xray_data.size());
+    if (!imported_events.empty()) {
+        std::cout << "  ✓ Successfully imported " << imported_events.size() << " XRay events\n";
     } else {
         std::cout << "  Note: Synthetic data format is simplified for demo\n";
     }
     
     // Get header info
-    XRayFileHeader header = importer.getHeader();
+    const XRayFileHeader& header = importer.getHeader();
     std::cout << "\n  File Header:\n";
     std::cout << "    Version: " << header.version << "\n";
-    std::cout << "    Record type: " << header.record_type << "\n";
-    std::cout << "    CPU type: " << header.cpu_type << "\n\n";
+    std::cout << "    Type: " << header.type << "\n";
+    std::cout << "    Cycle frequency: " << header.cycle_frequency << " Hz\n";
+    std::cout << "    Records: " << header.num_records << "\n\n";
     
     // ================================================================
     // Part 3: Manual Event Creation (for demonstration)

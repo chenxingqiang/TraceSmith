@@ -202,8 +202,8 @@ int main() {
     device.device_id = 0;
     device.name = "TraceSmith GPU";
     device.vendor = "TraceSmith";
-    device.compute_units = 80;
-    device.max_clock_speed = 1700;
+    device.multiprocessor_count = 80;
+    device.clock_rate = 1700000;
     devices.push_back(device);
     writer.writeDeviceInfo(devices);
     

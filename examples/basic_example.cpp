@@ -149,10 +149,11 @@ int main() {
     device.device_id = 0;
     device.name = "Example GPU";
     device.vendor = "TraceSmith";
-    device.platform = detected;
     device.total_memory = 8ULL * 1024 * 1024 * 1024;  // 8GB
-    device.compute_units = 80;
-    device.max_clock_speed = 1700;
+    device.multiprocessor_count = 80;
+    device.clock_rate = 1700000;  // kHz
+    device.compute_major = 8;
+    device.compute_minor = 6;
     devices.push_back(device);
     
     metadata.devices = devices;

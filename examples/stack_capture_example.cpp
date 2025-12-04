@@ -21,26 +21,27 @@ using namespace tracesmith;
 // Function call hierarchy for testing
 namespace deep_call {
 
-CallStack capture_at_depth_3(StackCapture& capturer) {
-    return capturer.capture();
+void capture_at_depth_3(StackCapture& capturer, CallStack& out) {
+    capturer.capture(out);
 }
 
-CallStack capture_at_depth_2(StackCapture& capturer) {
-    return capture_at_depth_3(capturer);
+void capture_at_depth_2(StackCapture& capturer, CallStack& out) {
+    capture_at_depth_3(capturer, out);
 }
 
-CallStack capture_at_depth_1(StackCapture& capturer) {
-    return capture_at_depth_2(capturer);
+void capture_at_depth_1(StackCapture& capturer, CallStack& out) {
+    capture_at_depth_2(capturer, out);
 }
 
 }  // namespace deep_call
 
 // Recursive function to test deep stacks
-CallStack recursive_capture(StackCapture& capturer, int depth) {
+void recursive_capture(StackCapture& capturer, int depth, CallStack& out) {
     if (depth <= 0) {
-        return capturer.capture();
+        capturer.capture(out);
+        return;
     }
-    return recursive_capture(capturer, depth - 1);
+    recursive_capture(capturer, depth - 1, out);
 }
 
 // Function to demonstrate capturing during "GPU operations"
@@ -48,7 +49,8 @@ void simulate_gpu_operation(StackCapture& capturer,
                             std::vector<TraceEvent>& events,
                             const std::string& kernel_name) {
     // Capture stack at the point of kernel launch
-    CallStack stack = capturer.capture();
+    CallStack stack;
+    capturer.capture(stack);
     
     // Create event with stack attached
     TraceEvent event;
@@ -120,7 +122,8 @@ int main() {
     std::cout << "    demangle: " << (config.demangle ? "true" : "false") << "\n\n";
     
     StackCapture capturer(config);
-    CallStack stack = capturer.capture();
+    CallStack stack;
+    capturer.capture(stack);
     
     std::cout << "  Captured " << stack.frames.size() << " frames:\n";
     for (size_t i = 0; i < std::min(size_t(10), stack.frames.size()); ++i) {
@@ -149,7 +152,8 @@ int main() {
     std::cout << "Part 3: Nested Function Calls\n";
     std::cout << "-----------------------------\n";
     
-    CallStack nested_stack = deep_call::capture_at_depth_1(capturer);
+    CallStack nested_stack;
+    deep_call::capture_at_depth_1(capturer, nested_stack);
     
     std::cout << "  Captured from 3 levels of nesting:\n";
     std::cout << "  Thread ID: " << nested_stack.thread_id << "\n";
@@ -170,7 +174,8 @@ int main() {
     std::cout << "Part 4: Recursive Capture (10 levels)\n";
     std::cout << "--------------------------------------\n";
     
-    CallStack recursive_stack = recursive_capture(capturer, 10);
+    CallStack recursive_stack;
+    recursive_capture(capturer, 10, recursive_stack);
     
     std::cout << "  Frames captured: " << recursive_stack.frames.size() << "\n";
     
@@ -226,9 +231,9 @@ int main() {
     
     // Measure capture time
     auto start = std::chrono::high_resolution_clock::now();
+    CallStack perf_stack;
     for (int i = 0; i < iterations; ++i) {
-        CallStack s = capturer.capture();
-        (void)s;  // Prevent optimization
+        capturer.capture(perf_stack);
     }
     auto end = std::chrono::high_resolution_clock::now();
     
@@ -254,7 +259,8 @@ int main() {
     skip_config.resolve_symbols = true;
     
     StackCapture skip_capturer(skip_config);
-    CallStack skip_stack = skip_capturer.capture();
+    CallStack skip_stack;
+    skip_capturer.capture(skip_stack);
     
     std::cout << "  Skip frames: 3\n";
     std::cout << "  Frames captured: " << skip_stack.frames.size() << "\n";

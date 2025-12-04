@@ -42,7 +42,11 @@ std::vector<TraceEvent> generatePipelineEvents() {
         preprocess.device_id = 0;
         preprocess.stream_id = 0;
         preprocess.correlation_id = correlation_id++;
-        preprocess.kernel_params = KernelParams{256, 1, 1, 256, 1, 1, 0, 32};
+        KernelParams preprocess_kp;
+        preprocess_kp.grid_x = 256; preprocess_kp.grid_y = 1; preprocess_kp.grid_z = 1;
+        preprocess_kp.block_x = 256; preprocess_kp.block_y = 1; preprocess_kp.block_z = 1;
+        preprocess_kp.shared_mem_bytes = 0; preprocess_kp.registers_per_thread = 32;
+        preprocess.kernel_params = preprocess_kp;
         events.push_back(preprocess);
         current_time += preprocess.duration + 5000;
         
@@ -55,7 +59,11 @@ std::vector<TraceEvent> generatePipelineEvents() {
         compute.device_id = 0;
         compute.stream_id = 1;
         compute.correlation_id = correlation_id++;
-        compute.kernel_params = KernelParams{512, 512, 1, 32, 8, 1, 4096, 48};
+        KernelParams compute_kp;
+        compute_kp.grid_x = 512; compute_kp.grid_y = 512; compute_kp.grid_z = 1;
+        compute_kp.block_x = 32; compute_kp.block_y = 8; compute_kp.block_z = 1;
+        compute_kp.shared_mem_bytes = 4096; compute_kp.registers_per_thread = 48;
+        compute.kernel_params = compute_kp;
         events.push_back(compute);
         current_time += compute.duration + 5000;
         
@@ -68,7 +76,11 @@ std::vector<TraceEvent> generatePipelineEvents() {
         postprocess.device_id = 0;
         postprocess.stream_id = 0;
         postprocess.correlation_id = correlation_id++;
-        postprocess.kernel_params = KernelParams{128, 1, 1, 128, 1, 1, 0, 24};
+        KernelParams postprocess_kp;
+        postprocess_kp.grid_x = 128; postprocess_kp.grid_y = 1; postprocess_kp.grid_z = 1;
+        postprocess_kp.block_x = 128; postprocess_kp.block_y = 1; postprocess_kp.block_z = 1;
+        postprocess_kp.shared_mem_bytes = 0; postprocess_kp.registers_per_thread = 24;
+        postprocess.kernel_params = postprocess_kp;
         events.push_back(postprocess);
         current_time += postprocess.duration + 5000;
         
@@ -130,7 +142,8 @@ int main() {
     config.skip_frames = 0;
     
     StackCapture capturer(config);
-    CallStack stack = capturer.capture();
+    CallStack stack;
+    capturer.capture(stack);
     
     std::cout << "Captured " << stack.frames.size() << " stack frames:\n";
     
@@ -171,7 +184,9 @@ int main() {
     
     // Attach call stacks to some events
     for (size_t i = 0; i < events.size(); i += 3) {
-        events[i].call_stack = capturer.capture();
+        CallStack call_stack;
+        capturer.capture(call_stack);
+        events[i].call_stack = call_stack;
     }
     
     std::cout << "Generated " << events.size() << " events\n";
@@ -255,7 +270,7 @@ int main() {
             case DependencyType::Synchronization:
                 sync++;
                 break;
-            case DependencyType::MemoryDependency:
+            case DependencyType::Memory:
                 memory++;
                 break;
             default:
@@ -267,7 +282,7 @@ int main() {
     std::cout << "  Sequential:       " << sequential << "\n";
     std::cout << "  Synchronization:  " << sync << "\n";
     std::cout << "  Memory:           " << memory << "\n";
-    std::cout << "  Other:            " << other << "\n\n";
+    std::cout << "  Host barrier:     " << other << "\n\n";
     
     // Show first few dependencies
     std::cout << "Sample dependencies:\n";
@@ -282,8 +297,11 @@ int main() {
             case DependencyType::Synchronization:
                 std::cout << " (Sync)";
                 break;
-            case DependencyType::MemoryDependency:
+            case DependencyType::Memory:
                 std::cout << " (Memory)";
+                break;
+            case DependencyType::HostBarrier:
+                std::cout << " (HostBarrier)";
                 break;
             default:
                 break;
