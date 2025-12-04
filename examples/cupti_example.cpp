@@ -234,9 +234,8 @@ void printEventSummary(const std::vector<TraceEvent>& events) {
         std::cout << "  Stream: " << event.stream_id << "\n";
         std::cout << "  Device: " << event.device_id << "\n";
         
-        auto dur_it = event.data.find("duration_ns");
-        if (dur_it != event.data.end() && std::holds_alternative<uint64_t>(dur_it->second)) {
-            double us = std::get<uint64_t>(dur_it->second) / 1e3;
+        if (event.duration > 0) {
+            double us = event.duration / 1e3;
             std::cout << "  Duration: " << std::fixed << std::setprecision(2) << us << " us\n";
         }
         
