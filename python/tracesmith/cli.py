@@ -907,16 +907,14 @@ def cmd_benchmark(args):
     
     print("║                                                                      ║")
     mode_str = "Python + CuPy" if cupy_available else "Python"
-    print(f"║  Results ({mode_str}):                                          ║")
-    print(f"║    • Events captured:    {len(events):>8}                                   ║")
-    print(f"║    • Call stacks:        {len(host_stacks):>8}                                   ║")
-    print(f"║    • Total time:         {duration_ms:>5.0f} ms                                  ║")
+    print(f"║  Results ({mode_str}):{' ' * (56 - len(mode_str))}║")
+    print(f"║    • Events captured:       {len(events):<41}║")
+    print(f"║    • Call stacks:           {len(host_stacks):<41}║")
+    print(f"║    • Total time:            {duration_ms:.0f} ms{' ' * (36 - len(f'{duration_ms:.0f}'))}║")
     print("║                                                                      ║")
     
     if not use_real_gpu:
-        print("║  For REAL GPU profiling with CUPTI, install CuPy:                   ║")
-        print("║    pip install cupy-cuda12x                                         ║")
-        print("║  Then run: tracesmith benchmark --real-gpu                          ║")
+        print("║  For REAL GPU profiling with CUPTI, use: tracesmith-cli benchmark   ║")
         print("║                                                                      ║")
     
     print("╚══════════════════════════════════════════════════════════════════════╝")
@@ -1082,11 +1080,11 @@ def _run_real_gpu_benchmark(cp, CUPTIProfiler, target_kernels, output_file,
     
     print("║                                                                      ║")
     print("║  Results (Python + CuPy + CUPTI):                                    ║")
-    print(f"║    • CuPy kernels launched: {target_kernels:>8}                               ║")
-    print(f"║    • GPU events (CUPTI):    {len(gpu_events):>8}                               ║")
-    print(f"║    • Kernel launches:       {kernel_launches:>8}                               ║")
-    print(f"║    • Kernel completes:      {kernel_completes:>8}                               ║")
-    print(f"║    • Total time:            {duration_ms:>5.0f} ms                              ║")
+    print(f"║    • CuPy kernels launched:    {target_kernels:<39}║")
+    print(f"║    • GPU events (CUPTI):       {len(gpu_events):<39}║")
+    print(f"║    • Kernel launches:          {kernel_launches:<39}║")
+    print(f"║    • Kernel completes:         {kernel_completes:<39}║")
+    print(f"║    • Total time:               {duration_ms:.0f} ms{' ' * (34 - len(f'{duration_ms:.0f}'))}║")
     print("║                                                                      ║")
     print("║  ✅ This is REAL GPU profiling - same as C++ CLI!                    ║")
     print("║                                                                      ║")
