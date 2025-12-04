@@ -329,9 +329,24 @@ uint64_t XRayImporter::tscToNanoseconds(uint64_t tsc) const {
     }
     
     // Convert: ns = tsc * 1e9 / frequency
-    // Use 128-bit multiplication to avoid overflow
+    // Use portable high-precision multiplication to avoid overflow
+#if defined(__GNUC__) || defined(__clang__)
+    // GCC/Clang support 128-bit integers
     __uint128_t result = static_cast<__uint128_t>(tsc) * 1000000000ULL;
     return static_cast<uint64_t>(result / header_.cycle_frequency);
+#else
+    // Windows MSVC: use double precision (sufficient for most cases)
+    // Or use split multiplication to avoid overflow
+    const uint64_t ns_per_sec = 1000000000ULL;
+    const uint64_t freq = header_.cycle_frequency;
+    
+    // Split calculation: (tsc / freq) * ns_per_sec + ((tsc % freq) * ns_per_sec) / freq
+    // This avoids overflow while maintaining precision
+    uint64_t whole_seconds = tsc / freq;
+    uint64_t remainder = tsc % freq;
+    
+    return whole_seconds * ns_per_sec + (remainder * ns_per_sec) / freq;
+#endif
 }
 
 } // namespace tracesmith

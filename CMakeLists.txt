@@ -10,6 +10,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Windows-specific settings
+if(WIN32)
+    # Prevent min/max macros from conflicting with std::min/std::max
+    add_definitions(-DNOMINMAX)
+    # Suppress some common MSVC warnings
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 # Build options
 option(TRACESMITH_BUILD_TESTS "Build unit tests" ON)
 option(TRACESMITH_BUILD_EXAMPLES "Build examples" ON)

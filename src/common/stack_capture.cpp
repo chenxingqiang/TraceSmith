@@ -78,8 +78,8 @@ size_t StackCapture::captureWithThreadId(uint64_t thread_id, CallStack& out) {
         return 0;
     }
     
-    // Skip requested frames
-    size_t skip = std::min(static_cast<size_t>(config_.skip_frames), count);
+    // Skip requested frames (use parentheses to avoid Windows min/max macro issues)
+    size_t skip = (std::min)(static_cast<size_t>(config_.skip_frames), count);
     
     // Convert to StackFrame
     out.frames.reserve(count - skip);

@@ -50,13 +50,11 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libunwind-dev
+          sudo apt-get install -y cmake ninja-build libunwind-dev pkg-config
           if [ "${{ matrix.compiler }}" = "clang" ]; then
             sudo apt-get install -y clang
           fi
@@ -97,8 +95,6 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       
       - name: Install dependencies
         run: brew install cmake ninja
@@ -136,8 +132,6 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       
       - name: Configure CMake
         run: |
@@ -164,8 +158,6 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -175,7 +167,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libunwind-dev
+          sudo apt-get install -y cmake ninja-build libunwind-dev pkg-config
           pip install --upgrade pip
           pip install pytest numpy
       
@@ -204,13 +196,11 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y cmake ninja-build libunwind-dev python3 python3-pip git
+          apt-get install -y cmake ninja-build libunwind-dev python3 python3-pip git pkg-config
       
       - name: Configure CMake with CUDA
         run: |

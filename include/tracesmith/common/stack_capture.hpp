@@ -12,10 +12,10 @@ namespace tracesmith {
  */
 struct StackCaptureConfig {
     uint32_t max_depth = 32;           // Maximum number of stack frames to capture
-    bool skip_frames = 2;               // Number of frames to skip (capture/profiler frames)
-    bool async_signal_safe = false;     // Use async-signal-safe capture
-    bool resolve_symbols = true;        // Resolve symbols immediately
-    bool demangle = true;               // Demangle C++ symbols
+    uint32_t skip_frames = 2;          // Number of frames to skip (capture/profiler frames)
+    bool async_signal_safe = false;    // Use async-signal-safe capture
+    bool resolve_symbols = true;       // Resolve symbols immediately
+    bool demangle = true;              // Demangle C++ symbols
     
     StackCaptureConfig() = default;
 };
