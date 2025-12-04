@@ -29,7 +29,7 @@ from ._tracesmith import (
     VERSION_MAJOR,
     VERSION_MINOR,
     VERSION_PATCH,
-    
+
     # ========================================================================
     # Core Enums
     # ========================================================================
@@ -52,7 +52,7 @@ from ._tracesmith import (
     BPFEventType,
     GPUState,
     DependencyType,
-    
+
     # ========================================================================
     # Core Classes
     # ========================================================================
@@ -63,7 +63,7 @@ from ._tracesmith import (
     FlowInfo,
     MemoryEvent,
     CounterEvent,
-    
+
     # ========================================================================
     # Stack Capture
     # ========================================================================
@@ -71,32 +71,32 @@ from ._tracesmith import (
     CallStack,
     StackCaptureConfig,
     StackCapture,
-    
+
     # ========================================================================
     # File I/O - SBT Binary Format
     # ========================================================================
     SBTWriter,
     SBTReader,
-    
+
     # ========================================================================
     # Timeline Building
     # ========================================================================
     TimelineSpan,
     Timeline,
     TimelineBuilder,
-    
+
     # ========================================================================
     # Export - Perfetto
     # ========================================================================
     PerfettoExporter,
     PerfettoProtoExporter,
-    
+
     # ========================================================================
     # Real-time Tracing
     # ========================================================================
     TracingSession,
     TracingStatistics,
-    
+
     # ========================================================================
     # Frame Capture (RenderDoc-inspired)
     # ========================================================================
@@ -106,7 +106,7 @@ from ._tracesmith import (
     DrawCallInfo,
     ResourceState,
     ResourceTracker,
-    
+
     # ========================================================================
     # Memory Profiler
     # ========================================================================
@@ -116,26 +116,26 @@ from ._tracesmith import (
     MemorySnapshot,
     MemoryLeak,
     MemoryReport,
-    
+
     # ========================================================================
     # XRay Importer
     # ========================================================================
     XRayImporter,
     XRayImporterConfig,
-    
+
     # ========================================================================
     # BPF Tracer (Linux only)
     # ========================================================================
     BPFTracer,
     BPFEventRecord,
-    
+
     # ========================================================================
     # Replay Engine
     # ========================================================================
     ReplayConfig,
     ReplayResult,
     ReplayEngine,
-    
+
     # ========================================================================
     # State Module (GPU State Machine, Instruction Stream, Timeline Viewer)
     # ========================================================================
@@ -150,7 +150,7 @@ from ._tracesmith import (
     InstructionStreamStatistics,
     TimelineViewConfig,
     TimelineViewer,
-    
+
     # ========================================================================
     # Utility Functions
     # ========================================================================
@@ -168,7 +168,7 @@ from ._tracesmith import (
     is_metal_available,
     get_metal_device_count,
     detect_platform,
-    
+
     # ========================================================================
     # Cluster Module - Multi-GPU Profiling (v0.7.0)
     # ========================================================================
@@ -186,7 +186,7 @@ from ._tracesmith import (
     MultiGPUConfig,
     MultiGPUStats,
     MultiGPUProfiler,
-    
+
     # ========================================================================
     # Cluster Module - Time Sync (v0.7.1)
     # ========================================================================
@@ -198,7 +198,7 @@ from ._tracesmith import (
     ClockCorrelator,
     time_sync_method_to_string,
     string_to_time_sync_method,
-    
+
     # ========================================================================
     # Cluster Module - NCCL Tracking (v0.7.1)
     # ========================================================================
@@ -224,9 +224,9 @@ __all__ = [
     # Version
     '__version__',
     'VERSION_MAJOR',
-    'VERSION_MINOR', 
+    'VERSION_MINOR',
     'VERSION_PATCH',
-    
+
     # Core Enums
     'EventType',
     'PlatformType',
@@ -247,7 +247,7 @@ __all__ = [
     'BPFEventType',
     'GPUState',
     'DependencyType',
-    
+
     # Core Classes
     'TraceEvent',
     'DeviceInfo',
@@ -256,30 +256,30 @@ __all__ = [
     'FlowInfo',
     'MemoryEvent',
     'CounterEvent',
-    
+
     # Stack Capture
     'StackFrame',
     'CallStack',
     'StackCaptureConfig',
     'StackCapture',
-    
+
     # File I/O
     'SBTWriter',
     'SBTReader',
-    
+
     # Timeline
     'TimelineSpan',
     'Timeline',
     'TimelineBuilder',
-    
+
     # Export
     'PerfettoExporter',
     'PerfettoProtoExporter',
-    
+
     # Real-time Tracing
     'TracingSession',
     'TracingStatistics',
-    
+
     # Frame Capture
     'FrameCapture',
     'FrameCaptureConfig',
@@ -287,7 +287,7 @@ __all__ = [
     'DrawCallInfo',
     'ResourceState',
     'ResourceTracker',
-    
+
     # Memory Profiler
     'MemoryProfiler',
     'MemoryProfilerConfig',
@@ -295,20 +295,20 @@ __all__ = [
     'MemorySnapshot',
     'MemoryLeak',
     'MemoryReport',
-    
+
     # XRay Importer
     'XRayImporter',
     'XRayImporterConfig',
-    
+
     # BPF Tracer
     'BPFTracer',
     'BPFEventRecord',
-    
+
     # Replay
     'ReplayConfig',
     'ReplayResult',
     'ReplayEngine',
-    
+
     # State Module
     'StateTransition',
     'GPUStreamState',
@@ -321,7 +321,7 @@ __all__ = [
     'InstructionStreamStatistics',
     'TimelineViewConfig',
     'TimelineViewer',
-    
+
     # Functions
     'get_current_timestamp',
     'event_type_to_string',
@@ -337,7 +337,7 @@ __all__ = [
     'is_metal_available',
     'get_metal_device_count',
     'detect_platform',
-    
+
     # High-level convenience functions
     'build_timeline',
     'export_perfetto',
@@ -345,7 +345,7 @@ __all__ = [
     'replay_trace',
     'profile_memory',
     'is_bpf_available',
-    
+
     # Cluster Module (v0.7.0)
     'GPULinkType',
     'GPULink',
@@ -361,7 +361,7 @@ __all__ = [
     'MultiGPUConfig',
     'MultiGPUStats',
     'MultiGPUProfiler',
-    
+
     # Time Sync (v0.7.1)
     'TimeSyncMethod',
     'TimeSyncConfig',
@@ -371,7 +371,7 @@ __all__ = [
     'ClockCorrelator',
     'time_sync_method_to_string',
     'string_to_time_sync_method',
-    
+
     # NCCL Tracking (v0.7.1)
     'NCCLOpType',
     'NCCLRedOp',
@@ -399,10 +399,10 @@ __all__ = [
 def build_timeline(events: list) -> Timeline:
     """
     Build a timeline from trace events.
-    
+
     Args:
         events: List of TraceEvent objects
-    
+
     Returns:
         Timeline object with spans and statistics
     """
@@ -414,12 +414,12 @@ def build_timeline(events: list) -> Timeline:
 def export_perfetto(events: list, filename: str, use_protobuf: bool = False) -> bool:
     """
     Export events to Perfetto format (JSON or Protobuf).
-    
+
     Args:
         events: List of TraceEvent objects
         filename: Output file path (.json for JSON, .perfetto-trace for protobuf)
         use_protobuf: If True, use protobuf format (85% smaller files)
-    
+
     Returns:
         True if successful
     """
@@ -433,7 +433,7 @@ def export_perfetto(events: list, filename: str, use_protobuf: bool = False) -> 
 def is_protobuf_available() -> bool:
     """
     Check if Perfetto SDK is available for protobuf export.
-    
+
     Returns:
         True if SDK is available (6.8x smaller trace files)
     """
@@ -443,36 +443,36 @@ def is_protobuf_available() -> bool:
 def replay_trace(events: list, mode: ReplayMode = ReplayMode.Full) -> ReplayResult:
     """
     Replay a trace with the given mode.
-    
+
     Args:
         events: List of TraceEvent objects
         mode: Replay mode (Full, Partial, DryRun, StreamSpecific)
-    
+
     Returns:
         ReplayResult with execution details
     """
     engine = ReplayEngine()
     engine.load_events(events)
-    
+
     config = ReplayConfig()
     config.mode = mode
     config.validate_order = True
     config.validate_dependencies = True
-    
+
     return engine.replay(config)
 
 
 def profile_memory(callback=None, config: MemoryProfilerConfig = None) -> MemoryProfiler:
     """
     Create and start a memory profiler.
-    
+
     Args:
         callback: Optional callback function for allocation events
         config: Optional MemoryProfilerConfig
-    
+
     Returns:
         MemoryProfiler instance (already started)
-    
+
     Usage:
         profiler = profile_memory()
         # ... your GPU code ...
@@ -482,7 +482,7 @@ def profile_memory(callback=None, config: MemoryProfilerConfig = None) -> Memory
     """
     if config is None:
         config = MemoryProfilerConfig()
-    
+
     profiler = MemoryProfiler(config)
     profiler.start()
     return profiler
@@ -491,7 +491,7 @@ def profile_memory(callback=None, config: MemoryProfilerConfig = None) -> Memory
 def is_bpf_available() -> bool:
     """
     Check if BPF tracing is available (Linux only).
-    
+
     Returns:
         True if BPF is available on this system
     """
