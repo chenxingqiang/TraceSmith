@@ -10,6 +10,7 @@ target_link_libraries(tracesmith_tests PRIVATE
     tracesmith-format
     tracesmith-capture
     tracesmith-state
+    tracesmith-replay
     GTest::gtest_main
 )
 

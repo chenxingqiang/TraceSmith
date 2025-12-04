@@ -638,3 +638,202 @@ TEST(BPFTypesTest, BPFProgramInfo) {
     EXPECT_FALSE(info.attached);
     EXPECT_TRUE(info.kprobes.empty());
 }
+
+// ============================================================
+// Frame Capture Tests (v0.5.0 - RenderDoc-inspired)
+// ============================================================
+
+#include "tracesmith/frame_capture.hpp"
+
+TEST(FrameCaptureTest, DefaultConstruction) {
+    FrameCapture capture;
+    
+    EXPECT_EQ(capture.getState(), CaptureState::Idle);
+    EXPECT_FALSE(capture.isCapturing());
+    EXPECT_TRUE(capture.getCapturedFrames().empty());
+}
+
+TEST(FrameCaptureTest, ConfigSettings) {
+    FrameCaptureConfig config;
+    config.capture_buffer_contents = true;
+    config.frames_to_capture = 5;
+    
+    FrameCapture capture(config);
+    EXPECT_EQ(capture.getConfig().frames_to_capture, 5u);
+    EXPECT_TRUE(capture.getConfig().capture_buffer_contents);
+}
+
+TEST(FrameCaptureTest, TriggerCapture) {
+    FrameCapture capture;
+    
+    EXPECT_EQ(capture.getState(), CaptureState::Idle);
+    
+    capture.triggerCapture();
+    EXPECT_EQ(capture.getState(), CaptureState::Armed);
+    
+    // First frame end starts capture
+    capture.onFrameEnd();
+    EXPECT_EQ(capture.getState(), CaptureState::Capturing);
+    EXPECT_TRUE(capture.isCapturing());
+}
+
+TEST(FrameCaptureTest, CaptureFrame) {
+    FrameCaptureConfig config;
+    config.frames_to_capture = 1;
+    FrameCapture capture(config);
+    
+    capture.triggerCapture();
+    capture.onFrameEnd();  // Start capture
+    
+    // Record some events
+    TraceEvent kernel;
+    kernel.type = EventType::KernelLaunch;
+    kernel.name = "test_kernel";
+    capture.recordEvent(kernel);
+    
+    TraceEvent memcpy_event;
+    memcpy_event.type = EventType::MemcpyH2D;
+    memcpy_event.name = "memcpy";
+    capture.recordEvent(memcpy_event);
+    
+    capture.onFrameEnd();  // End capture
+    
+    EXPECT_EQ(capture.getState(), CaptureState::Complete);
+    EXPECT_EQ(capture.getCapturedFrames().size(), 1u);
+    
+    const auto& frame = capture.getCapturedFrames()[0];
+    EXPECT_EQ(frame.events.size(), 2u);
+}
+
+TEST(FrameCaptureTest, DrawCallRecording) {
+    FrameCaptureConfig config;
+    config.frames_to_capture = 1;
+    FrameCapture capture(config);
+    
+    capture.triggerCapture();
+    capture.onFrameEnd();
+    
+    DrawCallInfo draw;
+    draw.call_id = 1;
+    draw.name = "DrawIndexed";
+    draw.vertex_count = 3600;
+    draw.instance_count = 100;
+    capture.recordDrawCall(draw);
+    
+    capture.onFrameEnd();
+    
+    const auto& frame = capture.getCapturedFrames()[0];
+    EXPECT_EQ(frame.draw_calls.size(), 1u);
+    EXPECT_EQ(frame.draw_calls[0].vertex_count, 3600u);
+}
+
+TEST(FrameCaptureTest, ResourceTracking) {
+    ResourceTracker tracker;
+    
+    tracker.registerResource(1, ResourceType::Buffer, "VertexBuffer");
+    tracker.registerResource(2, ResourceType::Texture2D, "Albedo");
+    
+    EXPECT_NE(tracker.getResource(1), nullptr);
+    EXPECT_EQ(tracker.getResource(1)->type, ResourceType::Buffer);
+    EXPECT_EQ(tracker.getResource(2)->name, "Albedo");
+    
+    tracker.updateResourceBinding(1, 0x1000, 4096);
+    EXPECT_EQ(tracker.getResource(1)->address, 0x1000u);
+    EXPECT_EQ(tracker.getResource(1)->size, 4096u);
+}
+
+TEST(FrameCaptureTest, ResourceModification) {
+    ResourceTracker tracker;
+    
+    tracker.registerResource(1, ResourceType::Buffer);
+    Timestamp before = tracker.getResource(1)->last_modified;
+    
+    // Small delay to ensure different timestamp
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    
+    Timestamp now = getCurrentTimestamp();
+    tracker.markModified(1, now);
+    
+    EXPECT_GE(tracker.getResource(1)->last_modified, before);
+}
+
+TEST(FrameCaptureTest, ResourceDestruction) {
+    ResourceTracker tracker;
+    
+    tracker.registerResource(1, ResourceType::Buffer);
+    EXPECT_NE(tracker.getResource(1), nullptr);
+    
+    tracker.destroyResource(1);
+    EXPECT_EQ(tracker.getResource(1), nullptr);
+}
+
+TEST(FrameCaptureTest, LiveResources) {
+    ResourceTracker tracker;
+    
+    tracker.registerResource(1, ResourceType::Buffer);
+    tracker.registerResource(2, ResourceType::Buffer);
+    tracker.registerResource(3, ResourceType::Texture2D);
+    
+    auto live = tracker.getLiveResources();
+    EXPECT_EQ(live.size(), 3u);
+    
+    tracker.destroyResource(2);
+    live = tracker.getLiveResources();
+    EXPECT_EQ(live.size(), 2u);
+}
+
+TEST(FrameCaptureTest, ResourceTypeToString) {
+    EXPECT_STREQ(resourceTypeToString(ResourceType::Buffer), "Buffer");
+    EXPECT_STREQ(resourceTypeToString(ResourceType::Texture2D), "Texture2D");
+    EXPECT_STREQ(resourceTypeToString(ResourceType::Pipeline), "Pipeline");
+    EXPECT_STREQ(resourceTypeToString(ResourceType::Unknown), "Unknown");
+}
+
+TEST(FrameCaptureTest, CapturedFrameStatistics) {
+    FrameCaptureConfig config;
+    config.frames_to_capture = 1;
+    FrameCapture capture(config);
+    
+    capture.triggerCapture();
+    capture.onFrameEnd();
+    
+    // Record various events
+    for (int i = 0; i < 10; i++) {
+        TraceEvent kernel;
+        kernel.type = EventType::KernelLaunch;
+        capture.recordEvent(kernel);
+    }
+    
+    for (int i = 0; i < 5; i++) {
+        TraceEvent memcpy_event;
+        memcpy_event.type = EventType::MemcpyH2D;
+        capture.recordEvent(memcpy_event);
+    }
+    
+    TraceEvent sync;
+    sync.type = EventType::DeviceSync;
+    capture.recordEvent(sync);
+    
+    capture.onFrameEnd();
+    
+    const auto& frame = capture.getCapturedFrames()[0];
+    EXPECT_EQ(frame.total_memory_ops, 5u);
+    EXPECT_EQ(frame.total_sync_ops, 1u);
+}
+
+TEST(FrameCaptureTest, ClearCapture) {
+    FrameCaptureConfig config;
+    config.frames_to_capture = 1;
+    FrameCapture capture(config);
+    
+    capture.triggerCapture();
+    capture.onFrameEnd();
+    capture.onFrameEnd();
+    
+    EXPECT_EQ(capture.getCapturedFrames().size(), 1u);
+    
+    capture.clear();
+    
+    EXPECT_TRUE(capture.getCapturedFrames().empty());
+    EXPECT_EQ(capture.getState(), CaptureState::Idle);
+}

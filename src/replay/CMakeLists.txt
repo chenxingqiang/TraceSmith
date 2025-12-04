@@ -4,6 +4,7 @@ add_library(tracesmith-replay STATIC
     operation_executor.cpp
     determinism_checker.cpp
     replay_engine.cpp
+    frame_capture.cpp
 )
 
 target_link_libraries(tracesmith-replay PUBLIC
