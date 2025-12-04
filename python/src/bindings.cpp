@@ -197,6 +197,16 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def_readwrite("capture_alloc", &ProfilerConfig::capture_alloc,
                        "Whether to capture allocation events");
     
+    // SBTResult struct
+    py::class_<SBTResult>(m, "SBTResult",
+        "Result type for SBT operations")
+        .def(py::init<>())
+        .def(py::init<bool>())
+        .def(py::init<const std::string&>())
+        .def_readwrite("success", &SBTResult::success)
+        .def_readwrite("error_message", &SBTResult::error_message)
+        .def("__bool__", [](const SBTResult& r) { return r.success; });
+    
     // SBTWriter class
     py::class_<SBTWriter>(m, "SBTWriter")
         .def(py::init<const std::string&>())
