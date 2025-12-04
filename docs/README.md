@@ -8,79 +8,108 @@ Complete documentation for the TraceSmith GPU Profiling & Replay System.
 - **[Getting Started Guide](getting_started.md)** - Quick start guide for building and using TraceSmith
 
 ### Project Documentation
-- **[Project Summary](PROJECT_SUMMARY.md)** - Complete project overview and architecture
-- **[Planning Document](PLANNING.md)** - Original project planning and goals (目标规划书)
-- **[Test Report](TEST_REPORT.md)** - Comprehensive functionality test results
-- **[Changelog](CHANGELOG.md)** - Version history and changes
+- **[Planning Document](PLANNING.md)** - Project planning, goals, and architecture
+- **[Changelog](../CHANGELOG.md)** - Version history and changes
 
-### Phase Documentation
-- **[Phase 2 Summary](PHASE2_SUMMARY.md)** - Call Stack Collection implementation
-- **[Phase 3 Summary](PHASE3_SUMMARY.md)** - GPU State Machine & Timeline implementation
-- **[Phase 4 Summary](PHASE4_SUMMARY.md)** - Replay Engine implementation
-- **[Phase 5 Summary](PHASE5_SUMMARY.md)** - Production Release (CLI, Python bindings, Docker)
+### Feature Documentation
+- **[Cluster Profiling](CLUSTER_PROFILING.md)** - Multi-GPU and cluster profiling implementation plan (v0.7.0+)
 
 ### Reference
-- **[GPU Profiling Projects](GPU%20Profiling%20与调用栈采集（Callstack）方向的开源项目.md)** - Survey of related open source projects
-- **[Integration Recommendations](INTEGRATION_RECOMMENDATIONS.md)** - Strategic recommendations for integrating open source components
+- **[GPU Profiling Projects](gpu_profiling_callstack_opensource.md)** - Survey of related open source projects
 
 ## 🚀 Quick Links
 
 ### For Users
 1. Start with [Getting Started Guide](getting_started.md)
-2. Read [Project Summary](PROJECT_SUMMARY.md) for architecture overview
-3. Check [Test Report](TEST_REPORT.md) for tested functionality
+2. Read [Planning Document](PLANNING.md) for architecture overview
+3. Check [Changelog](../CHANGELOG.md) for recent changes
 
 ### For Developers
 1. Review [Planning Document](PLANNING.md) for design goals
-2. Study [Phase 2](PHASE2_SUMMARY.md) and [Phase 3](PHASE3_SUMMARY.md) for implementation details
-3. Check [Changelog](CHANGELOG.md) for recent changes
+2. Study [Cluster Profiling](CLUSTER_PROFILING.md) for multi-GPU implementation
+3. Check source code in `src/` directories
 
 ### For Contributors
-1. Read [Project Summary](PROJECT_SUMMARY.md) for codebase structure
-2. Review [Test Report](TEST_REPORT.md) to see what's tested
+1. Read the main [README.md](../README.md) for project overview
+2. Review [Changelog](../CHANGELOG.md) to see what's new
 3. Check open issues on GitHub
 
 ## 📖 Documentation Structure
 
 ```
 docs/
-├── README.md                    # This file
-├── getting_started.md           # Quick start guide
-├── PROJECT_SUMMARY.md           # Complete project overview
-├── PLANNING.md                  # Original planning document
-├── TEST_REPORT.md              # Functionality test results
-├── CHANGELOG.md                # Version history
-├── PHASE2_SUMMARY.md           # Phase 2 implementation
-├── PHASE3_SUMMARY.md           # Phase 3 implementation
-├── PHASE4_SUMMARY.md           # Phase 4 implementation (Replay)
-├── PHASE5_SUMMARY.md           # Phase 5 implementation (Production)
-└── GPU Profiling 与调用栈...   # Related projects survey
+├── README.md                         # This file
+├── getting_started.md                # Quick start guide
+├── PLANNING.md                       # Project planning & goals
+├── CLUSTER_PROFILING.md              # Multi-GPU cluster profiling plan
+├── gpu_profiling_callstack_opensource.md  # Related projects survey
+└── CHANGELOG.md                      # Local changelog (deprecated, use root)
 ```
 
-## 🎯 Key Features Documented
+## 🎯 Key Features
 
+### Core Profiling
 - **SBT Binary Format** - Custom trace format optimized for GPU events
-- **Ring Buffer** - Lock-free circular buffer for event capture
-- **Call Stack Capture** - Cross-platform stack unwinding
+- **Ring Buffer** - Lock-free SPSC circular buffer for event capture
+- **Call Stack Capture** - Cross-platform stack unwinding (libunwind)
+- **Memory Profiler** - GPU memory tracking and leak detection
+
+### State Analysis
 - **GPU State Machine** - Multi-stream GPU execution modeling
+- **Instruction Stream** - Dependency graph construction
 - **Timeline Builder** - Event timeline construction and visualization
-- **Perfetto Export** - Chrome tracing format export
+- **Timeline Viewer** - ASCII art timeline rendering
+
+### Export & Integration
+- **Perfetto JSON** - Chrome tracing format export
+- **Perfetto Protobuf** - Native protobuf export (85% smaller files)
+- **XRay Import** - LLVM XRay trace import
+
+### Replay Engine
 - **Replay Engine** - Deterministic GPU execution replay
-- **CUPTI Integration** - NVIDIA GPU profiling (code complete)
-- **Metal Integration** - Apple GPU profiling (tested on M3 Max)
+- **Determinism Checker** - Verify replay correctness
+- **Stream Scheduler** - Multi-stream operation scheduling
+- **Frame Capture** - RenderDoc-inspired GPU frame capture
+
+### Multi-GPU (v0.7.0+)
+- **Multi-GPU Profiler** - Profile multiple GPUs simultaneously
+- **GPU Topology** - NVLink/NVSwitch topology discovery
+- **Time Sync** - Cross-GPU/node time synchronization
+- **NCCL Tracker** - Collective operation tracking
+
+### Platform Support
+- **CUDA/CUPTI** - NVIDIA GPU profiling
+- **Metal** - Apple GPU profiling (M1/M2/M3)
+- **ROCm** - AMD GPU profiling (planned)
+- **BPF** - Linux kernel-level tracing
 
 ## 📊 Current Status
 
-- **Version**: 0.1.0
-- **Completion**: 97%
-- **Lines of Code**: ~5,300 (C++ + Python)
-- **Test Coverage**: All core functionality tested on macOS
-- **Hardware Tested**: Apple M3 Max (Metal)
-- **Pending**: NVIDIA GPU testing (CUPTI)
+| Metric | Value |
+|--------|-------|
+| **Version** | 0.7.1 |
+| **C++ Standard** | C++17 |
+| **Python** | 3.9 - 3.12 |
+| **Platforms** | Linux, macOS, Windows |
+| **GPU Backends** | CUDA, Metal, (ROCm planned) |
+
+## 🛠️ Build Requirements
+
+### Required
+- CMake 3.16+
+- C++17 compiler (GCC 9+, Clang 10+, MSVC 2019+)
+- Python 3.9+ (for Python bindings)
+- pybind11 2.11+
+
+### Optional
+- CUDA Toolkit 11.0+ (for NVIDIA GPU profiling)
+- libunwind (for stack capture on Linux)
+- Ninja (for faster builds)
 
 ## 🔗 External Resources
 
 - **Repository**: https://github.com/chenxingqiang/TraceSmith
+- **PyPI**: https://pypi.org/project/tracesmith/
 - **Perfetto UI**: https://ui.perfetto.dev
 - **NVIDIA CUPTI**: https://developer.nvidia.com/cupti
 - **Apple Metal**: https://developer.apple.com/metal/
