@@ -363,7 +363,12 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def_readwrite("mode", &ReplayConfig::mode)
         .def_readwrite("validate_order", &ReplayConfig::validate_order)
         .def_readwrite("validate_dependencies", &ReplayConfig::validate_dependencies)
-        .def_readwrite("verbose", &ReplayConfig::verbose);
+        .def_readwrite("validate_timing", &ReplayConfig::validate_timing)
+        .def_readwrite("compute_checksums", &ReplayConfig::compute_checksums)
+        .def_readwrite("verbose", &ReplayConfig::verbose)
+        .def_readwrite("pause_on_error", &ReplayConfig::pause_on_error)
+        .def_readwrite("time_scale", &ReplayConfig::time_scale)
+        .def_readwrite("stream_id", &ReplayConfig::stream_id);
     
     // ReplayResult class
     py::class_<ReplayResult>(m, "ReplayResult")
@@ -372,9 +377,15 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def_readwrite("deterministic", &ReplayResult::deterministic)
         .def_readwrite("operations_total", &ReplayResult::operations_total)
         .def_readwrite("operations_executed", &ReplayResult::operations_executed)
+        .def_readwrite("operations_skipped", &ReplayResult::operations_skipped)
         .def_readwrite("operations_failed", &ReplayResult::operations_failed)
         .def_readwrite("replay_duration", &ReplayResult::replay_duration)
+        .def_readwrite("original_duration", &ReplayResult::original_duration)
+        .def_readwrite("order_violations", &ReplayResult::order_violations)
+        .def_readwrite("dependency_violations", &ReplayResult::dependency_violations)
+        .def_readwrite("timing_violations", &ReplayResult::timing_violations)
         .def_readwrite("errors", &ReplayResult::errors)
+        .def_readwrite("warnings", &ReplayResult::warnings)
         .def("summary", &ReplayResult::summary);
     
     // ReplayEngine class
@@ -439,10 +450,16 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def_readwrite("timestamp", &DrawCallInfo::timestamp)
         .def_readwrite("vertex_count", &DrawCallInfo::vertex_count)
         .def_readwrite("instance_count", &DrawCallInfo::instance_count)
+        .def_readwrite("first_vertex", &DrawCallInfo::first_vertex)
+        .def_readwrite("first_instance", &DrawCallInfo::first_instance)
         .def_readwrite("index_count", &DrawCallInfo::index_count)
+        .def_readwrite("first_index", &DrawCallInfo::first_index)
+        .def_readwrite("vertex_offset", &DrawCallInfo::vertex_offset)
         .def_readwrite("group_count_x", &DrawCallInfo::group_count_x)
         .def_readwrite("group_count_y", &DrawCallInfo::group_count_y)
         .def_readwrite("group_count_z", &DrawCallInfo::group_count_z)
+        .def_readwrite("input_resources", &DrawCallInfo::input_resources)
+        .def_readwrite("output_resources", &DrawCallInfo::output_resources)
         .def_readwrite("pipeline_id", &DrawCallInfo::pipeline_id)
         .def_readwrite("vertex_shader", &DrawCallInfo::vertex_shader)
         .def_readwrite("fragment_shader", &DrawCallInfo::fragment_shader)
@@ -487,6 +504,10 @@ PYBIND11_MODULE(_tracesmith, m) {
              "Trigger frame capture (like pressing F12 in RenderDoc)")
         .def("is_capturing", &FrameCapture::isCapturing)
         .def("get_state", &FrameCapture::getState)
+        .def_property_readonly("state", &FrameCapture::getState,
+             "Current capture state")
+        .def_property_readonly("captured_frames", &FrameCapture::getCapturedFrames,
+             py::return_value_policy::reference_internal)
         .def("on_frame_end", &FrameCapture::onFrameEnd,
              "Signal end of frame (call on Present/SwapBuffers)")
         .def("record_draw_call", &FrameCapture::recordDrawCall, py::arg("draw"))

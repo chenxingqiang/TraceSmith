@@ -35,7 +35,7 @@ class PerfettoExporter {
 public:
     PerfettoExporter() = default;
     
-/**
+    /**
      * Export events to enhanced Perfetto JSON format
      * 
      * @param events Events to export
