@@ -583,7 +583,35 @@ make benchmark_10k_stacks -j8
 [![PyPI version](https://badge.fury.io/py/tracesmith.svg)](https://badge.fury.io/py/tracesmith)
 
 ```bash
+# Basic installation
 pip install tracesmith==0.6.9
+
+# With CuPy for real GPU profiling in Python CLI (choose one):
+pip install tracesmith[cuda12]    # CUDA 12.x
+pip install tracesmith[cuda11]    # CUDA 11.x
+pip install tracesmith[cuda118]   # CUDA 11.8 specific
+pip install tracesmith[cuda120]   # CUDA 12.0 specific
+
+# With visualization tools
+pip install tracesmith[visualization]
+
+# With PyTorch integration
+pip install tracesmith[torch]
+
+# All optional dependencies
+pip install tracesmith[all]
+```
+
+### Python CLI Real GPU Benchmark
+
+With CuPy installed, you can run real GPU profiling from Python:
+
+```bash
+# Install CuPy first
+pip install tracesmith[cuda12]
+
+# Run real GPU benchmark
+python -m tracesmith benchmark --real-gpu -n 10000
 ```
 
 **Tested on NVIDIA GPU Server (RTX 4090):**

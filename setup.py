@@ -17,6 +17,18 @@ Platform-specific installation:
     # Metal (Apple)
     TRACESMITH_METAL=1 pip install .
 
+With CuPy for real GPU profiling (Python CLI):
+    pip install .[cuda12]    # CUDA 12.x
+    pip install .[cuda11]    # CUDA 11.x
+    pip install .[cuda118]   # CUDA 11.8
+    pip install .[cuda120]   # CUDA 12.0
+
+Other extras:
+    pip install .[visualization]  # matplotlib, plotly
+    pip install .[torch]          # PyTorch integration
+    pip install .[dev]            # Development tools
+    pip install .[all]            # All extras
+
 Development installation:
     pip install -e .
 """
@@ -205,6 +217,25 @@ setup(
             'torch>=1.9',
         ],
         'visualization': [
+            'matplotlib',
+            'plotly',
+        ],
+        # CuPy for real GPU profiling in Python CLI
+        'cuda11': [
+            'cupy-cuda11x>=12.0.0',
+        ],
+        'cuda12': [
+            'cupy-cuda12x>=12.0.0',
+        ],
+        'cuda118': [
+            'cupy-cuda118>=12.0.0',
+        ],
+        'cuda120': [
+            'cupy-cuda12x>=12.0.0',
+        ],
+        # All extras for full functionality
+        'all': [
+            'numpy',
             'matplotlib',
             'plotly',
         ],

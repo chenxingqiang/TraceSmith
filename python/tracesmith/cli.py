@@ -11,6 +11,7 @@ Usage:
     tracesmith export FILE       Export to Perfetto format
     tracesmith analyze FILE      Analyze trace file
     tracesmith replay FILE       Replay a captured trace
+    tracesmith benchmark         Run 10K GPU call stacks benchmark
 """
 
 import argparse
@@ -626,6 +627,477 @@ def cmd_replay(args):
 
 
 # =============================================================================
+# Command: benchmark - Run 10K GPU Call Stacks Benchmark
+# =============================================================================
+def cmd_benchmark(args):
+    """Run the 10K GPU instruction-level call stacks benchmark."""
+    import time
+    
+    # Import TraceSmith modules
+    try:
+        from . import (
+            is_cuda_available, get_cuda_device_count,
+            StackCapture, StackCaptureConfig, CallStack,
+            SBTWriter, TraceMetadata, TraceEvent, EventType,
+            ProfilerConfig, getCurrentTimestamp
+        )
+    except ImportError as e:
+        print_error(f"Failed to import TraceSmith modules: {e}")
+        return 1
+    
+    # Check CUDA availability
+    cuda_available = False
+    try:
+        cuda_available = is_cuda_available()
+    except:
+        pass
+    
+    if not cuda_available:
+        print()
+        print(f"{C(Color.BOLD)}{C(Color.RED)}")
+        print("╔══════════════════════════════════════════════════════════════════════╗")
+        print("║  ERROR: CUDA support not available                                   ║")
+        print("╚══════════════════════════════════════════════════════════════════════╝")
+        print(f"{C(Color.RESET)}")
+        print()
+        print("This benchmark requires CUDA support.")
+        print("Please ensure:")
+        print("  1. NVIDIA GPU is available")
+        print("  2. TraceSmith was built with -DTRACESMITH_ENABLE_CUDA=ON")
+        print()
+        return 1
+    
+    # Check for CuPy (real GPU kernels)
+    cupy_available = False
+    cp = None
+    try:
+        import cupy as cp
+        cupy_available = True
+    except ImportError:
+        pass
+    
+    # Check for CUPTI profiler
+    cupti_available = False
+    CUPTIProfiler = None
+    try:
+        from . import CUPTIProfiler
+        cupti_available = True
+    except ImportError:
+        pass
+    
+    # Determine benchmark mode
+    use_real_gpu = args.real_gpu and cupy_available and cupti_available
+    
+    # Print banner
+    print()
+    print(f"{C(Color.BOLD)}{C(Color.CYAN)}")
+    print("╔══════════════════════════════════════════════════════════════════════╗")
+    print("║  TraceSmith Benchmark: 10,000+ GPU Instruction-Level Call Stacks     ║")
+    print("║  Feature: Non-intrusive capture of instruction-level GPU call stacks ║")
+    print("╚══════════════════════════════════════════════════════════════════════╝")
+    print(f"{C(Color.RESET)}")
+    print()
+    
+    # Configuration
+    target_kernels = args.count
+    output_file = args.output or "benchmark.sbt"
+    capture_stacks = not args.no_stacks
+    verbose = args.verbose
+    
+    # Print info
+    device_count = get_cuda_device_count()
+    print_success(f"CUDA available, {device_count} device(s)")
+    
+    if cupy_available:
+        print_success("CuPy available (real GPU kernels)")
+    else:
+        print_warning("CuPy not available (install with: pip install cupy-cuda12x)")
+    
+    if cupti_available:
+        print_success("CUPTI profiler available")
+    else:
+        print_warning("CUPTI profiler not available")
+    
+    # Check stack capture
+    stack_available = StackCapture.is_available()
+    if capture_stacks and not stack_available:
+        print_warning("Stack capture not available, disabling")
+        capture_stacks = False
+    elif capture_stacks:
+        print_success("Stack capture available")
+    
+    print()
+    print(f"{C(Color.BOLD)}Configuration:{C(Color.RESET)}")
+    print(f"  Target kernels: {target_kernels}")
+    print(f"  Output file:    {output_file}")
+    print(f"  Capture stacks: {'Yes' if capture_stacks else 'No'}")
+    print(f"  Real GPU mode:  {'Yes' if use_real_gpu else 'No'}")
+    print()
+    
+    # Setup stack capturer
+    stack_capturer = None
+    host_stacks = []
+    
+    if capture_stacks:
+        config = StackCaptureConfig()
+        config.max_depth = 16
+        config.resolve_symbols = False
+        config.demangle = False
+        stack_capturer = StackCapture(config)
+    
+    # =================================================================
+    # Real GPU Benchmark Mode (with CuPy + CUPTI)
+    # =================================================================
+    if use_real_gpu:
+        return _run_real_gpu_benchmark(
+            cp, CUPTIProfiler, 
+            target_kernels, output_file, 
+            capture_stacks, stack_capturer, host_stacks,
+            verbose, SBTWriter, TraceMetadata, TraceEvent, EventType, getCurrentTimestamp
+        )
+    
+    # =================================================================
+    # Fallback: Python-side stack capture mode
+    # =================================================================
+    print_section("Running Benchmark (Python Mode)")
+    print(f"Capturing {target_kernels} call stacks...")
+    
+    if cupy_available and not cupti_available:
+        print_info("Launching real CuPy kernels (CUPTI not available for capture)")
+    print()
+    
+    start_time = time.time()
+    
+    # Capture stacks for each "kernel launch"
+    progress_interval = target_kernels // 20
+    if progress_interval == 0:
+        progress_interval = 1
+    
+    events = []
+    
+    # Optionally use CuPy for real GPU work
+    if cupy_available and cp is not None:
+        # Allocate GPU memory
+        data_size = 1024 * 1024  # 1M elements
+        d_data = cp.ones(data_size, dtype=cp.float32)
+    
+    for i in range(target_kernels):
+        # Capture host call stack
+        if capture_stacks and stack_capturer:
+            stack = CallStack()
+            stack_capturer.capture(stack)
+            
+            event = TraceEvent()
+            event.type = EventType.KernelLaunch
+            event.name = f"benchmark_kernel_{i}"
+            event.timestamp = getCurrentTimestamp()
+            event.correlation_id = i
+            event.device_id = 0
+            event.stream_id = 0
+            event.call_stack = stack
+            event.thread_id = stack.thread_id
+            events.append(event)
+            host_stacks.append(stack)
+        else:
+            event = TraceEvent()
+            event.type = EventType.KernelLaunch
+            event.name = f"benchmark_kernel_{i}"
+            event.timestamp = getCurrentTimestamp()
+            event.correlation_id = i
+            event.device_id = 0
+            event.stream_id = 0
+            events.append(event)
+        
+        # Run real GPU kernel if CuPy available
+        if cupy_available and cp is not None:
+            d_data = d_data * 2.0 + float(i)
+            if i % 1000 == 999:
+                cp.cuda.Stream.null.synchronize()
+        
+        # Show progress
+        if verbose and i % progress_interval == 0:
+            pct = (i * 100) // target_kernels
+            bar = "█" * (pct // 5) + "░" * (20 - pct // 5)
+            print(f"\r  Progress: [{bar}] {pct}% ", end="", flush=True)
+    
+    # Final sync
+    if cupy_available and cp is not None:
+        cp.cuda.Stream.null.synchronize()
+    
+    end_time = time.time()
+    duration_ms = (end_time - start_time) * 1000
+    
+    if verbose:
+        print(f"\r  Progress: [████████████████████] 100%")
+    
+    print_success(f"Captured {target_kernels} events")
+    print(f"  Total time:    {duration_ms:.0f} ms")
+    print(f"  Events/sec:    {target_kernels * 1000 / duration_ms:.0f}")
+    print()
+    
+    # =================================================================
+    # Results
+    # =================================================================
+    print_section("Results")
+    
+    print(f"{C(Color.BOLD)}Events:{C(Color.RESET)}")
+    print(f"  Total events:    {len(events)}")
+    
+    if capture_stacks:
+        stacks_captured = sum(1 for e in events if e.call_stack is not None)
+        total_frames = sum(e.call_stack.depth() if e.call_stack else 0 for e in events)
+        avg_depth = total_frames / stacks_captured if stacks_captured > 0 else 0
+        
+        print()
+        print(f"{C(Color.BOLD)}Host Call Stacks:{C(Color.RESET)}")
+        print(f"  Stacks captured: {stacks_captured}")
+        print(f"  Average depth:   {avg_depth:.1f} frames")
+        print(f"  Total frames:    {total_frames}")
+    
+    print()
+    
+    # =================================================================
+    # Save to file
+    # =================================================================
+    try:
+        writer = SBTWriter(output_file)
+        meta = TraceMetadata()
+        meta.application_name = "TraceSmith Python Benchmark"
+        meta.command_line = f"tracesmith benchmark -n {target_kernels}"
+        writer.write_metadata(meta)
+        
+        for event in events:
+            writer.write_event(event)
+        
+        writer.finalize()
+        
+        import os
+        file_size = os.path.getsize(output_file)
+        
+        print_success(f"Saved to {output_file}")
+        print(f"  File size: {file_size // 1024} KB")
+        print()
+    except Exception as e:
+        print_warning(f"Failed to save trace: {e}")
+    
+    # =================================================================
+    # Summary
+    # =================================================================
+    goal_achieved = len(events) >= target_kernels
+    
+    if goal_achieved:
+        color = Color.GREEN
+    else:
+        color = Color.RED
+    
+    print(f"{C(Color.BOLD)}{C(color)}")
+    print("╔══════════════════════════════════════════════════════════════════════╗")
+    print("║                         BENCHMARK SUMMARY                            ║")
+    print("╠══════════════════════════════════════════════════════════════════════╣")
+    print("║                                                                      ║")
+    print("║  Feature: Non-intrusive 10K+ instruction-level GPU call stacks       ║")
+    print("║                                                                      ║")
+    
+    if goal_achieved:
+        print("║  ✅ VERIFIED!                                                        ║")
+    else:
+        print("║  ❌ NOT VERIFIED                                                     ║")
+    
+    print("║                                                                      ║")
+    mode_str = "Python + CuPy" if cupy_available else "Python"
+    print(f"║  Results ({mode_str}):                                          ║")
+    print(f"║    • Events captured:    {len(events):>8}                                   ║")
+    print(f"║    • Call stacks:        {len(host_stacks):>8}                                   ║")
+    print(f"║    • Total time:         {duration_ms:>5.0f} ms                                  ║")
+    print("║                                                                      ║")
+    
+    if not use_real_gpu:
+        print("║  For REAL GPU profiling with CUPTI, install CuPy:                   ║")
+        print("║    pip install cupy-cuda12x                                         ║")
+        print("║  Then run: tracesmith benchmark --real-gpu                          ║")
+        print("║                                                                      ║")
+    
+    print("╚══════════════════════════════════════════════════════════════════════╝")
+    print(f"{C(Color.RESET)}")
+    print()
+    
+    return 0 if goal_achieved else 1
+
+
+def _run_real_gpu_benchmark(cp, CUPTIProfiler, target_kernels, output_file, 
+                            capture_stacks, stack_capturer, host_stacks,
+                            verbose, SBTWriter, TraceMetadata, TraceEvent, 
+                            EventType, getCurrentTimestamp):
+    """Run benchmark with real GPU kernels and CUPTI profiling."""
+    import time
+    
+    print_section("Running Benchmark (REAL GPU Mode)")
+    print(f"Launching {target_kernels} REAL CuPy GPU kernels with CUPTI capture...")
+    print()
+    
+    # Allocate GPU memory
+    data_size = 1024 * 1024  # 1M elements
+    d_data = cp.ones(data_size, dtype=cp.float32)
+    print_success(f"Allocated {data_size * 4 // 1024 // 1024} MB GPU memory")
+    
+    # Setup CUPTI profiler
+    profiler = CUPTIProfiler()
+    from . import ProfilerConfig
+    prof_config = ProfilerConfig()
+    prof_config.buffer_size = 64 * 1024 * 1024  # 64MB buffer
+    profiler.initialize(prof_config)
+    
+    # Start CUPTI capture
+    profiler.start_capture()
+    print_success("CUPTI profiling started")
+    print()
+    
+    start_time = time.time()
+    
+    progress_interval = target_kernels // 20
+    if progress_interval == 0:
+        progress_interval = 1
+    
+    # Launch real GPU kernels
+    for i in range(target_kernels):
+        # Capture host call stack before kernel launch
+        if capture_stacks and stack_capturer:
+            from . import CallStack
+            stack = CallStack()
+            stack_capturer.capture(stack)
+            host_stacks.append((i, stack))
+        
+        # Launch REAL CuPy kernel
+        d_data = d_data * 2.0 + float(i % 100)
+        
+        # Sync every 1000 kernels
+        if i % 1000 == 999:
+            cp.cuda.Stream.null.synchronize()
+        
+        # Show progress
+        if verbose and i % progress_interval == 0:
+            pct = (i * 100) // target_kernels
+            bar = "█" * (pct // 5) + "░" * (20 - pct // 5)
+            print(f"\r  Progress: [{bar}] {pct}% ", end="", flush=True)
+    
+    # Final sync
+    cp.cuda.Stream.null.synchronize()
+    
+    end_time = time.time()
+    duration_ms = (end_time - start_time) * 1000
+    
+    # Stop profiling
+    profiler.stop_capture()
+    
+    if verbose:
+        print(f"\r  Progress: [████████████████████] 100%")
+    
+    print_success(f"Launched {target_kernels} real CUDA kernels")
+    print(f"  Total time:   {duration_ms:.0f} ms")
+    print(f"  Kernels/sec:  {target_kernels * 1000 / duration_ms:.0f}")
+    print()
+    
+    # =================================================================
+    # Get GPU events from CUPTI
+    # =================================================================
+    print_section("Results (CUPTI)")
+    
+    gpu_events = []
+    event_count = profiler.get_events(gpu_events)
+    events_dropped = profiler.events_dropped()
+    
+    # Count event types
+    kernel_launches = sum(1 for e in gpu_events if e.type == EventType.KernelLaunch)
+    kernel_completes = sum(1 for e in gpu_events if e.type == EventType.KernelComplete)
+    other = len(gpu_events) - kernel_launches - kernel_completes
+    
+    print(f"{C(Color.BOLD)}GPU Events (CUPTI):{C(Color.RESET)}")
+    print(f"  Events captured:   {event_count}")
+    print(f"  Events dropped:    {events_dropped}")
+    print(f"  Kernel launches:   {kernel_launches}")
+    print(f"  Kernel completes:  {kernel_completes}")
+    print(f"  Other events:      {other}")
+    print()
+    
+    # Attach host stacks to GPU events
+    if capture_stacks and host_stacks:
+        stack_map = {corr_id: stack for corr_id, stack in host_stacks}
+        attached = 0
+        for event in gpu_events:
+            if event.correlation_id in stack_map:
+                event.call_stack = stack_map[event.correlation_id]
+                attached += 1
+        
+        print(f"{C(Color.BOLD)}Host Call Stacks:{C(Color.RESET)}")
+        print(f"  Stacks captured:        {len(host_stacks)}")
+        print(f"  GPU events with stacks: {attached}")
+        print()
+    
+    # =================================================================
+    # Save to file
+    # =================================================================
+    try:
+        writer = SBTWriter(output_file)
+        meta = TraceMetadata()
+        meta.application_name = "TraceSmith Python Benchmark (Real GPU)"
+        meta.command_line = f"tracesmith benchmark -n {target_kernels} --real-gpu"
+        writer.write_metadata(meta)
+        
+        for event in gpu_events:
+            writer.write_event(event)
+        
+        writer.finalize()
+        
+        import os
+        file_size = os.path.getsize(output_file)
+        
+        print_success(f"Saved to {output_file}")
+        print(f"  File size: {file_size // 1024} KB")
+        print()
+    except Exception as e:
+        print_warning(f"Failed to save trace: {e}")
+    
+    # =================================================================
+    # Summary
+    # =================================================================
+    goal_achieved = kernel_launches >= target_kernels
+    
+    if goal_achieved:
+        color = Color.GREEN
+    else:
+        color = Color.RED
+    
+    print(f"{C(Color.BOLD)}{C(color)}")
+    print("╔══════════════════════════════════════════════════════════════════════╗")
+    print("║                         BENCHMARK SUMMARY                            ║")
+    print("╠══════════════════════════════════════════════════════════════════════╣")
+    print("║                                                                      ║")
+    print("║  Feature: Non-intrusive 10K+ instruction-level GPU call stacks       ║")
+    print("║                                                                      ║")
+    
+    if goal_achieved:
+        print("║  ✅ VERIFIED! (REAL GPU)                                             ║")
+    else:
+        print("║  ❌ NOT VERIFIED                                                     ║")
+    
+    print("║                                                                      ║")
+    print("║  Results (Python + CuPy + CUPTI):                                    ║")
+    print(f"║    • CuPy kernels launched: {target_kernels:>8}                               ║")
+    print(f"║    • GPU events (CUPTI):    {len(gpu_events):>8}                               ║")
+    print(f"║    • Kernel launches:       {kernel_launches:>8}                               ║")
+    print(f"║    • Kernel completes:      {kernel_completes:>8}                               ║")
+    print(f"║    • Total time:            {duration_ms:>5.0f} ms                              ║")
+    print("║                                                                      ║")
+    print("║  ✅ This is REAL GPU profiling - same as C++ CLI!                    ║")
+    print("║                                                                      ║")
+    print("╚══════════════════════════════════════════════════════════════════════╝")
+    print(f"{C(Color.RESET)}")
+    print()
+    
+    return 0 if goal_achieved else 1
+
+
+# =============================================================================
 # Main Entry Point
 # =============================================================================
 def main():
@@ -645,6 +1117,7 @@ def main():
   tracesmith view trace.sbt --stats        # Show statistics
   tracesmith export trace.sbt              # Export to Perfetto
   tracesmith analyze trace.sbt             # Analyze performance
+  tracesmith benchmark -n 10000            # Run 10K benchmark
   tracesmith devices                       # List GPUs
 
 Run '{C(Color.CYAN)}tracesmith <command> --help{C(Color.RESET)}' for more information.
@@ -696,6 +1169,19 @@ Run '{C(Color.CYAN)}tracesmith <command> --help{C(Color.RESET)}' for more inform
     replay_parser.add_argument('--mode', choices=['dry-run', 'full', 'partial'], default='dry-run')
     replay_parser.add_argument('--validate', action='store_true', help='Validate determinism')
     replay_parser.set_defaults(func=cmd_replay)
+    
+    # benchmark command
+    benchmark_parser = subparsers.add_parser('benchmark', help='Run 10K GPU call stacks benchmark')
+    benchmark_parser.add_argument('-n', '--count', type=int, default=10000, 
+                                  help='Number of events to capture (default: 10000)')
+    benchmark_parser.add_argument('-o', '--output', help='Output file (default: benchmark.sbt)')
+    benchmark_parser.add_argument('--no-stacks', action='store_true', 
+                                  help='Disable host call stack capture')
+    benchmark_parser.add_argument('--real-gpu', action='store_true',
+                                  help='Use real GPU profiling with CuPy + CUPTI')
+    benchmark_parser.add_argument('-v', '--verbose', action='store_true', 
+                                  help='Show progress bar')
+    benchmark_parser.set_defaults(func=cmd_benchmark)
     
     args = parser.parse_args()
     

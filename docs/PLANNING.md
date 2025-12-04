@@ -1,9 +1,13 @@
-# **《TraceSmith：GPU Profiling & Replay 系统》目标规划书**## **📍** ## **一、项目概述**
+# **《TraceSmith：GPU Profiling & Replay 系统》目标规划书**## **📍** 
+## **一、项目概述**
 **TraceSmith** 致力于构建一套跨平台、轻量、高性能的 GPU Profiling 工具，支持：* 在不中断业务的情况下采集 **1 万+ 指令级 GPU 调用栈**
 * 构建可序列化的 GPU 执行轨迹
 * 基于事件流恢复 **GPU 状态机**（State Machine）
 * 提供 GPU 指令流 **Replay / 回放能力**
-* 支持多 GPU、多 Stream、异步执行模型该项目面向 AI 编译器、深度学习框架、GPU 驱动工程师和超算平台研发人员。# **二、项目目标（Goal）**## **总目标：**开发一款开源 GPU 高级 Profiling 工具，具备 **Real-time profiling + Deterministic replay + State reconstruction** 功能，成为国产 GPU、AI 框架、算子优化工具链中的关键组件。
+* 支持多 GPU、多 Stream、异步执行模型该项目面向 AI 编译器、深度学习框架、GPU 驱动工程师和超算平台研发人员。
+# **二、项目目标（Goal）**
+
+## **总目标：**开发一款开源 GPU 高级 Profiling 工具，具备 **Real-time profiling + Deterministic replay + State reconstruction** 功能，成为国产 GPU、AI 框架、算子优化工具链中的关键组件。
 
 # **三、阶段性目标（Milestones）**
 

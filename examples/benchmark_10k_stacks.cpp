@@ -68,8 +68,6 @@ int main() {
 ╔══════════════════════════════════════════════════════════════════════╗
 ║  TraceSmith Benchmark: 10,000+ GPU Instruction-Level Call Stacks     ║
 ║  Feature: Non-intrusive capture of instruction-level GPU call stacks ║
-║                                                                      ║
-║           ║
 ╚══════════════════════════════════════════════════════════════════════╝
 )" << "\n";
 
