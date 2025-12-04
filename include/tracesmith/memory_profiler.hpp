@@ -199,6 +199,9 @@ public:
     /// Convert to MemoryEvents
     std::vector<MemoryEvent> toMemoryEvents() const;
     
+    /// Detect potential memory leaks based on leak threshold
+    std::vector<MemoryLeak> detectLeaks() const;
+    
 private:
     Config config_;
     std::atomic<bool> active_{false};
@@ -228,7 +231,6 @@ private:
     void updatePeakUsage();
     void takeTimelineSnapshot();
     FragmentationInfo calculateFragmentation() const;
-    std::vector<MemoryLeak> detectLeaks() const;
 };
 
 // ============================================================================

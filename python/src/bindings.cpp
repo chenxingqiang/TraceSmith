@@ -31,6 +31,7 @@
 #include "tracesmith/gpu_state_machine.hpp"
 #include "tracesmith/instruction_stream.hpp"
 #include "tracesmith/stack_capture.hpp"
+#include "tracesmith/ring_buffer.hpp"
 
 namespace py = pybind11;
 using namespace tracesmith;
@@ -247,12 +248,21 @@ PYBIND11_MODULE(_tracesmith, m) {
         .value("Metal", PlatformType::Metal)
         .export_values();
     
+    // OverflowPolicy enum
+    py::enum_<OverflowPolicy>(m, "OverflowPolicy")
+        .value("DropOldest", OverflowPolicy::DropOldest)
+        .value("DropNewest", OverflowPolicy::DropNewest)
+        .value("Block", OverflowPolicy::Block)
+        .export_values();
+    
     // ProfilerConfig class
     py::class_<ProfilerConfig>(m, "ProfilerConfig",
         "Configuration options for GPU profilers")
         .def(py::init<>())
         .def_readwrite("buffer_size", &ProfilerConfig::buffer_size,
                        "Ring buffer size (number of events)")
+        .def_readwrite("overflow_policy", &ProfilerConfig::overflow_policy,
+                       "Policy when buffer overflows")
         .def_readwrite("capture_callstacks", &ProfilerConfig::capture_callstacks,
                        "Whether to capture call stacks")
         .def_readwrite("callstack_depth", &ProfilerConfig::callstack_depth,
@@ -724,6 +734,7 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def("get_live_allocations", &MemoryProfiler::getLiveAllocations)
         .def("take_snapshot", &MemoryProfiler::takeSnapshot)
         .def("generate_report", &MemoryProfiler::generateReport)
+        .def("detect_leaks", &MemoryProfiler::detectLeaks)
         .def("clear", &MemoryProfiler::clear)
         .def("to_counter_events", &MemoryProfiler::toCounterEvents)
         .def("to_memory_events", &MemoryProfiler::toMemoryEvents);
