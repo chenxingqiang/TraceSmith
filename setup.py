@@ -138,6 +138,14 @@ class CMakeBuild(build_ext):
         else:
             cmake_args.append('-DTRACESMITH_ENABLE_METAL=OFF')
 
+        # Perfetto SDK support
+        enable_perfetto = os.environ.get('TRACESMITH_PERFETTO', '1').lower() in ('1', 'true', 'on', 'yes')
+        if enable_perfetto:
+            cmake_args.append('-DTRACESMITH_USE_PERFETTO_SDK=ON')
+            print("TraceSmith: Building with Perfetto SDK (protobuf export)")
+        else:
+            cmake_args.append('-DTRACESMITH_USE_PERFETTO_SDK=OFF')
+
         # Additional build arguments
         build_args = ['--config', cfg]
         

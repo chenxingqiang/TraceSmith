@@ -1,4 +1,5 @@
 #include "tracesmith/perfetto_exporter.hpp"
+#include "tracesmith/types.hpp"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -145,7 +146,8 @@ void PerfettoExporter::writeFooter(std::ostream& out) {
     out << "\n  ],\n";
     out << "  \"displayTimeUnit\": \"ns\",\n";
     out << "  \"otherData\": {\n";
-    out << "    \"version\": \"TraceSmith v0.5.0\"\n";
+    out << "    \"version\": \"TraceSmith v" 
+        << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << "\"\n";
     out << "  }\n";
     out << "}\n";
 }

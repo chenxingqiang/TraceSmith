@@ -21,7 +21,6 @@
 - **RenderDoc-style Frame Capture**: F12-trigger capture with resource state snapshots
 - **GPU Memory Profiler**: Allocation tracking, leak detection, peak usage monitoring
 - **CLI Tools**: Easy-to-use command-line interface for recording and viewing traces
-- **Simulation Mode**: Test and develop without GPU hardware
 
 ## Architecture
 
