@@ -114,8 +114,15 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def_readwrite("device_id", &DeviceInfo::device_id)
         .def_readwrite("name", &DeviceInfo::name)
         .def_readwrite("vendor", &DeviceInfo::vendor)
+        .def_readwrite("compute_major", &DeviceInfo::compute_major)
+        .def_readwrite("compute_minor", &DeviceInfo::compute_minor)
         .def_readwrite("total_memory", &DeviceInfo::total_memory)
-        .def_readwrite("multiprocessor_count", &DeviceInfo::multiprocessor_count);
+        .def_readwrite("memory_clock_rate", &DeviceInfo::memory_clock_rate)
+        .def_readwrite("memory_bus_width", &DeviceInfo::memory_bus_width)
+        .def_readwrite("multiprocessor_count", &DeviceInfo::multiprocessor_count)
+        .def_readwrite("max_threads_per_mp", &DeviceInfo::max_threads_per_mp)
+        .def_readwrite("clock_rate", &DeviceInfo::clock_rate)
+        .def_readwrite("warp_size", &DeviceInfo::warp_size);
     
     // MemoryEvent class (Kineto-compatible, v0.2.0)
     py::enum_<MemoryEvent::Category>(m, "MemoryCategory")
@@ -165,7 +172,10 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def_readwrite("application_name", &TraceMetadata::application_name)
         .def_readwrite("command_line", &TraceMetadata::command_line)
         .def_readwrite("start_time", &TraceMetadata::start_time)
-        .def_readwrite("end_time", &TraceMetadata::end_time);
+        .def_readwrite("end_time", &TraceMetadata::end_time)
+        .def_readwrite("hostname", &TraceMetadata::hostname)
+        .def_readwrite("process_id", &TraceMetadata::process_id)
+        .def_readwrite("devices", &TraceMetadata::devices);
     
     // PlatformType enum
     py::enum_<PlatformType>(m, "PlatformType")
@@ -229,9 +239,29 @@ PYBIND11_MODULE(_tracesmith, m) {
         .def("event_count", &SBTReader::eventCount)
         .def("read_all", [](SBTReader& r) {
             TraceRecord record;
-            r.readAll(record);
-            return py::make_tuple(record.metadata(), record.events());
-        });
+            auto result = r.readAll(record);
+            if (!result.success) {
+                throw std::runtime_error(result.error_message);
+            }
+            return record.events();
+        }, "Read all events from the SBT file")
+        .def("read_metadata", [](SBTReader& r) {
+            TraceMetadata metadata;
+            auto result = r.readMetadata(metadata);
+            if (!result.success) {
+                return py::make_tuple(SBTResult(false), metadata);
+            }
+            return py::make_tuple(result, metadata);
+        }, "Read metadata from the SBT file")
+        .def("read_events", [](SBTReader& r, size_t offset, size_t count) {
+            std::vector<TraceEvent> events;
+            auto result = r.readEvents(events, offset, count);
+            if (!result.success) {
+                throw std::runtime_error(result.error_message);
+            }
+            return events;
+        }, py::arg("offset") = 0, py::arg("count") = 0,
+           "Read events from the SBT file with pagination");
     
     // TimelineSpan class
     py::class_<TimelineSpan>(m, "TimelineSpan")
