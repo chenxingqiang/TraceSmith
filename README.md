@@ -410,6 +410,46 @@ profiler.export_perfetto("metal_trace.json")
 - Optional: Raw `.trace` file (use `--keep-trace`) for viewing in Instruments
 - Optional: Perfetto JSON export (use `--perfetto`)
 
+#### Python Examples with Cross-Platform Device Support
+
+All Python examples support multiple GPU platforms with automatic device detection:
+
+```bash
+# Run examples on specific device
+python examples/basic_usage.py --device cuda    # NVIDIA GPU
+python examples/basic_usage.py --device mps     # Apple Silicon
+python examples/basic_usage.py --device rocm    # AMD GPU
+python examples/basic_usage.py --device cpu     # CPU fallback
+
+# Run all examples with test runner
+python examples/run_tests.py                    # Best available device
+python examples/run_tests.py --all-devices      # Test on all devices
+python examples/run_tests.py --test pytorch     # Run specific test
+python examples/run_tests.py --list             # List available tests
+```
+
+**Using DeviceManager for cross-platform code:**
+
+```python
+from examples.device_utils import DeviceManager, benchmark
+
+# Auto-detect best device
+dm = DeviceManager()  # or DeviceManager(prefer_device="mps")
+print(f"Using: {dm.get_device_name()}")  # Apple Silicon GPU (mps:0, 25.2 GB)
+
+# Create tensors on device
+x = dm.randn(1000, 1000)
+y = dm.randn(1000, 1000)
+
+# Benchmark with proper synchronization
+results = benchmark(lambda: x @ y, warmup=3, iterations=10, dm=dm)
+print(f"Mean: {results['mean_ms']:.2f} ms")
+
+# Device-agnostic operations
+dm.synchronize()
+print(f"Memory: {dm.memory_allocated() / 1024**2:.1f} MB")
+```
+
 #### C++ API
 
 ```cpp
