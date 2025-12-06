@@ -20,7 +20,7 @@
 - **High-Performance Event Capture**: Collect 10,000+ GPU instruction-level call stacks without interrupting execution
 - **Lock-Free Ring Buffer**: Minimal overhead event collection using SPSC (Single Producer Single Consumer) design
 - **SBT Binary Trace Format**: Compact, efficient binary format with string interning and delta timestamp encoding
-- **Multi-Platform Support**: NVIDIA CUDA (via CUPTI), AMD ROCm, Apple Metal (planned)
+- **Multi-Platform Support**: NVIDIA CUDA (via CUPTI), AMD ROCm, Apple Metal + Instruments (xctrace)
 - **Multi-GPU & Multi-Stream**: Full support for complex GPU topologies and async execution
 - **Multi-GPU Cluster Profiling** (v0.7.x): GPUTopology discovery, TimeSync (NTP/PTP/CUDA), NCCLTracker for distributed training
 - **Perfetto SDK Integration**: Native protobuf export (85% smaller files) + JSON fallback
@@ -54,6 +54,7 @@
 |----------|---------|--------|
 | NVIDIA | CUPTI SDK | ✅ Production |
 | Apple | Metal API | ✅ Production |
+| Apple | Instruments (xctrace) | ✅ Production |
 | AMD | ROCm | 🔜 Coming Soon |
 | Linux | eBPF | ✅ Available |
 
@@ -275,6 +276,7 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
 
 | Command | Description |
 |---------|-------------|
+| `profile` | **Profile a command** (record + execute in one step) |
 | `record` | Record GPU events to a trace file |
 | `view` | View contents of a trace file |
 | `info` | Show detailed information about a trace file |
@@ -288,6 +290,16 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
 **C++ CLI Examples:**
 
 ```bash
+# Profile a Python script (records GPU events during execution)
+./bin/tracesmith profile -- python train.py
+./bin/tracesmith profile -o model.sbt -- python train.py --epochs 10
+./bin/tracesmith profile --perfetto -- ./my_cuda_app
+
+# Use Apple Instruments (xctrace) for real Metal GPU events on macOS
+./bin/tracesmith profile --xctrace -- python train.py
+./bin/tracesmith profile --xctrace --keep-trace -- python mps_benchmark.py
+./bin/tracesmith profile --xctrace --xctrace-template "GPU Driver" -- ./app
+
 # Record a trace (auto-detect GPU platform)
 ./bin/tracesmith record -o trace.sbt -d 5
 
@@ -319,6 +331,15 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
 **Python CLI Examples:**
 
 ```bash
+# Profile a command (record + execute in one step)
+tracesmith-cli profile -- python train.py
+tracesmith-cli profile -o model.sbt -- python train.py --epochs 10
+tracesmith-cli profile --perfetto -- python inference.py
+
+# Use Apple Instruments (xctrace) for real Metal GPU events on macOS
+tracesmith-cli profile --xctrace -- python train.py
+tracesmith-cli profile --xctrace --keep-trace -- python mps_benchmark.py
+
 # Show system info
 tracesmith-cli info
 
@@ -340,6 +361,54 @@ tracesmith-cli analyze trace.sbt
 # Replay trace
 tracesmith-cli replay trace.sbt --mode dry-run
 ```
+
+#### macOS Metal GPU Profiling with xctrace
+
+On macOS, TraceSmith integrates with Apple Instruments (xctrace) for capturing real Metal GPU events. This provides accurate GPU timing and event capture that the Metal Frame Capture API cannot achieve programmatically.
+
+**Why use xctrace?**
+- Captures real Metal GPU execution events (kernel launches, command buffer submissions)
+- Accurate GPU timing from hardware counters
+- Works with any Metal application (PyTorch MPS, TensorFlow Metal, custom Metal apps)
+
+**Usage:**
+
+```bash
+# Python CLI (recommended - includes event parsing)
+tracesmith-cli profile --xctrace -- python train.py
+tracesmith-cli profile --xctrace --keep-trace -o model.sbt -- python inference.py
+tracesmith-cli profile --xctrace --perfetto -- python benchmark.py
+
+# C++ CLI (calls xctrace, outputs raw .trace file)
+./bin/tracesmith profile --xctrace -- python train.py
+./bin/tracesmith profile --xctrace --xctrace-template "GPU Driver" -- ./app
+
+# Python API
+from tracesmith.xctrace import XCTraceProfiler, profile_with_xctrace
+
+# Simple usage
+events, trace_file = profile_with_xctrace(
+    ["python", "train.py"],
+    duration=60,
+    template="Metal System Trace"
+)
+
+# Full control
+profiler = XCTraceProfiler()
+events = profiler.profile_command(["python", "train.py"])
+profiler.export_perfetto("metal_trace.json")
+```
+
+**Available Templates:**
+- `Metal System Trace` - Most detailed Metal profiling (default)
+- `GPU Driver` - Driver-level analysis
+- `Game Performance` - Frame rate and GPU time
+- `Animation Hitches` - Animation performance
+
+**Output:**
+- SBT file with parsed GPU events
+- Optional: Raw `.trace` file (use `--keep-trace`) for viewing in Instruments
+- Optional: Perfetto JSON export (use `--perfetto`)
 
 #### C++ API
 

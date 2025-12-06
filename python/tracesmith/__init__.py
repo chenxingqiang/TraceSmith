@@ -168,57 +168,134 @@ from ._tracesmith import (  # noqa: I001 - imports organized by category
     is_metal_available,
     get_metal_device_count,
     detect_platform,
-
-    # ========================================================================
-    # Cluster Module - Multi-GPU Profiling (v0.7.0)
-    # ========================================================================
-    GPULinkType,
-    GPULink,
-    GPUDeviceTopology,
-    GPUTopologyInfo,
-    GPUTopology,
-    is_nvml_available,
-    get_nvml_version,
-    link_type_to_string,
-    get_link_bandwidth,
-    NVLinkTransfer,
-    PeerAccess,
-    MultiGPUConfig,
-    MultiGPUStats,
-    MultiGPUProfiler,
-
-    # ========================================================================
-    # Cluster Module - Time Sync (v0.7.1)
-    # ========================================================================
-    TimeSyncMethod,
-    TimeSyncConfig,
-    SyncResult,
-    TimeSync,
-    DriftModel,
-    ClockCorrelator,
-    time_sync_method_to_string,
-    string_to_time_sync_method,
-
-    # ========================================================================
-    # Cluster Module - NCCL Tracking (v0.7.1)
-    # ========================================================================
-    NCCLOpType,
-    NCCLRedOp,
-    NCCLDataType,
-    NCCLOperation,
-    NCCLTrackerConfig,
-    NCCLStatistics,
-    NCCLTracker,
-    CommPattern,
-    CommMatrix,
-    CommBottleneck,
-    LoadImbalance,
-    CommAnalysis,
-    nccl_op_type_to_string,
-    nccl_red_op_to_string,
-    nccl_data_type_to_string,
-    nccl_data_type_size,
 )
+
+# ============================================================================
+# Cluster Module - Multi-GPU Profiling (v0.7.0)
+# Optional: Only available when compiled with cluster support
+# ============================================================================
+_CLUSTER_AVAILABLE = False
+try:
+    from ._tracesmith import (
+        GPULinkType,
+        GPULink,
+        GPUDeviceTopology,
+        GPUTopologyInfo,
+        GPUTopology,
+        is_nvml_available,
+        get_nvml_version,
+        link_type_to_string,
+        get_link_bandwidth,
+        NVLinkTransfer,
+        PeerAccess,
+        MultiGPUConfig,
+        MultiGPUStats,
+        MultiGPUProfiler,
+    )
+    _CLUSTER_AVAILABLE = True
+except ImportError:
+    # Cluster module not compiled, provide stubs
+    GPULinkType = None
+    GPULink = None
+    GPUDeviceTopology = None
+    GPUTopologyInfo = None
+    GPUTopology = None
+    is_nvml_available = lambda: False
+    get_nvml_version = lambda: ""
+    link_type_to_string = lambda x: "unknown"
+    get_link_bandwidth = lambda x: 0
+    NVLinkTransfer = None
+    PeerAccess = None
+    MultiGPUConfig = None
+    MultiGPUStats = None
+    MultiGPUProfiler = None
+
+# ============================================================================
+# Cluster Module - Time Sync (v0.7.1)
+# Optional: Only available when compiled with cluster support
+# ============================================================================
+_TIME_SYNC_AVAILABLE = False
+try:
+    from ._tracesmith import (
+        TimeSyncMethod,
+        TimeSyncConfig,
+        SyncResult,
+        TimeSync,
+        DriftModel,
+        ClockCorrelator,
+        time_sync_method_to_string,
+        string_to_time_sync_method,
+    )
+    _TIME_SYNC_AVAILABLE = True
+except ImportError:
+    # Time sync module not compiled
+    TimeSyncMethod = None
+    TimeSyncConfig = None
+    SyncResult = None
+    TimeSync = None
+    DriftModel = None
+    ClockCorrelator = None
+    time_sync_method_to_string = lambda x: "unknown"
+    string_to_time_sync_method = lambda x: None
+
+# ============================================================================
+# Cluster Module - NCCL Tracking (v0.7.1)
+# Optional: Only available when compiled with NCCL support
+# ============================================================================
+_NCCL_AVAILABLE = False
+try:
+    from ._tracesmith import (
+        NCCLOpType,
+        NCCLRedOp,
+        NCCLDataType,
+        NCCLOperation,
+        NCCLTrackerConfig,
+        NCCLStatistics,
+        NCCLTracker,
+        CommPattern,
+        CommMatrix,
+        CommBottleneck,
+        LoadImbalance,
+        CommAnalysis,
+        nccl_op_type_to_string,
+        nccl_red_op_to_string,
+        nccl_data_type_to_string,
+        nccl_data_type_size,
+    )
+    _NCCL_AVAILABLE = True
+except ImportError:
+    # NCCL module not compiled
+    NCCLOpType = None
+    NCCLRedOp = None
+    NCCLDataType = None
+    NCCLOperation = None
+    NCCLTrackerConfig = None
+    NCCLStatistics = None
+    NCCLTracker = None
+    CommPattern = None
+    CommMatrix = None
+    CommBottleneck = None
+    LoadImbalance = None
+    CommAnalysis = None
+    nccl_op_type_to_string = lambda x: "unknown"
+    nccl_red_op_to_string = lambda x: "unknown"
+    nccl_data_type_to_string = lambda x: "unknown"
+    nccl_data_type_size = lambda x: 0
+
+
+def is_cluster_available() -> bool:
+    """Check if cluster/multi-GPU profiling is available."""
+    return _CLUSTER_AVAILABLE
+
+
+def is_time_sync_available() -> bool:
+    """Check if time synchronization module is available."""
+    return _TIME_SYNC_AVAILABLE
+
+
+def is_nccl_available() -> bool:
+    """Check if NCCL tracking is available."""
+    return _NCCL_AVAILABLE
 
 __all__ = [
     # Version
@@ -346,7 +423,12 @@ __all__ = [
     'profile_memory',
     'is_bpf_available',
 
-    # Cluster Module (v0.7.0)
+    # Availability checks
+    'is_cluster_available',
+    'is_time_sync_available',
+    'is_nccl_available',
+
+    # Cluster Module (v0.7.0) - Optional
     'GPULinkType',
     'GPULink',
     'GPUDeviceTopology',
@@ -362,7 +444,7 @@ __all__ = [
     'MultiGPUStats',
     'MultiGPUProfiler',
 
-    # Time Sync (v0.7.1)
+    # Time Sync (v0.7.1) - Optional
     'TimeSyncMethod',
     'TimeSyncConfig',
     'SyncResult',
@@ -372,7 +454,7 @@ __all__ = [
     'time_sync_method_to_string',
     'string_to_time_sync_method',
 
-    # NCCL Tracking (v0.7.1)
+    # NCCL Tracking (v0.7.1) - Optional
     'NCCLOpType',
     'NCCLRedOp',
     'NCCLDataType',
@@ -496,3 +578,29 @@ def is_bpf_available() -> bool:
         True if BPF is available on this system
     """
     return BPFTracer.is_available()
+
+
+# ============================================================================
+# XCTrace Integration (macOS only)
+# ============================================================================
+def is_xctrace_available() -> bool:
+    """
+    Check if Apple Instruments (xctrace) is available (macOS only).
+
+    Returns:
+        True if xctrace is available for Metal GPU profiling
+    """
+    import sys
+    if sys.platform != 'darwin':
+        return False
+    try:
+        from .xctrace import XCTraceProfiler
+        return XCTraceProfiler.is_available()
+    except ImportError:
+        return False
+
+
+# Add xctrace to __all__
+__all__.extend([
+    'is_xctrace_available',
+])

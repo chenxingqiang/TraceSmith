@@ -28,6 +28,13 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <memory>
+
+#ifndef _WIN32
+#include <unistd.h>
+#include <sys/wait.h>
+#include <cerrno>
+#endif
 
 using namespace tracesmith;
 
@@ -169,6 +176,7 @@ void printUsage(const char* program) {
     std::cout << "    " << program << " <COMMAND> [OPTIONS]\n\n";
     
     std::cout << C(Bold) << "COMMANDS:" << C(Reset) << "\n";
+    std::cout << C(Green) << "    profile" << C(Reset) << "     Profile a command (record + execute)\n";
     std::cout << C(Green) << "    record" << C(Reset) << "      Record GPU events to a trace file\n";
     std::cout << C(Green) << "    view" << C(Reset) << "        View contents of a trace file\n";
     std::cout << C(Green) << "    info" << C(Reset) << "        Show detailed information about a trace file\n";
@@ -181,6 +189,8 @@ void printUsage(const char* program) {
     std::cout << C(Green) << "    help" << C(Reset) << "        Show this help message\n\n";
     
     std::cout << C(Bold) << "EXAMPLES:" << C(Reset) << "\n";
+    std::cout << "    " << program << " profile -- python train.py    # Profile a command\n";
+    std::cout << "    " << program << " profile -o t.sbt -- ./app     # Profile with custom output\n";
     std::cout << "    " << program << " record -o trace.sbt -d 5      # Record for 5 seconds\n";
     std::cout << "    " << program << " view trace.sbt --stats        # Show statistics\n";
     std::cout << "    " << program << " export trace.sbt -f perfetto  # Export to Perfetto\n";
@@ -214,6 +224,43 @@ void printRecordUsage(const char* program) {
     std::cout << C(Bold) << "EXAMPLES:" << C(Reset) << "\n";
     std::cout << "    " << program << " record -o my_trace.sbt -d 10\n";
     std::cout << "    " << program << " record -p cuda -d 30 --stacks\n";
+}
+
+void printProfileUsage(const char* program) {
+    printCompactBanner();
+    std::cout << C(Bold) << "USAGE:" << C(Reset) << "\n";
+    std::cout << "    " << program << " profile [OPTIONS] -- <COMMAND> [ARGS...]\n\n";
+    
+    std::cout << C(Bold) << "DESCRIPTION:" << C(Reset) << "\n";
+    std::cout << "    Profile a command by recording GPU events during its execution.\n";
+    std::cout << "    This starts GPU profiling, executes the command, then stops profiling.\n\n";
+    
+    std::cout << C(Bold) << "OPTIONS:" << C(Reset) << "\n";
+    std::cout << "    -o, --output <FILE>      Output trace file (default: <command>_trace.sbt)\n";
+    std::cout << "    -b, --buffer <SIZE>      Ring buffer size in events (default: 1M)\n";
+    std::cout << "    --perfetto               Also export to Perfetto JSON format\n";
+#ifdef __APPLE__
+    std::cout << "    --xctrace                Use Apple Instruments for Metal GPU profiling\n";
+    std::cout << "    --xctrace-template <T>   Instruments template (default: 'Metal System Trace')\n";
+    std::cout << "    --keep-trace             Keep the raw .trace file\n";
+#endif
+    std::cout << "    -v, --verbose            Verbose output\n";
+    std::cout << "    -h, --help               Show this help message\n\n";
+    
+    std::cout << C(Bold) << "EXAMPLES:" << C(Reset) << "\n";
+    std::cout << "    " << program << " profile -- python train.py\n";
+    std::cout << "    " << program << " profile -o model.sbt -- python train.py --epochs 10\n";
+    std::cout << "    " << program << " profile --perfetto -- ./my_cuda_app\n";
+#ifdef __APPLE__
+    std::cout << "    " << program << " profile --xctrace -- python train.py\n";
+#endif
+    std::cout << "    " << program << " profile -- python -c \"import torch; torch.randn(1000).cuda()\"\n\n";
+    
+    std::cout << C(Bold) << "NOTE:" << C(Reset) << "\n";
+    std::cout << "    Use '--' to separate tracesmith options from the command to profile.\n";
+#ifdef __APPLE__
+    std::cout << "    Use --xctrace on macOS for real Metal GPU event capture.\n";
+#endif
 }
 
 void printViewUsage(const char* program) {
@@ -362,6 +409,440 @@ int cmdDevices([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
     }
     
     return found_any ? 0 : 1;
+}
+
+// =============================================================================
+// Command: profile with xctrace (macOS only)
+// =============================================================================
+#ifdef __APPLE__
+int cmdProfileXCTrace(
+    const std::vector<std::string>& command,
+    std::string output_file,
+    const std::string& xctrace_template,
+    bool keep_trace,
+    [[maybe_unused]] bool export_perfetto_flag
+) {
+    // Generate output filename if not provided
+    if (output_file.empty()) {
+        std::string cmd_name = command[0];
+        size_t slash_pos = cmd_name.rfind('/');
+        if (slash_pos != std::string::npos) {
+            cmd_name = cmd_name.substr(slash_pos + 1);
+        }
+        size_t dot_pos = cmd_name.rfind('.');
+        if (dot_pos != std::string::npos) {
+            cmd_name = cmd_name.substr(0, dot_pos);
+        }
+        output_file = cmd_name + "_trace.sbt";
+    }
+    
+    // Build command string
+    std::string cmd_str;
+    for (size_t i = 0; i < command.size(); ++i) {
+        if (i > 0) cmd_str += " ";
+        if (command[i].find(' ') != std::string::npos) {
+            cmd_str += "\"" + command[i] + "\"";
+        } else {
+            cmd_str += command[i];
+        }
+    }
+    
+    // Generate trace file path
+    std::string trace_file = output_file;
+    size_t dot_pos = trace_file.rfind('.');
+    if (dot_pos != std::string::npos) {
+        trace_file = trace_file.substr(0, dot_pos);
+    }
+    trace_file += ".trace";
+    
+    printSection("TraceSmith Profile (xctrace)");
+    
+    std::cout << C(Bold) << "Configuration:" << C(Reset) << "\n";
+    std::cout << "  Command:   " << C(Cyan) << cmd_str << C(Reset) << "\n";
+    std::cout << "  Output:    " << C(Cyan) << output_file << C(Reset) << "\n";
+    std::cout << "  Backend:   " << C(Green) << "Apple Instruments (xctrace)" << C(Reset) << "\n";
+    std::cout << "  Template:  " << xctrace_template << "\n\n";
+    
+    // Build xctrace command
+    std::vector<std::string> xctrace_cmd = {
+        "xcrun", "xctrace", "record",
+        "--template", xctrace_template,
+        "--output", trace_file,
+        "--launch", "--"
+    };
+    
+    // Add user command
+    for (const auto& arg : command) {
+        xctrace_cmd.push_back(arg);
+    }
+    
+    // Build command line string for system()
+    std::string full_cmd;
+    for (size_t i = 0; i < xctrace_cmd.size(); ++i) {
+        if (i > 0) full_cmd += " ";
+        // Quote args with spaces
+        if (xctrace_cmd[i].find(' ') != std::string::npos) {
+            full_cmd += "'" + xctrace_cmd[i] + "'";
+        } else {
+            full_cmd += xctrace_cmd[i];
+        }
+    }
+    
+    printSuccess("xctrace profiler initialized");
+    std::cout << "\n";
+    
+    std::cout << C(Green) << "▶ Starting xctrace profiling..." << C(Reset) << "\n";
+    std::cout << C(Yellow);
+    for (int i = 0; i < 60; ++i) std::cout << "-";
+    std::cout << C(Reset) << "\n";
+    
+    auto start_time = std::chrono::steady_clock::now();
+    
+    // Execute xctrace
+    int exit_code = system(full_cmd.c_str());
+    
+    std::cout << C(Yellow);
+    for (int i = 0; i < 60; ++i) std::cout << "-";
+    std::cout << C(Reset) << "\n\n";
+    
+    auto end_time = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    
+    if (exit_code != 0) {
+        printWarning("xctrace returned non-zero exit code");
+    }
+    
+    printSuccess("xctrace profiling stopped");
+    
+    // Print summary
+    printSection("Profile Complete");
+    
+    std::cout << C(Bold) << "Summary:" << C(Reset) << "\n";
+    std::cout << "  Command:      " << cmd_str << "\n";
+    std::cout << "  Duration:     " << std::fixed << std::setprecision(2) 
+              << (duration.count() / 1000.0) << " seconds\n";
+    std::cout << "  Raw Trace:    " << C(Cyan) << trace_file << C(Reset) << "\n\n";
+    
+    std::cout << C(Bold) << "Next steps:" << C(Reset) << "\n";
+    std::cout << "  " << C(Cyan) << "open \"" << trace_file << "\"" << C(Reset) 
+              << "  # Open in Instruments\n";
+    std::cout << "  " << C(Cyan) << "xcrun xctrace export --input \"" << trace_file 
+              << "\" --toc" << C(Reset) << "  # Export TOC\n";
+    
+    // Suggest using Python CLI for parsing
+    std::cout << "\n" << C(Yellow) << "Note:" << C(Reset) 
+              << " For event parsing, use the Python CLI:\n";
+    std::cout << "  " << C(Cyan) << "tracesmith-cli profile --xctrace -- " 
+              << cmd_str << C(Reset) << "\n";
+    
+    // Cleanup trace file if not keeping
+    if (!keep_trace) {
+        std::string rm_cmd = "rm -rf \"" + trace_file + "\"";
+        system(rm_cmd.c_str());
+    }
+    
+    return exit_code == 0 ? 0 : 1;
+}
+#endif
+
+// =============================================================================
+// Command: profile - Profile a Command (Record + Execute)
+// =============================================================================
+int cmdProfile(int argc, char* argv[]) {
+    std::string output_file;
+    size_t buffer_size = 1024 * 1024;
+    bool export_perfetto = false;
+    [[maybe_unused]] bool verbose = false;
+    std::vector<std::string> command;
+    
+#ifdef __APPLE__
+    bool use_xctrace = false;
+    std::string xctrace_template = "Metal System Trace";
+    bool keep_trace = false;
+#endif
+    
+    // Parse arguments
+    bool found_separator = false;
+    for (int i = 2; i < argc; ++i) {
+        std::string arg = argv[i];
+        
+        if (found_separator) {
+            // Everything after '--' is the command
+            command.push_back(arg);
+        } else if (arg == "--") {
+            found_separator = true;
+        } else if (arg == "-h" || arg == "--help") {
+            printProfileUsage(argv[0]);
+            return 0;
+        } else if ((arg == "-o" || arg == "--output") && i + 1 < argc) {
+            output_file = argv[++i];
+#ifdef __APPLE__
+        } else if (arg == "--xctrace") {
+            use_xctrace = true;
+        } else if (arg == "--xctrace-template" && i + 1 < argc) {
+            xctrace_template = argv[++i];
+        } else if (arg == "--keep-trace") {
+            keep_trace = true;
+#endif
+        } else if ((arg == "-b" || arg == "--buffer") && i + 1 < argc) {
+            buffer_size = std::stoull(argv[++i]);
+        } else if (arg == "--perfetto") {
+            export_perfetto = true;
+        } else if (arg == "-v" || arg == "--verbose") {
+            verbose = true;
+        } else if (arg[0] != '-') {
+            // Start of command without --
+            command.push_back(arg);
+            for (int j = i + 1; j < argc; ++j) {
+                command.push_back(argv[j]);
+            }
+            break;
+        }
+    }
+    
+    // Check if command is provided
+    if (command.empty()) {
+        printError("No command specified");
+        std::cout << "\n" << C(Bold) << "Usage:" << C(Reset) << "\n";
+        std::cout << "    " << argv[0] << " profile [OPTIONS] -- <COMMAND> [ARGS...]\n\n";
+        std::cout << C(Bold) << "Examples:" << C(Reset) << "\n";
+        std::cout << "    " << argv[0] << " profile -- python train.py\n";
+        std::cout << "    " << argv[0] << " profile -o trace.sbt -- python train.py --epochs 10\n";
+        std::cout << "    " << argv[0] << " profile --perfetto -- ./my_cuda_app\n";
+#ifdef __APPLE__
+        std::cout << "    " << argv[0] << " profile --xctrace -- python train.py\n";
+#endif
+        return 1;
+    }
+    
+#ifdef __APPLE__
+    // Use xctrace if requested
+    if (use_xctrace) {
+        return cmdProfileXCTrace(command, output_file, xctrace_template, keep_trace, export_perfetto);
+    }
+    
+    // Suggest xctrace on macOS with Metal
+    if (detectPlatform() == PlatformType::Metal) {
+        printInfo("Tip: Use --xctrace for real Metal GPU events on macOS");
+        std::cout << "\n";
+    }
+#endif
+    
+    // Generate output filename if not provided
+    if (output_file.empty()) {
+        std::string cmd_name = command[0];
+        // Extract basename
+        size_t slash_pos = cmd_name.rfind('/');
+        if (slash_pos != std::string::npos) {
+            cmd_name = cmd_name.substr(slash_pos + 1);
+        }
+        // Remove extension
+        size_t dot_pos = cmd_name.rfind('.');
+        if (dot_pos != std::string::npos) {
+            cmd_name = cmd_name.substr(0, dot_pos);
+        }
+        output_file = cmd_name + "_trace.sbt";
+    }
+    
+    // Build command string for display
+    std::string cmd_str;
+    for (size_t i = 0; i < command.size(); ++i) {
+        if (i > 0) cmd_str += " ";
+        // Quote arguments with spaces
+        if (command[i].find(' ') != std::string::npos) {
+            cmd_str += "\"" + command[i] + "\"";
+        } else {
+            cmd_str += command[i];
+        }
+    }
+    
+    printSection("TraceSmith Profile");
+    
+    std::cout << C(Bold) << "Configuration:" << C(Reset) << "\n";
+    std::cout << "  Command: " << C(Cyan) << cmd_str << C(Reset) << "\n";
+    std::cout << "  Output:  " << C(Cyan) << output_file << C(Reset) << "\n\n";
+    
+    // Detect platform
+    PlatformType platform = detectPlatform();
+    std::string platform_name = platformTypeToString(platform);
+    
+    std::shared_ptr<IPlatformProfiler> profiler;
+    
+    if (platform == PlatformType::Unknown) {
+        printWarning("No GPU detected, will execute without GPU profiling");
+    } else {
+        printSuccess("Detected GPU platform: " + platform_name);
+        
+        // Create profiler
+        profiler = createProfiler(platform);
+        if (!profiler) {
+            printWarning("Failed to create profiler for " + platform_name);
+        } else {
+            // Configure
+            ProfilerConfig config;
+            config.buffer_size = buffer_size;
+            
+            if (!profiler->initialize(config)) {
+                printWarning("Failed to initialize profiler");
+                profiler = nullptr;
+            } else {
+                printSuccess("Profiler initialized");
+            }
+        }
+    }
+    
+    // Create writer
+    SBTWriter writer(output_file);
+    if (!writer.isOpen()) {
+        printError("Failed to open output file: " + output_file);
+        return 1;
+    }
+    
+    // Write metadata
+    TraceMetadata metadata;
+    metadata.application_name = command[0];
+    metadata.command_line = cmd_str;
+    metadata.start_time = getCurrentTimestamp();
+    writer.writeMetadata(metadata);
+    
+    // Start profiling
+    if (profiler) {
+        profiler->startCapture();
+        std::cout << "\n" << C(Green) << "▶ GPU profiling started" << C(Reset) << "\n";
+    }
+    
+    std::cout << C(Green) << "▶ Executing command..." << C(Reset) << "\n\n";
+    std::cout << C(Yellow);
+    for (int i = 0; i < 60; ++i) std::cout << "-";
+    std::cout << C(Reset) << "\n";
+    
+    // Record start time
+    auto start_time = std::chrono::steady_clock::now();
+    
+    // Execute the command using fork/exec
+    int exit_code = 0;
+    
+#ifdef _WIN32
+    // Windows: use system()
+    exit_code = system(cmd_str.c_str());
+#else
+    // Unix: use fork/exec for better control
+    pid_t pid = fork();
+    
+    if (pid < 0) {
+        printError("Failed to fork process");
+        return 1;
+    } else if (pid == 0) {
+        // Child process - execute the command
+        std::vector<char*> c_args;
+        for (auto& arg : command) {
+            c_args.push_back(const_cast<char*>(arg.c_str()));
+        }
+        c_args.push_back(nullptr);
+        
+        execvp(c_args[0], c_args.data());
+        
+        // If execvp returns, it failed
+        std::cerr << "Failed to execute: " << command[0] << " - " << strerror(errno) << "\n";
+        _exit(127);
+    } else {
+        // Parent process - wait for child
+        int status;
+        waitpid(pid, &status, 0);
+        
+        if (WIFEXITED(status)) {
+            exit_code = WEXITSTATUS(status);
+        } else if (WIFSIGNALED(status)) {
+            exit_code = 128 + WTERMSIG(status);
+        }
+    }
+#endif
+    
+    std::cout << C(Yellow);
+    for (int i = 0; i < 60; ++i) std::cout << "-";
+    std::cout << C(Reset) << "\n\n";
+    
+    // Record end time
+    auto end_time = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    
+    // Stop profiling and collect events
+    std::vector<TraceEvent> all_events;
+    
+    if (profiler) {
+        profiler->stopCapture();
+        profiler->getEvents(all_events);
+        printSuccess("GPU profiling stopped");
+    }
+    
+    // Write events
+    if (!all_events.empty()) {
+        writer.writeEvents(all_events);
+    }
+    
+    writer.finalize();
+    
+    // Print summary
+    printSection("Profile Complete");
+    
+    // Command result
+    if (exit_code == 0) {
+        printSuccess("Command completed successfully");
+    } else {
+        printWarning("Command exited with code: " + std::to_string(exit_code));
+    }
+    
+    std::cout << "\n" << C(Bold) << "Summary:" << C(Reset) << "\n";
+    std::cout << "  Command:      " << cmd_str << "\n";
+    std::cout << "  Duration:     " << std::fixed << std::setprecision(2) 
+              << (duration.count() / 1000.0) << " seconds\n";
+    std::cout << "  GPU Events:   " << C(Green) << all_events.size() << C(Reset) << "\n";
+    std::cout << "  Output:       " << C(Cyan) << output_file << C(Reset) << "\n";
+    
+    // Analyze events
+    if (!all_events.empty()) {
+        size_t kernel_count = 0;
+        size_t memcpy_count = 0;
+        
+        for (const auto& e : all_events) {
+            if (e.type == EventType::KernelLaunch) kernel_count++;
+            else if (e.type == EventType::MemcpyH2D || e.type == EventType::MemcpyD2H || 
+                     e.type == EventType::MemcpyD2D) memcpy_count++;
+        }
+        
+        std::cout << "\n" << C(Bold) << "Event Breakdown:" << C(Reset) << "\n";
+        std::cout << "  Kernel Launches: " << kernel_count << "\n";
+        std::cout << "  Memory Copies:   " << memcpy_count << "\n";
+        std::cout << "  Other Events:    " << (all_events.size() - kernel_count - memcpy_count) << "\n";
+    }
+    
+    std::cout << "\n";
+    
+    // Export to Perfetto if requested
+    if (export_perfetto && !all_events.empty()) {
+        std::string perfetto_file = output_file;
+        size_t dot_pos = perfetto_file.rfind('.');
+        if (dot_pos != std::string::npos) {
+            perfetto_file = perfetto_file.substr(0, dot_pos);
+        }
+        perfetto_file += ".json";
+        
+        PerfettoExporter exporter;
+        if (exporter.exportToFile(all_events, perfetto_file)) {
+            printSuccess("Exported Perfetto trace: " + perfetto_file);
+            std::cout << "  View at: " << C(Cyan) << "https://ui.perfetto.dev/" << C(Reset) << "\n\n";
+        } else {
+            printWarning("Failed to export Perfetto trace");
+        }
+    }
+    
+    // Next steps
+    std::cout << C(Bold) << "Next steps:" << C(Reset) << "\n";
+    std::cout << "  " << C(Cyan) << "tracesmith view " << output_file << " --stats" << C(Reset) << "\n";
+    std::cout << "  " << C(Cyan) << "tracesmith export " << output_file << " -f perfetto" << C(Reset) << "\n";
+    std::cout << "  " << C(Cyan) << "tracesmith analyze " << output_file << C(Reset) << "\n";
+    
+    return exit_code;
 }
 
 // =============================================================================
@@ -1359,7 +1840,9 @@ int main(int argc, char* argv[]) {
     
     std::string command = argv[1];
     
-    if (command == "record") {
+    if (command == "profile") {
+        return cmdProfile(argc, argv);
+    } else if (command == "record") {
         return cmdRecord(argc, argv);
     } else if (command == "view") {
         return cmdView(argc, argv);

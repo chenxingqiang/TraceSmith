@@ -110,7 +110,9 @@ def main():
 
     writer.write_events(events)
     writer.finalize()
-    print(f"   ✓ Saved: python_trace.sbt ({writer.file_size()} bytes)")
+    import os
+    file_size = os.path.getsize("python_trace.sbt") if os.path.exists("python_trace.sbt") else 0
+    print(f"   ✓ Saved: python_trace.sbt ({file_size} bytes)")
 
     # 7. Load and verify
     print("\n7. Loading trace from file...")

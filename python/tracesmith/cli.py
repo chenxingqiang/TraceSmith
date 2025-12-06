@@ -7,6 +7,7 @@ Usage:
     tracesmith-cli info              Show version and system info
     tracesmith-cli devices           List available GPU devices
     tracesmith-cli record            Record GPU events
+    tracesmith-cli profile CMD       Profile a command (record + execute)
     tracesmith-cli view FILE         View trace file contents
     tracesmith-cli export FILE       Export to Perfetto format
     tracesmith-cli analyze FILE      Analyze trace file
@@ -367,6 +368,413 @@ def cmd_record(args):
     print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
     print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
 
+    return 0
+
+
+# =============================================================================
+# Command: profile - Profile a Command (Record + Execute)
+# =============================================================================
+def cmd_profile(args):
+    """Profile a command by recording GPU events during its execution."""
+    import os
+    import signal
+    import subprocess
+    import sys
+    import threading
+    import time
+
+    from . import (
+        PlatformType,
+        ProfilerConfig,
+        SBTWriter,
+        TraceMetadata,
+        create_profiler,
+        detect_platform,
+        export_perfetto,
+        platform_type_to_string,
+    )
+
+    # Parse command - handle the '--' separator
+    command = args.command
+    
+    # Remove leading '--' if present
+    if command and command[0] == '--':
+        command = command[1:]
+    
+    if not command:
+        print_error("No command specified")
+        print()
+        print(f"{colorize(Color.BOLD)}Usage:{colorize(Color.RESET)}")
+        print(f"  tracesmith-cli profile [options] -- <command>")
+        print()
+        print(f"{colorize(Color.BOLD)}Examples:{colorize(Color.RESET)}")
+        print(f"  tracesmith-cli profile -- python train.py")
+        print(f"  tracesmith-cli profile -o trace.sbt -- python train.py --epochs 10")
+        print(f"  tracesmith-cli profile --perfetto -- ./my_cuda_app")
+        print(f"  tracesmith-cli profile --xctrace -- python train.py  # Use Instruments on macOS")
+        print(f"  tracesmith-cli profile -- python -c \"import torch; x=torch.randn(1000).cuda()\"")
+        return 1
+    
+    # Check if xctrace should be used
+    use_xctrace = getattr(args, 'xctrace', False)
+    
+    # On macOS with Metal, suggest xctrace if not specified
+    platform = detect_platform()
+    if sys.platform == 'darwin' and platform == PlatformType.Metal and not use_xctrace:
+        print_info("Tip: Use --xctrace for real Metal GPU events on macOS")
+        print()
+    
+    # Use xctrace if requested
+    if use_xctrace:
+        return _cmd_profile_xctrace(args, command)
+
+    # Output file
+    if args.output:
+        output_file = args.output
+    else:
+        # Generate output name from command
+        cmd_name = os.path.basename(command[0]).replace('.py', '').replace('.sh', '')
+        output_file = f"{cmd_name}_trace.sbt"
+
+    print_section("TraceSmith Profile")
+
+    print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
+    print(f"  Command: {colorize(Color.CYAN)}{' '.join(command)}{colorize(Color.RESET)}")
+    print(f"  Output:  {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+    print()
+
+    # Detect platform
+    platform = detect_platform()
+    platform_name = platform_type_to_string(platform)
+
+    if platform == PlatformType.Unknown:
+        print_warning("No GPU detected, will record without GPU profiling")
+        profiler = None
+    else:
+        print_success(f"Detected GPU platform: {platform_name}")
+
+        # Create profiler
+        profiler = create_profiler(platform)
+        if not profiler:
+            print_warning(f"Failed to create profiler for {platform_name}")
+            profiler = None
+        else:
+            # Configure
+            config = ProfilerConfig()
+            config.buffer_size = args.buffer_size
+
+            if not profiler.initialize(config):
+                print_warning("Failed to initialize profiler")
+                profiler = None
+            else:
+                print_success("Profiler initialized")
+
+    # Create writer
+    writer = SBTWriter(output_file)
+    if not writer.is_open():
+        print_error(f"Failed to open output file: {output_file}")
+        return 1
+
+    # Write metadata
+    metadata = TraceMetadata()
+    metadata.application_name = os.path.basename(command[0])
+    metadata.command_line = ' '.join(command)
+    writer.write_metadata(metadata)
+
+    # Event collection thread
+    events_lock = threading.Lock()
+    all_events = []
+    stop_collection = threading.Event()
+    total_events = [0]  # Use list for mutable counter in closure
+
+    def collect_events():
+        """Background thread to collect events."""
+        while not stop_collection.is_set():
+            if profiler:
+                events = profiler.get_events(10000)
+                if events:
+                    with events_lock:
+                        all_events.extend(events)
+                        total_events[0] += len(events)
+            time.sleep(0.05)  # 50ms polling interval
+
+    # Start profiling
+    print()
+    if profiler:
+        profiler.start_capture()
+        print(f"{colorize(Color.GREEN)}▶ GPU profiling started{colorize(Color.RESET)}")
+
+    # Start collection thread
+    collector_thread = threading.Thread(target=collect_events, daemon=True)
+    collector_thread.start()
+
+    # Record start time
+    start_time = time.time()
+    start_timestamp = time.time_ns()
+
+    print(f"{colorize(Color.GREEN)}▶ Executing command...{colorize(Color.RESET)}")
+    print()
+    print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+
+    # Execute command
+    exit_code = 0
+    try:
+        # Run the command
+        result = subprocess.run(
+            command,
+            shell=False,
+            env=os.environ.copy()
+        )
+        exit_code = result.returncode
+    except KeyboardInterrupt:
+        print()
+        print_warning("Command interrupted by user (Ctrl+C)")
+        exit_code = 130
+    except FileNotFoundError:
+        print_error(f"Command not found: {command[0]}")
+        exit_code = 127
+    except Exception as e:
+        print_error(f"Failed to execute command: {e}")
+        exit_code = 1
+
+    print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+    print()
+
+    # Record end time
+    end_time = time.time()
+    end_timestamp = time.time_ns()
+    duration_sec = end_time - start_time
+
+    # Stop profiling
+    stop_collection.set()
+    collector_thread.join(timeout=1.0)
+
+    if profiler:
+        profiler.stop_capture()
+
+        # Drain remaining events
+        remaining = profiler.get_events()
+        if remaining:
+            with events_lock:
+                all_events.extend(remaining)
+                total_events[0] += len(remaining)
+
+        print_success("GPU profiling stopped")
+
+    # Write events
+    if all_events:
+        writer.write_events(all_events)
+
+    writer.finalize()
+
+    # Print summary
+    print_section("Profile Complete")
+
+    # Command result
+    if exit_code == 0:
+        print_success(f"Command completed successfully")
+    else:
+        print_warning(f"Command exited with code: {exit_code}")
+
+    print()
+    print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
+    print(f"  Command:      {' '.join(command)}")
+    print(f"  Duration:     {duration_sec:.2f} seconds")
+    print(f"  GPU Events:   {colorize(Color.GREEN)}{total_events[0]}{colorize(Color.RESET)}")
+    print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+
+    # Analyze events
+    if all_events:
+        from collections import Counter
+        from . import EventType
+
+        type_counts = Counter(e.type for e in all_events)
+        kernel_count = type_counts.get(EventType.KernelLaunch, 0)
+        memcpy_count = sum(type_counts.get(t, 0) for t in 
+                          [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D])
+
+        print()
+        print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
+        print(f"  Kernel Launches: {kernel_count}")
+        print(f"  Memory Copies:   {memcpy_count}")
+        print(f"  Other Events:    {total_events[0] - kernel_count - memcpy_count}")
+
+    print()
+
+    # Export to Perfetto if requested
+    if args.perfetto:
+        perfetto_file = output_file.replace('.sbt', '.json')
+        if export_perfetto(all_events, perfetto_file):
+            print_success(f"Exported Perfetto trace: {perfetto_file}")
+            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+        else:
+            print_warning("Failed to export Perfetto trace")
+        print()
+
+    # Next steps
+    print(f"{colorize(Color.BOLD)}Next steps:{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli analyze {output_file}{colorize(Color.RESET)}")
+
+    return exit_code
+
+
+def _cmd_profile_xctrace(args, command):
+    """Profile using Apple Instruments (xctrace) on macOS."""
+    import os
+    import sys
+    import time
+    
+    from . import (
+        SBTWriter,
+        TraceMetadata,
+        export_perfetto,
+    )
+    
+    # Check platform
+    if sys.platform != 'darwin':
+        print_error("xctrace is only available on macOS")
+        return 1
+    
+    # Import xctrace module
+    try:
+        from .xctrace import XCTraceProfiler, XCTraceConfig
+    except ImportError as e:
+        print_error(f"Failed to import xctrace module: {e}")
+        return 1
+    
+    # Check if xctrace is available
+    if not XCTraceProfiler.is_available():
+        print_error("xctrace not found. Install Xcode Command Line Tools:")
+        print(f"  {colorize(Color.CYAN)}xcode-select --install{colorize(Color.RESET)}")
+        return 1
+    
+    # Output file
+    if args.output:
+        output_file = args.output
+    else:
+        cmd_name = os.path.basename(command[0]).replace('.py', '').replace('.sh', '')
+        output_file = f"{cmd_name}_trace.sbt"
+    
+    print_section("TraceSmith Profile (xctrace)")
+    
+    print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
+    print(f"  Command:   {colorize(Color.CYAN)}{' '.join(command)}{colorize(Color.RESET)}")
+    print(f"  Output:    {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+    print(f"  Backend:   {colorize(Color.GREEN)}Apple Instruments (xctrace){colorize(Color.RESET)}")
+    print(f"  Template:  {args.xctrace_template}")
+    print()
+    
+    # Create profiler
+    config = XCTraceConfig(
+        template=args.xctrace_template,
+        duration_seconds=3600,  # 1 hour max, will stop when command exits
+    )
+    
+    profiler = XCTraceProfiler(config)
+    
+    # Get trace output dir
+    trace_dir = os.path.dirname(output_file) or "."
+    trace_file = os.path.join(
+        trace_dir,
+        os.path.basename(output_file).replace('.sbt', '.trace')
+    )
+    
+    print_success("xctrace profiler initialized")
+    print()
+    
+    # Record start time
+    start_time = time.time()
+    
+    # Profile the command
+    print(f"{colorize(Color.GREEN)}▶ Starting xctrace profiling...{colorize(Color.RESET)}")
+    print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+    
+    try:
+        all_events = profiler.profile_command(
+            command,
+            duration=None,  # Run until command exits
+            output_file=trace_file if args.keep_trace else None
+        )
+    except Exception as e:
+        print_error(f"Profiling failed: {e}")
+        return 1
+    
+    print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+    print()
+    
+    end_time = time.time()
+    duration_sec = end_time - start_time
+    
+    print_success("xctrace profiling stopped")
+    
+    # Save to SBT format
+    writer = SBTWriter(output_file)
+    if writer.is_open():
+        metadata = TraceMetadata()
+        metadata.application_name = os.path.basename(command[0])
+        metadata.command_line = ' '.join(command)
+        writer.write_metadata(metadata)
+        
+        if all_events:
+            writer.write_events(all_events)
+        
+        writer.finalize()
+    
+    # Print summary
+    print_section("Profile Complete")
+    
+    print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
+    print(f"  Command:      {' '.join(command)}")
+    print(f"  Duration:     {duration_sec:.2f} seconds")
+    print(f"  GPU Events:   {colorize(Color.GREEN)}{len(all_events)}{colorize(Color.RESET)}")
+    print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+    
+    # Show trace file location
+    raw_trace = profiler.get_trace_file()
+    if raw_trace and os.path.exists(raw_trace):
+        if args.keep_trace:
+            print(f"  Raw Trace:    {colorize(Color.CYAN)}{raw_trace}{colorize(Color.RESET)}")
+            print()
+            print(f"  Open in Instruments: {colorize(Color.YELLOW)}open \"{raw_trace}\"{colorize(Color.RESET)}")
+        else:
+            # Cleanup temp trace
+            profiler.cleanup()
+    
+    # Analyze events
+    if all_events:
+        from collections import Counter
+        from . import EventType
+        
+        type_counts = Counter(e.type for e in all_events)
+        kernel_count = type_counts.get(EventType.KernelLaunch, 0)
+        complete_count = type_counts.get(EventType.KernelComplete, 0)
+        
+        print()
+        print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
+        print(f"  GPU Commands:    {kernel_count + complete_count}")
+        print(f"  Other Events:    {len(all_events) - kernel_count - complete_count}")
+    
+    print()
+    
+    # Export to Perfetto if requested
+    if args.perfetto:
+        perfetto_file = output_file.replace('.sbt', '.json')
+        if export_perfetto(all_events, perfetto_file):
+            print_success(f"Exported Perfetto trace: {perfetto_file}")
+            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+        else:
+            print_warning("Failed to export Perfetto trace")
+        print()
+    
+    # Next steps
+    print(f"{colorize(Color.BOLD)}Next steps:{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
+    if raw_trace and args.keep_trace:
+        print(f"  {colorize(Color.CYAN)}open \"{raw_trace}\"{colorize(Color.RESET)}  # Open in Instruments")
+    
     return 0
 
 
@@ -1120,12 +1528,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 {colorize(Color.BOLD)}Examples:{colorize(Color.RESET)}
-  tracesmith-cli record -o trace.sbt -d 5  # Record for 5 seconds
-  tracesmith-cli view trace.sbt --stats    # Show statistics
-  tracesmith-cli export trace.sbt          # Export to Perfetto
-  tracesmith-cli analyze trace.sbt         # Analyze performance
-  tracesmith-cli benchmark -n 10000        # Run 10K benchmark
-  tracesmith-cli devices                   # List GPUs
+  tracesmith-cli profile -- python train.py          # Profile a Python script
+  tracesmith-cli profile -o trace.sbt -- ./my_app    # Profile with custom output
+  tracesmith-cli profile --perfetto -- python test.py # Profile + export Perfetto
+  tracesmith-cli record -o trace.sbt -d 5            # Record for 5 seconds
+  tracesmith-cli view trace.sbt --stats              # Show statistics
+  tracesmith-cli export trace.sbt                    # Export to Perfetto
+  tracesmith-cli analyze trace.sbt                   # Analyze performance
+  tracesmith-cli benchmark -n 10000                  # Run 10K benchmark
+  tracesmith-cli devices                             # List GPUs
 
 Run '{colorize(Color.CYAN)}tracesmith-cli <command> --help{colorize(Color.RESET)}' for more information.
 """
@@ -1149,6 +1560,37 @@ Run '{colorize(Color.CYAN)}tracesmith-cli <command> --help{colorize(Color.RESET)
     record_parser.add_argument('-d', '--duration', type=float, default=5.0, help='Duration in seconds')
     record_parser.add_argument('-p', '--platform', choices=['cuda', 'metal', 'rocm', 'auto'], default='auto')
     record_parser.set_defaults(func=cmd_record)
+
+    # profile command (NEW!)
+    profile_parser = subparsers.add_parser(
+        'profile', 
+        help='Profile a command (start recording, execute command, stop recording)',
+        description='''
+Profile a command by recording GPU events during its execution.
+
+Examples:
+  tracesmith-cli profile -- python train.py
+  tracesmith-cli profile -o model_trace.sbt -- python train.py --epochs 10
+  tracesmith-cli profile --perfetto -- ./my_cuda_app
+  tracesmith-cli profile -- python -c "import torch; torch.randn(1000,1000).cuda()"
+''',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    profile_parser.add_argument('-o', '--output', 
+                                help='Output trace file (default: <command>_trace.sbt)')
+    profile_parser.add_argument('--perfetto', action='store_true',
+                                help='Also export to Perfetto JSON format')
+    profile_parser.add_argument('--buffer-size', type=int, default=1000000,
+                                help='Event buffer size (default: 1000000)')
+    profile_parser.add_argument('--xctrace', action='store_true',
+                                help='Use Apple Instruments (xctrace) for Metal GPU profiling on macOS')
+    profile_parser.add_argument('--xctrace-template', default='Metal System Trace',
+                                help="Instruments template (default: 'Metal System Trace')")
+    profile_parser.add_argument('--keep-trace', action='store_true',
+                                help='Keep the raw .trace file after profiling (xctrace only)')
+    profile_parser.add_argument('command', nargs=argparse.REMAINDER,
+                                help='Command to profile (use -- before command)')
+    profile_parser.set_defaults(func=cmd_profile)
 
     # view command
     view_parser = subparsers.add_parser('view', help='View trace file contents')
