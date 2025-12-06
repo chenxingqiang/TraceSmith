@@ -5,6 +5,37 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-12-07
+
+### Added
+- **Apple Instruments (xctrace) Integration**: Real Metal GPU profiling on macOS
+  - `XCTraceProfiler`: Python wrapper for xctrace
+  - Automatic Metal GPU event parsing from Instruments traces
+  - Support for multiple Instruments templates (Metal System Trace, GPU Driver, etc.)
+  - CLI: `--xctrace`, `--xctrace-template`, `--keep-trace` options
+  - Captures real GPU events (13K+ events in tests)
+
+- **Cross-Platform Device Utilities**: Unified device management for examples
+  - `DeviceManager`: Auto-detect and manage CUDA/MPS/ROCm/CPU devices
+  - `benchmark()`: Cross-platform benchmarking with proper synchronization
+  - Test decorators: `skip_if_no_gpu`, `skip_if_not_cuda`, `skip_if_not_mps`
+  - `run_tests.py`: Test runner for all examples across devices
+
+- **Enhanced Python Examples**:
+  - All examples now support `--device` flag for device selection
+  - Automatic device detection and fallback
+  - Comprehensive test coverage on MPS and CPU
+
+### Changed
+- Updated C++ CLI `profile` command with xctrace support on macOS
+- Improved Python CLI with xctrace backend option
+- Enhanced README with cross-platform device support documentation
+
+### Fixed
+- PyTorch hooks profiling backward pass compatibility
+- Multi-GPU profiling cluster availability checks
+- Real-time tracing session configuration
+
 ## [0.7.1] - 2025-12-04
 
 ### Added

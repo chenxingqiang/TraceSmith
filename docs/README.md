@@ -87,7 +87,7 @@ docs/
 
 | Metric | Value |
 |--------|-------|
-| **Version** | 0.7.1 |
+| **Version** | 0.8.0 |
 | **C++ Standard** | C++17 |
 | **Python** | 3.9 - 3.12 |
 | **Platforms** | Linux, macOS, Windows |
