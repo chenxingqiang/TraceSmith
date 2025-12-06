@@ -91,18 +91,18 @@ class TorchProfiler:
             self.profiler = None
 
     @contextmanager
-    def profile(self, sync_cuda: bool = True):
+    def profile(self, sync_device: bool = True):
         """Context manager for profiling a code block.
         
         Args:
-            sync_cuda: Whether to synchronize CUDA before and after profiling
+            sync_device: Whether to synchronize device before and after profiling
         
         Usage:
             with profiler.profile():
                 model(input)
         """
-        if TORCH_AVAILABLE and torch.cuda.is_available() and sync_cuda:
-            torch.cuda.synchronize()
+        if TORCH_AVAILABLE and sync_device:
+            self._sync_device()
 
         self.start()
         start_time = time.perf_counter()
@@ -110,12 +110,21 @@ class TorchProfiler:
         try:
             yield self
         finally:
-            if TORCH_AVAILABLE and torch.cuda.is_available() and sync_cuda:
-                torch.cuda.synchronize()
+            if TORCH_AVAILABLE and sync_device:
+                self._sync_device()
 
             end_time = time.perf_counter()
             self.stop()
             self._last_duration = (end_time - start_time) * 1000  # ms
+    
+    def _sync_device(self):
+        """Synchronize device (CUDA/MPS/ROCm)."""
+        if not TORCH_AVAILABLE:
+            return
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            torch.mps.synchronize()
 
     def analyze(self) -> ProfileResult:
         """Analyze captured events."""
@@ -348,7 +357,7 @@ def profile_training_step(model: nn.Module, input_data: torch.Tensor,
     return profiler
 
 
-def main():
+def main(device_preference: str = None):
     print("╔═══════════════════════════════════════════════════════════╗")
     print("║  TraceSmith - PyTorch Model Profiling                     ║")
     print("╚═══════════════════════════════════════════════════════════╝\n")
@@ -358,16 +367,28 @@ def main():
         print("Install with: pip install torch torchvision")
         return
 
+    # Import device utilities if available
+    try:
+        from device_utils import DeviceManager
+        dm = DeviceManager(prefer_device=device_preference)
+        device = dm.torch_device
+        print(f"Device: {dm.get_device_name()}")
+    except ImportError:
+        dm = None
+        # Fallback device detection
+        if device_preference == "mps" and hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            device = torch.device("mps")
+            print(f"Device: Apple Silicon GPU (MPS)")
+        elif device_preference == "cuda" or (device_preference is None and torch.cuda.is_available()):
+            device = torch.device("cuda")
+            print(f"Device: {torch.cuda.get_device_name(0)}")
+        else:
+            device = torch.device("cpu")
+            print("Device: CPU (profiling will be limited)")
+
     # Check GPU availability
     platform = ts.detect_platform()
     print(f"TraceSmith Platform: {ts.platform_type_to_string(platform)}")
-
-    if torch.cuda.is_available():
-        print(f"PyTorch CUDA: {torch.cuda.get_device_name(0)}")
-        device = torch.device("cuda")
-    else:
-        print("CUDA not available, using CPU (profiling will be limited)")
-        device = torch.device("cpu")
 
     print("\n" + "-" * 60)
     print("Example 1: CNN Inference Profiling")
@@ -444,4 +465,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description="PyTorch Model Profiling Example")
+    parser.add_argument(
+        "--device", "-d",
+        choices=["cuda", "mps", "rocm", "cpu"],
+        default=None,
+        help="Preferred device (default: auto-detect)"
+    )
+    args = parser.parse_args()
+    main(device_preference=args.device)

@@ -2,6 +2,19 @@
 
 This directory contains comprehensive examples demonstrating how to use TraceSmith for GPU profiling with Python and deep learning frameworks.
 
+## Cross-Platform Device Support
+
+All examples support multiple GPU platforms:
+
+| Platform | Device Flag | Description |
+|----------|-------------|-------------|
+| **CUDA** | `--device cuda` | NVIDIA GPUs |
+| **MPS** | `--device mps` | Apple Silicon (M1/M2/M3) |
+| **ROCm** | `--device rocm` | AMD GPUs |
+| **CPU** | `--device cpu` | CPU fallback |
+
+If no device is specified, the best available device is auto-detected.
+
 ## Examples Overview
 
 | Example | Description | Requirements |
@@ -14,6 +27,8 @@ This directory contains comprehensive examples demonstrating how to use TraceSmi
 | `multi_gpu_profiling.py` | Multi-GPU and DataParallel profiling | PyTorch, multi-GPU |
 | `realtime_tracing.py` | Real-time tracing with lock-free buffers | TraceSmith only |
 | `transformers_profiling.py` | Transformer/LLM model profiling | PyTorch, transformers |
+| `device_utils.py` | Cross-platform device utilities | PyTorch (optional) |
+| `run_tests.py` | Test runner for all examples | TraceSmith only |
 
 ## Quick Start
 
@@ -31,14 +46,161 @@ pip install torch torchvision transformers
 ### Running Examples
 
 ```bash
-# Basic usage
+# Basic usage (auto-detect device)
 python examples/basic_usage.py
 
-# Kernel timing statistics
-python examples/kernel_timing_stats.py
+# Run on specific device
+python examples/basic_usage.py --device cuda   # NVIDIA GPU
+python examples/basic_usage.py --device mps    # Apple Silicon
+python examples/basic_usage.py --device cpu    # CPU fallback
+
+# Run all examples with test runner
+python examples/run_tests.py                   # Best device
+python examples/run_tests.py --all-devices     # All devices
+python examples/run_tests.py --device mps      # Specific device
+python examples/run_tests.py --list            # List available tests
 
 # PyTorch profiling
-python examples/pytorch_profiling.py
+python examples/pytorch_profiling.py --device cuda
+```
+
+## Test Runner
+
+The `run_tests.py` script runs all examples and reports results:
+
+```bash
+# Run all tests on best available device
+python run_tests.py
+
+# Run on all available devices
+python run_tests.py --all-devices
+
+# Run specific test
+python run_tests.py --test basic
+python run_tests.py --test pytorch
+
+# List available tests
+python run_tests.py --list
+```
+
+**Sample Output:**
+```
+TraceSmith Examples Test Runner
+============================================================
+Devices: mps, cpu
+Tests: basic, pytorch, hooks, memory, kernel, realtime, multigpu, transformers
+============================================================
+
+>>> Running tests on MPS <<<
+
+Running basic...     ✓ PASSED (2.3s)
+Running pytorch...   ✓ PASSED (15.4s)
+Running memory...    ✓ PASSED (8.2s)
+...
+
+======================================================================
+TEST RESULTS SUMMARY
+======================================================================
+
+MPS:
+--------------------------------------------------
+  ✓ PASSED basic                (2.3s)
+  ✓ PASSED pytorch              (15.4s)
+  ✓ PASSED memory               (8.2s)
+  ...
+
+  Total: 7 passed, 0 failed, 1 skipped, 0 errors
+
+======================================================================
+OVERALL: 7/8 tests passed
+```
+
+## Device Utilities
+
+The `device_utils.py` module provides cross-platform device management:
+
+```python
+from device_utils import DeviceManager, get_device, benchmark
+
+# Auto-detect best device
+dm = DeviceManager()
+print(f"Using: {dm.get_device_name()}")
+
+# Or specify device
+dm = DeviceManager(prefer_device="mps")
+
+# Create tensors on device
+x = dm.randn(1000, 1000)
+y = dm.randn(1000, 1000)
+
+# Benchmark with proper synchronization
+def matmul():
+    return x @ y
+
+results = benchmark(matmul, warmup=3, iterations=10, dm=dm)
+print(f"Mean: {results['mean_ms']:.2f} ms")
+
+# Device-agnostic synchronization
+dm.synchronize()
+
+# Memory info
+print(f"Allocated: {dm.memory_allocated() / 1024**2:.1f} MB")
+```
+
+### DeviceManager API
+
+```python
+from device_utils import DeviceManager
+
+dm = DeviceManager(prefer_device="cuda")  # or "mps", "rocm", "cpu", None
+
+# Properties
+dm.device           # DeviceInfo object
+dm.device_type      # DeviceType enum
+dm.torch_device     # PyTorch device object
+dm.is_gpu           # bool
+dm.is_cuda          # bool
+dm.is_mps           # bool
+dm.is_rocm          # bool
+
+# Methods
+dm.list_devices()           # List all detected devices
+dm.synchronize()            # Sync current device
+dm.empty_cache()            # Clear memory cache
+dm.memory_allocated()       # Current memory usage
+dm.memory_reserved()        # Reserved memory
+
+# Tensor creation
+dm.randn(100, 100)          # Random tensor on device
+dm.zeros(100, 100)          # Zero tensor on device
+dm.ones(100, 100)           # Ones tensor on device
+dm.create_tensor([1, 2, 3]) # From data
+dm.to_device(tensor)        # Move to device
+
+# TraceSmith integration
+platform = dm.get_tracesmith_platform()
+profiler = dm.create_profiler()
+```
+
+### Test Decorators
+
+```python
+from device_utils import skip_if_no_gpu, skip_if_not_cuda, skip_if_not_mps
+
+@skip_if_no_gpu
+def test_gpu_only():
+    # Runs only if GPU is available
+    pass
+
+@skip_if_not_cuda
+def test_cuda_specific():
+    # Runs only on CUDA
+    pass
+
+@skip_if_not_mps
+def test_mps_specific():
+    # Runs only on Apple Silicon
+    pass
 ```
 
 ## Example Details
