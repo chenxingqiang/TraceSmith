@@ -271,10 +271,15 @@ endif()
 # ----------------------------------------------------------------------------
 # MetaX MACA Examples (requires MetaX GPU)
 # ----------------------------------------------------------------------------
-if(TRACESMITH_ENABLE_MACA)
+if(TRACESMITH_ENABLE_MACA AND MACA_ROOT)
     # MetaX basic example
     add_executable(metax_example
         metax_example.cpp
+    )
+    
+    target_include_directories(metax_example PRIVATE
+        ${MACA_ROOT}/include
+        ${MACA_ROOT}/include/mcr
     )
     
     target_link_libraries(metax_example PRIVATE
@@ -287,6 +292,11 @@ if(TRACESMITH_ENABLE_MACA)
     # MetaX benchmark example
     add_executable(metax_benchmark
         metax_benchmark.cpp
+    )
+    
+    target_include_directories(metax_benchmark PRIVATE
+        ${MACA_ROOT}/include
+        ${MACA_ROOT}/include/mcr
     )
     
     target_link_libraries(metax_benchmark PRIVATE
