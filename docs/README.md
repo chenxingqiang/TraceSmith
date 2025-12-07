@@ -13,6 +13,7 @@ Complete documentation for the TraceSmith GPU Profiling & Replay System.
 
 ### Feature Documentation
 - **[Cluster Profiling](CLUSTER_PROFILING.md)** - Multi-GPU and cluster profiling implementation plan (v0.7.0+)
+- **[MACA Profiling](MACA_PROFILING.md)** - MetaX GPU profiling guide with MCPTI backend
 
 ### Reference
 - **[GPU Profiling Projects](gpu_profiling_callstack_opensource.md)** - Survey of related open source projects
@@ -42,6 +43,7 @@ docs/
 ├── getting_started.md                # Quick start guide
 ├── PLANNING.md                       # Project planning & goals
 ├── CLUSTER_PROFILING.md              # Multi-GPU cluster profiling plan
+├── MACA_PROFILING.md                 # MetaX GPU profiling guide
 ├── gpu_profiling_callstack_opensource.md  # Related projects survey
 └── CHANGELOG.md                      # Local changelog (deprecated, use root)
 ```
@@ -80,6 +82,7 @@ docs/
 ### Platform Support
 - **CUDA/CUPTI** - NVIDIA GPU profiling
 - **Metal** - Apple GPU profiling (M1/M2/M3)
+- **MACA/MCPTI** - MetaX GPU profiling (C500, C550)
 - **ROCm** - AMD GPU profiling (planned)
 - **BPF** - Linux kernel-level tracing
 
@@ -91,7 +94,7 @@ docs/
 | **C++ Standard** | C++17 |
 | **Python** | 3.9 - 3.12 |
 | **Platforms** | Linux, macOS, Windows |
-| **GPU Backends** | CUDA, Metal, (ROCm planned) |
+| **GPU Backends** | CUDA, Metal, MACA, (ROCm planned) |
 
 ## 🛠️ Build Requirements
 

@@ -412,11 +412,34 @@ profiler.export_perfetto("metal_trace.json")
 
 TraceSmith supports MetaX GPUs (C500, C550, etc.) using the MCPTI (MACA Profiling Tools Interface), which provides an API compatible with NVIDIA CUPTI.
 
+> 📖 **Full documentation**: See [docs/MACA_PROFILING.md](docs/MACA_PROFILING.md) for detailed setup and usage guide.
+
+**Tested Hardware:**
+
+| GPU | Memory | Compute Units | Driver | Status |
+|-----|--------|---------------|--------|--------|
+| MetaX C500 | 64 GB | 104 CUs | 3.0.11 | ✅ Verified |
+| MetaX C550 | - | - | - | 🔜 Planned |
+
+**Benchmark Results (MetaX C500):**
+
+| Test | Data Size | Bandwidth |
+|------|-----------|-----------|
+| Host → Device | 256 MB | 8.8 GB/s |
+| Device → Host | 256 MB | 8.7 GB/s |
+| Device → Device | 256 MB | **599 GB/s** |
+| **MCPTI Overhead** | - | **< 2%** |
+
 **Build with MetaX support:**
 
 ```bash
+# On MetaX system (MACA SDK auto-detected at /opt/maca-3.0.0)
 cmake -DTRACESMITH_ENABLE_MACA=ON ..
 make -j4
+
+# Run examples
+./bin/metax_example      # Basic profiling demo
+./bin/metax_benchmark    # Memory bandwidth test
 ```
 
 **C++ API:**
@@ -446,6 +469,10 @@ profiler->stopCapture();
 // Get events
 std::vector<tracesmith::TraceEvent> events;
 profiler->getEvents(events);
+
+// Export to Perfetto
+tracesmith::PerfettoExporter exporter;
+exporter.exportToFile(events, "metax_trace.json");
 ```
 
 **Python API:**
@@ -466,21 +493,26 @@ if ts.is_maca_available():
     profiler.stop_capture()
     
     events = profiler.get_events()
+    
+    # Save trace
+    writer = ts.SBTWriter("metax_trace.sbt")
+    writer.write_events(events)
+    writer.finalize()
 ```
 
 **MCPTI Captured Events:**
 
 | Event Type | Description |
 |------------|-------------|
-| KernelLaunch/Complete | Kernel execution timing |
-| MemcpyH2D/D2H/D2D | Memory transfers |
-| MemsetDevice | Memory initialization |
-| StreamSync/DeviceSync | Synchronization events |
+| KernelLaunch/Complete | Kernel execution timing with grid/block dimensions |
+| MemcpyH2D/D2H/D2D | Memory transfers with bandwidth calculation |
+| MemsetDevice | Memory initialization operations |
+| StreamSync/DeviceSync | Synchronization events with duration |
 
 **Output:**
-- SBT file with parsed GPU events
-- Optional: Raw `.trace` file (use `--keep-trace`) for viewing in Instruments
-- Optional: Perfetto JSON export (use `--perfetto`)
+- `.sbt` - TraceSmith Binary Trace format
+- `.json` - Perfetto JSON (view at https://ui.perfetto.dev)
+- Device info: name, memory, compute capability, clock rates
 
 #### Python Examples with Cross-Platform Device Support
 
