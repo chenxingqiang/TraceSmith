@@ -53,14 +53,20 @@ if(TRACESMITH_ENABLE_MACA)
             ${MACA_ROOT}/include/mcr
             ${MACA_ROOT}/include/mcpti
         )
-        # Add both lib and lib64 directories
-        target_link_directories(tracesmith-capture PRIVATE 
-            ${MACA_ROOT}/lib 
-            ${MACA_ROOT}/lib64
-        )
-        # Link against mcpti and mcruntime libraries
-        target_link_libraries(tracesmith-capture PUBLIC mcpti mcruntime)
-        target_compile_definitions(tracesmith-capture PUBLIC TRACESMITH_ENABLE_MACA)
+        
+        # Find and link MACA libraries with full path
+        find_library(MCPTI_LIBRARY mcpti PATHS ${MACA_ROOT}/lib ${MACA_ROOT}/lib64 NO_DEFAULT_PATH)
+        find_library(MCRUNTIME_LIBRARY mcruntime PATHS ${MACA_ROOT}/lib ${MACA_ROOT}/lib64 NO_DEFAULT_PATH)
+        
+        if(MCPTI_LIBRARY AND MCRUNTIME_LIBRARY)
+            message(STATUS "  MCPTI library: ${MCPTI_LIBRARY}")
+            message(STATUS "  MCRuntime library: ${MCRUNTIME_LIBRARY}")
+            target_link_libraries(tracesmith-capture PUBLIC ${MCPTI_LIBRARY} ${MCRUNTIME_LIBRARY})
+            target_compile_definitions(tracesmith-capture PUBLIC TRACESMITH_ENABLE_MACA)
+        else()
+            message(WARNING "MACA libraries not found")
+            set(TRACESMITH_ENABLE_MACA OFF PARENT_SCOPE)
+        endif()
     else()
         message(WARNING "MACA SDK not found. Set MACA_ROOT to the correct path.")
         set(TRACESMITH_ENABLE_MACA OFF PARENT_SCOPE)

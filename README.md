@@ -407,6 +407,77 @@ profiler.export_perfetto("metal_trace.json")
 - `Animation Hitches` - Animation performance
 
 **Output:**
+
+#### MetaX GPU Profiling with MCPTI
+
+TraceSmith supports MetaX GPUs (C500, C550, etc.) using the MCPTI (MACA Profiling Tools Interface), which provides an API compatible with NVIDIA CUPTI.
+
+**Build with MetaX support:**
+
+```bash
+cmake -DTRACESMITH_ENABLE_MACA=ON ..
+make -j4
+```
+
+**C++ API:**
+
+```cpp
+#include <tracesmith/tracesmith.hpp>
+
+// Check MetaX GPU availability
+if (tracesmith::isMACAAvailable()) {
+    std::cout << "MetaX devices: " << tracesmith::getMACADeviceCount() << std::endl;
+}
+
+// Create MCPTI profiler
+auto profiler = tracesmith::createProfiler(tracesmith::PlatformType::MACA);
+
+// Configure
+tracesmith::ProfilerConfig config;
+config.capture_kernels = true;
+config.capture_memcpy = true;
+profiler->initialize(config);
+
+// Capture events
+profiler->startCapture();
+// ... GPU code using MACA runtime ...
+profiler->stopCapture();
+
+// Get events
+std::vector<tracesmith::TraceEvent> events;
+profiler->getEvents(events);
+```
+
+**Python API:**
+
+```python
+import tracesmith as ts
+
+# Check MetaX availability
+if ts.is_maca_available():
+    print(f"MetaX devices: {ts.get_maca_device_count()}")
+    
+    # Create profiler
+    profiler = ts.create_profiler(ts.PlatformType.MACA)
+    profiler.initialize(ts.ProfilerConfig())
+    
+    profiler.start_capture()
+    # ... GPU code ...
+    profiler.stop_capture()
+    
+    events = profiler.get_events()
+```
+
+**MCPTI Captured Events:**
+
+| Event Type | Description |
+|------------|-------------|
+| KernelLaunch/Complete | Kernel execution timing |
+| MemcpyH2D/D2H/D2D | Memory transfers |
+| MemsetDevice | Memory initialization |
+| StreamSync/DeviceSync | Synchronization events |
+
+**Output:**
 - SBT file with parsed GPU events
 - Optional: Raw `.trace` file (use `--keep-trace`) for viewing in Instruments
 - Optional: Perfetto JSON export (use `--perfetto`)

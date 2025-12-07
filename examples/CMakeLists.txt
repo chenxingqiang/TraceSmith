@@ -269,6 +269,35 @@ if(TRACESMITH_ENABLE_METAL AND APPLE)
 endif()
 
 # ----------------------------------------------------------------------------
+# MetaX MACA Examples (requires MetaX GPU)
+# ----------------------------------------------------------------------------
+if(TRACESMITH_ENABLE_MACA)
+    # MetaX basic example
+    add_executable(metax_example
+        metax_example.cpp
+    )
+    
+    target_link_libraries(metax_example PRIVATE
+        tracesmith-common
+        tracesmith-format
+        tracesmith-capture
+        tracesmith-state
+    )
+    
+    # MetaX benchmark example
+    add_executable(metax_benchmark
+        metax_benchmark.cpp
+    )
+    
+    target_link_libraries(metax_benchmark PRIVATE
+        tracesmith-common
+        tracesmith-format
+        tracesmith-capture
+        tracesmith-state
+    )
+endif()
+
+# ----------------------------------------------------------------------------
 # Goal Validation Example - Validates all project goals from PLANNING.md
 # ----------------------------------------------------------------------------
 add_executable(goal_validation_example
@@ -379,6 +408,11 @@ endif()
 if(TRACESMITH_ENABLE_METAL AND APPLE)
     message(STATUS "  Metal examples (Apple GPU):")
     message(STATUS "    - metal_example (Apple Metal profiling)")
+endif()
+if(TRACESMITH_ENABLE_MACA)
+    message(STATUS "  MetaX examples (MetaX GPU):")
+    message(STATUS "    - metax_example (MetaX MCPTI profiling)")
+    message(STATUS "    - metax_benchmark (MetaX benchmark with multi-stream)")
 endif()
 message(STATUS "  Python examples:")
 message(STATUS "    - python_example.py (Python API demonstration)")
