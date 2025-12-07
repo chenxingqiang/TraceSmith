@@ -53,8 +53,13 @@ if(TRACESMITH_ENABLE_MACA)
             ${MACA_ROOT}/include/mcr
             ${MACA_ROOT}/include/mcpti
         )
-        target_link_directories(tracesmith-capture PRIVATE ${MACA_ROOT}/lib)
-        target_link_libraries(tracesmith-capture PUBLIC mcpti mcr)
+        # Add both lib and lib64 directories
+        target_link_directories(tracesmith-capture PRIVATE 
+            ${MACA_ROOT}/lib 
+            ${MACA_ROOT}/lib64
+        )
+        # Link against mcpti and mcruntime libraries
+        target_link_libraries(tracesmith-capture PUBLIC mcpti mcruntime)
         target_compile_definitions(tracesmith-capture PUBLIC TRACESMITH_ENABLE_MACA)
     else()
         message(WARNING "MACA SDK not found. Set MACA_ROOT to the correct path.")
