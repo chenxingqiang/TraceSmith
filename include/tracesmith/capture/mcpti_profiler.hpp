@@ -5,7 +5,9 @@
 #include <unordered_map>
 
 #ifdef TRACESMITH_ENABLE_MACA
-#include <mcc/mcc.h>
+// MetaX MACA Runtime and Profiling headers
+#include <mcr/maca.h>
+#include <mcr/mc_runtime_api.h>
 #include <mcpti/mcpti.h>
 #endif
 

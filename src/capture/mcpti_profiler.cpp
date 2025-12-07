@@ -39,12 +39,11 @@ MCPTIProfiler* MCPTIProfiler::instance_ = nullptr;
 
 #define MCC_CALL(call)                                                      \
     do {                                                                    \
-        MCresult _status = call;                                            \
-        if (_status != MC_SUCCESS) {                                        \
-            const char* errstr;                                             \
-            mcGetErrorString(_status, &errstr);                             \
-            std::cerr << "MACA error: " << errstr << " at " << __FILE__    \
-                      << ":" << __LINE__ << std::endl;                      \
+        mcError_t _status = call;                                           \
+        if (_status != mcSuccess) {                                         \
+            const char* errstr = mcGetErrorString(_status);                 \
+            std::cerr << "MACA error: " << (errstr ? errstr : "unknown")   \
+                      << " at " << __FILE__ << ":" << __LINE__ << std::endl;\
             return false;                                                   \
         }                                                                   \
     } while (0)
@@ -95,14 +94,14 @@ bool MCPTIProfiler::isAvailable() const {
 
 bool isMACAAvailable() {
 #ifdef TRACESMITH_ENABLE_MACA
-    MCresult result = mcInit(0);
-    if (result != MC_SUCCESS) {
+    mcError_t result = mcInit(0);
+    if (result != mcSuccess) {
         return false;
     }
     
     int device_count = 0;
-    result = mcDeviceGetCount(&device_count);
-    return (result == MC_SUCCESS && device_count > 0);
+    result = mcGetDeviceCount(&device_count);
+    return (result == mcSuccess && device_count > 0);
 #else
     return false;
 #endif
@@ -111,7 +110,7 @@ bool isMACAAvailable() {
 int getMACADriverVersion() {
 #ifdef TRACESMITH_ENABLE_MACA
     int version = 0;
-    if (mcDriverGetVersion(&version) == MC_SUCCESS) {
+    if (mcDriverGetVersion(&version) == mcSuccess) {
         return version;
     }
 #endif
@@ -121,8 +120,8 @@ int getMACADriverVersion() {
 int getMACADeviceCount() {
 #ifdef TRACESMITH_ENABLE_MACA
     int count = 0;
-    if (mcInit(0) == MC_SUCCESS) {
-        mcDeviceGetCount(&count);
+    if (mcInit(0) == mcSuccess) {
+        mcGetDeviceCount(&count);
     }
     return count;
 #else
@@ -280,47 +279,27 @@ std::vector<DeviceInfo> MCPTIProfiler::getDeviceInfo() const {
     
 #ifdef TRACESMITH_ENABLE_MACA
     int device_count = 0;
-    if (mcDeviceGetCount(&device_count) != MC_SUCCESS) {
+    if (mcGetDeviceCount(&device_count) != mcSuccess) {
         return devices;
     }
     
     for (int i = 0; i < device_count; ++i) {
-        MCdevice device;
-        if (mcDeviceGet(&device, i) != MC_SUCCESS) {
-            continue;
-        }
-        
         DeviceInfo info;
         info.device_id = i;
         info.vendor = "MetaX";
         
-        // Device name
-        char name[256];
-        if (mcDeviceGetName(name, sizeof(name), device) == MC_SUCCESS) {
-            info.name = name;
+        // Get device properties
+        mcDeviceProp_t prop;
+        if (mcGetDeviceProperties(&prop, i) == mcSuccess) {
+            info.name = prop.name;
+            info.compute_major = prop.major;
+            info.compute_minor = prop.minor;
+            info.total_memory = prop.totalGlobalMem;
+            info.multiprocessor_count = prop.multiProcessorCount;
+            info.clock_rate = prop.clockRate; // kHz
+        } else {
+            info.name = "MetaX GPU";
         }
-        
-        // Compute capability (MetaX uses similar concept)
-        int major = 0, minor = 0;
-        mcDeviceGetAttribute(&major, MC_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device);
-        mcDeviceGetAttribute(&minor, MC_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device);
-        info.compute_major = major;
-        info.compute_minor = minor;
-        
-        // Memory
-        size_t total_mem = 0;
-        mcDeviceTotalMem(&total_mem, device);
-        info.total_memory = total_mem;
-        
-        // Compute units (SMs/CUs)
-        int cu_count = 0;
-        mcDeviceGetAttribute(&cu_count, MC_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device);
-        info.multiprocessor_count = cu_count;
-        
-        // Clock speed
-        int clock_rate_khz = 0;
-        mcDeviceGetAttribute(&clock_rate_khz, MC_DEVICE_ATTRIBUTE_CLOCK_RATE, device);
-        info.clock_rate = clock_rate_khz; // kHz
         
         devices.push_back(info);
     }
