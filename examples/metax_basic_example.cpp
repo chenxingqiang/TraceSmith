@@ -230,7 +230,7 @@ void profileWithMCPTI() {
         // Export to Perfetto
         const std::string json_file = "metax_trace.json";
         PerfettoExporter exporter;
-        exporter.exportToFile(events, json_file);
+        exporter.exportEvents(events, json_file);
         
         std::cout << "Perfetto JSON exported to: " << json_file << "\n";
         std::cout << "View at: https://ui.perfetto.dev\n";

@@ -15,6 +15,7 @@
 #include <chrono>
 #include <numeric>
 #include <algorithm>
+#include <cmath>
 #include <tracesmith/tracesmith.hpp>
 
 #ifdef TRACESMITH_ENABLE_MACA

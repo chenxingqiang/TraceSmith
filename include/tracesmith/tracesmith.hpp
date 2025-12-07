@@ -47,6 +47,15 @@
 #include "tracesmith/capture/memory_profiler.hpp"
 #include "tracesmith/capture/bpf_types.hpp"
 
+// Platform-specific profilers (conditionally included)
+#ifdef TRACESMITH_ENABLE_CUDA
+#include "tracesmith/capture/cupti_profiler.hpp"
+#endif
+
+#ifdef TRACESMITH_ENABLE_MACA
+#include "tracesmith/capture/mcpti_profiler.hpp"
+#endif
+
 // =============================================================================
 // Format - Trace file I/O
 // =============================================================================
