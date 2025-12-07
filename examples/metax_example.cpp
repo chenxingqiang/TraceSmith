@@ -1,28 +1,24 @@
 /**
- * TraceSmith MetaX GPU Profiling Example
+ * MetaX C500/C550 GPU Profiling Example
  * 
- * Demonstrates how to use TraceSmith with MetaX GPUs (C500, C550, etc.)
- * using the MCPTI (MACA Profiling Tools Interface) backend.
+ * This example demonstrates how to use TraceSmith with MetaX GPUs
+ * using the MCPTI (MACA Profiling Tools Interface).
  * 
- * This example shows:
- * - MetaX GPU detection and device info
- * - MCPTI profiler initialization
- * - Capturing GPU events (kernels, memory operations)
- * - Exporting traces to SBT and Perfetto formats
+ * Build with:
+ *   cmake -DTRACESMITH_ENABLE_MACA=ON ..
+ *   make metax_basic_example
  * 
- * Build requirements:
- * - MetaX MACA SDK (typically in /opt/maca or /opt/maca-3.0.0)
- * - cmake -DTRACESMITH_ENABLE_MACA=ON ..
- * 
- * Run on MetaX system:
- * ./metax_example
+ * Requirements:
+ *   - MetaX GPU (C500, C550, etc.)
+ *   - MACA SDK installed at /opt/maca or /opt/maca-3.0.0
+ *   - MACA driver loaded
  */
 
-#include <tracesmith/tracesmith.hpp>
 #include <iostream>
 #include <iomanip>
-#include <thread>
+#include <vector>
 #include <chrono>
+#include <tracesmith/tracesmith.hpp>
 
 #ifdef TRACESMITH_ENABLE_MACA
 #include <mcr/mc_runtime_api.h>
@@ -30,128 +26,134 @@
 
 using namespace tracesmith;
 
-// Helper function to print separator
-void printSeparator(const std::string& title = "") {
-    std::cout << "\n";
-    if (!title.empty()) {
-        std::cout << "=== " << title << " ===" << std::endl;
-    }
-    std::cout << std::string(50, '-') << std::endl;
+void printSeparator(const char* title) {
+    std::cout << "\n" << std::string(60, '=') << "\n";
+    std::cout << title << "\n";
+    std::cout << std::string(60, '=') << "\n";
 }
 
-// Print device information
-void printDeviceInfo(const DeviceInfo& info) {
-    std::cout << "  Device ID:     " << info.device_id << std::endl;
-    std::cout << "  Name:          " << info.name << std::endl;
-    std::cout << "  Vendor:        " << info.vendor << std::endl;
-    std::cout << "  Compute:       " << info.compute_major << "." << info.compute_minor << std::endl;
-    std::cout << "  Memory:        " << (info.total_memory / (1024*1024)) << " MB" << std::endl;
-    std::cout << "  CUs:           " << info.multiprocessor_count << std::endl;
-    std::cout << "  Clock:         " << (info.clock_rate / 1000) << " MHz" << std::endl;
-}
-
-// Simple GPU workload using MACA runtime
-#ifdef TRACESMITH_ENABLE_MACA
-void runGPUWorkload() {
-    const size_t SIZE = 1024 * 1024;  // 1M elements
-    const size_t BYTES = SIZE * sizeof(float);
+void printDeviceInfo() {
+    printSeparator("MetaX GPU Information");
     
-    // Allocate host memory
-    float* h_data = new float[SIZE];
-    for (size_t i = 0; i < SIZE; i++) {
+#ifdef TRACESMITH_ENABLE_MACA
+    int device_count = 0;
+    mcError_t err = mcGetDeviceCount(&device_count);
+    
+    if (err != mcSuccess) {
+        std::cerr << "Failed to get device count: " << mcGetErrorString(err) << std::endl;
+        return;
+    }
+    
+    std::cout << "Number of MetaX GPUs: " << device_count << "\n\n";
+    
+    for (int i = 0; i < device_count; ++i) {
+        mcDeviceProp_t prop;
+        if (mcGetDeviceProperties(&prop, i) == mcSuccess) {
+            std::cout << "Device " << i << ": " << prop.name << "\n";
+            std::cout << "  Compute Capability: " << prop.major << "." << prop.minor << "\n";
+            std::cout << "  Total Memory: " << (prop.totalGlobalMem / (1024*1024*1024.0)) << " GB\n";
+            std::cout << "  Multiprocessors: " << prop.multiProcessorCount << "\n";
+            std::cout << "  Clock Rate: " << (prop.clockRate / 1000.0) << " MHz\n";
+            std::cout << "  Memory Clock: " << (prop.memoryClockRate / 1000.0) << " MHz\n";
+            std::cout << "  Memory Bus Width: " << prop.memoryBusWidth << " bit\n";
+            std::cout << "  L2 Cache Size: " << (prop.l2CacheSize / 1024) << " KB\n";
+            std::cout << "  Max Threads per Block: " << prop.maxThreadsPerBlock << "\n";
+            std::cout << "  Warp Size: " << prop.warpSize << "\n";
+            std::cout << "\n";
+        }
+    }
+#else
+    std::cout << "MACA support not enabled in this build.\n";
+    std::cout << "Rebuild with -DTRACESMITH_ENABLE_MACA=ON\n";
+#endif
+}
+
+void runGPUWorkload() {
+    printSeparator("Running GPU Workload");
+    
+#ifdef TRACESMITH_ENABLE_MACA
+    const size_t N = 1024 * 1024;  // 1M elements
+    const size_t bytes = N * sizeof(float);
+    
+    std::cout << "Allocating " << (bytes / (1024*1024)) << " MB on device...\n";
+    
+    // Host memory
+    float* h_data = new float[N];
+    for (size_t i = 0; i < N; ++i) {
         h_data[i] = static_cast<float>(i);
     }
     
-    // Allocate device memory
+    // Device memory
     float* d_data = nullptr;
-    mcError_t err = mcMalloc((void**)&d_data, BYTES);
+    mcError_t err = mcMalloc(&d_data, bytes);
     if (err != mcSuccess) {
         std::cerr << "mcMalloc failed: " << mcGetErrorString(err) << std::endl;
         delete[] h_data;
         return;
     }
     
-    std::cout << "  Allocated " << (BYTES / (1024*1024)) << " MB on GPU" << std::endl;
+    // Create stream
+    mcStream_t stream;
+    mcStreamCreate(&stream);
     
-    // Copy data to device (H2D)
-    err = mcMemcpy(d_data, h_data, BYTES, mcMemcpyHostToDevice);
-    if (err != mcSuccess) {
-        std::cerr << "mcMemcpy H2D failed: " << mcGetErrorString(err) << std::endl;
-    }
-    std::cout << "  Copied data Host -> Device" << std::endl;
+    std::cout << "Performing memory operations...\n";
     
-    // Memset on device
-    err = mcMemset(d_data, 0, BYTES);
-    if (err != mcSuccess) {
-        std::cerr << "mcMemset failed: " << mcGetErrorString(err) << std::endl;
-    }
-    std::cout << "  Memset on device" << std::endl;
+    // H2D copy
+    auto start = std::chrono::high_resolution_clock::now();
+    mcMemcpyAsync(d_data, h_data, bytes, mcMemcpyHostToDevice, stream);
+    mcStreamSynchronize(stream);
+    auto h2d_time = std::chrono::high_resolution_clock::now() - start;
     
-    // Copy data back (D2H)
-    err = mcMemcpy(h_data, d_data, BYTES, mcMemcpyDeviceToHost);
-    if (err != mcSuccess) {
-        std::cerr << "mcMemcpy D2H failed: " << mcGetErrorString(err) << std::endl;
-    }
-    std::cout << "  Copied data Device -> Host" << std::endl;
+    std::cout << "  H2D Transfer: " << std::chrono::duration<double, std::milli>(h2d_time).count() << " ms\n";
     
-    // Synchronize
-    mcDeviceSynchronize();
-    std::cout << "  Device synchronized" << std::endl;
+    // Memset
+    start = std::chrono::high_resolution_clock::now();
+    mcMemsetAsync(d_data, 0, bytes, stream);
+    mcStreamSynchronize(stream);
+    auto memset_time = std::chrono::high_resolution_clock::now() - start;
+    
+    std::cout << "  Memset: " << std::chrono::duration<double, std::milli>(memset_time).count() << " ms\n";
+    
+    // D2H copy
+    start = std::chrono::high_resolution_clock::now();
+    mcMemcpyAsync(h_data, d_data, bytes, mcMemcpyDeviceToHost, stream);
+    mcStreamSynchronize(stream);
+    auto d2h_time = std::chrono::high_resolution_clock::now() - start;
+    
+    std::cout << "  D2H Transfer: " << std::chrono::duration<double, std::milli>(d2h_time).count() << " ms\n";
     
     // Cleanup
+    mcStreamDestroy(stream);
     mcFree(d_data);
     delete[] h_data;
     
-    std::cout << "  GPU workload completed" << std::endl;
-}
-#endif
-
-int main() {
-    std::cout << "TraceSmith MetaX GPU Profiling Example" << std::endl;
-    std::cout << "Version: " << getVersionString() << std::endl;
-    
-    // =========================================================================
-    // Part 1: Platform Detection
-    // =========================================================================
-    printSeparator("Part 1: Platform Detection");
-    
-#ifdef TRACESMITH_ENABLE_MACA
-    std::cout << "MACA support: ENABLED" << std::endl;
-    
-    if (isMACAAvailable()) {
-        std::cout << "MetaX GPU: DETECTED" << std::endl;
-        std::cout << "Driver version: " << getMACADriverVersion() << std::endl;
-        std::cout << "Device count: " << getMACADeviceCount() << std::endl;
-    } else {
-        std::cout << "MetaX GPU: NOT DETECTED" << std::endl;
-        std::cout << "(Make sure MetaX driver is loaded)" << std::endl;
-        return 1;
-    }
+    std::cout << "GPU workload completed.\n";
 #else
-    std::cout << "MACA support: DISABLED" << std::endl;
-    std::cout << "(Rebuild with -DTRACESMITH_ENABLE_MACA=ON)" << std::endl;
-    return 1;
+    std::cout << "MACA support not enabled. Skipping GPU workload.\n";
 #endif
-    
-    // =========================================================================
-    // Part 2: Create MCPTI Profiler
-    // =========================================================================
-    printSeparator("Part 2: Initialize MCPTI Profiler");
+}
+
+void profileWithMCPTI() {
+    printSeparator("Profiling with MCPTI");
     
 #ifdef TRACESMITH_ENABLE_MACA
+    // Create MCPTI profiler
     auto profiler = createProfiler(PlatformType::MACA);
-    if (!profiler) {
-        std::cerr << "Failed to create MCPTI profiler" << std::endl;
-        return 1;
-    }
     
-    std::cout << "Platform: " << platformTypeToString(profiler->platformType()) << std::endl;
+    if (!profiler) {
+        std::cerr << "Failed to create MCPTI profiler.\n";
+        std::cerr << "Make sure MACA driver is loaded and GPU is accessible.\n";
+        return;
+    }
     
     // Get device info
     auto devices = profiler->getDeviceInfo();
-    std::cout << "\nFound " << devices.size() << " MetaX GPU(s):" << std::endl;
+    std::cout << "Profiler detected " << devices.size() << " device(s)\n\n";
+    
     for (const auto& dev : devices) {
-        printDeviceInfo(dev);
+        std::cout << "Device " << dev.device_id << ": " << dev.name << "\n";
+        std::cout << "  Vendor: " << dev.vendor << "\n";
+        std::cout << "  Memory: " << (dev.total_memory / (1024*1024*1024.0)) << " GB\n";
     }
     
     // Configure profiler
@@ -160,92 +162,116 @@ int main() {
     config.capture_memcpy = true;
     config.capture_memset = true;
     config.capture_sync = true;
-    config.buffer_size = 1024 * 1024;  // 1M events buffer
     
     if (!profiler->initialize(config)) {
-        std::cerr << "Failed to initialize profiler" << std::endl;
-        return 1;
+        std::cerr << "Failed to initialize profiler.\n";
+        return;
     }
-    std::cout << "\nProfiler initialized successfully" << std::endl;
     
-    // =========================================================================
-    // Part 3: Capture GPU Events
-    // =========================================================================
-    printSeparator("Part 3: Capture GPU Events");
-    
-    std::cout << "Starting capture..." << std::endl;
-    if (!profiler->startCapture()) {
-        std::cerr << "Failed to start capture" << std::endl;
-        return 1;
-    }
+    std::cout << "\nStarting capture...\n";
+    profiler->startCapture();
     
     // Run GPU workload
-    std::cout << "\nRunning GPU workload:" << std::endl;
     runGPUWorkload();
     
-    // Stop capture
-    std::cout << "\nStopping capture..." << std::endl;
     profiler->stopCapture();
+    std::cout << "Capture stopped.\n";
     
-    std::cout << "Events captured: " << profiler->eventsCaptured() << std::endl;
-    std::cout << "Events dropped:  " << profiler->eventsDropped() << std::endl;
-    
-    // =========================================================================
-    // Part 4: Retrieve and Analyze Events
-    // =========================================================================
-    printSeparator("Part 4: Analyze Captured Events");
-    
+    // Get captured events
     std::vector<TraceEvent> events;
     profiler->getEvents(events);
     
-    std::cout << "Retrieved " << events.size() << " events" << std::endl;
+    std::cout << "\nCaptured " << events.size() << " events\n";
+    std::cout << "  Total captured: " << profiler->eventsCaptured() << "\n";
+    std::cout << "  Dropped: " << profiler->eventsDropped() << "\n";
     
-    // Count by type
-    std::map<EventType, int> type_counts;
-    for (const auto& ev : events) {
-        type_counts[ev.type]++;
-    }
-    
-    std::cout << "\nEvents by type:" << std::endl;
-    for (const auto& [type, count] : type_counts) {
-        std::cout << "  " << std::setw(20) << std::left << eventTypeToString(type) 
-                  << ": " << count << std::endl;
-    }
-    
-    // Print first few events
-    std::cout << "\nFirst 10 events:" << std::endl;
-    for (size_t i = 0; i < std::min(events.size(), size_t(10)); i++) {
-        const auto& ev = events[i];
-        std::cout << "  [" << std::setw(3) << i << "] "
-                  << std::setw(20) << std::left << eventTypeToString(ev.type)
-                  << " | " << ev.name << std::endl;
-    }
-    
-    // =========================================================================
-    // Part 5: Export to Files
-    // =========================================================================
-    printSeparator("Part 5: Export Trace Files");
-    
-    // Export to SBT format
-    {
-        SBTWriter writer("metax_trace.sbt");
-        writer.writeHeader();
+    // Analyze events
+    if (!events.empty()) {
+        std::cout << "\nEvent breakdown:\n";
+        
+        int kernel_count = 0, memcpy_count = 0, memset_count = 0, sync_count = 0;
+        
+        for (const auto& event : events) {
+            switch (event.type) {
+                case EventType::KernelLaunch:
+                case EventType::KernelComplete:
+                    kernel_count++;
+                    break;
+                case EventType::MemcpyH2D:
+                case EventType::MemcpyD2H:
+                case EventType::MemcpyD2D:
+                    memcpy_count++;
+                    break;
+                case EventType::MemsetDevice:
+                    memset_count++;
+                    break;
+                case EventType::StreamSync:
+                case EventType::DeviceSync:
+                    sync_count++;
+                    break;
+                default:
+                    break;
+            }
+        }
+        
+        std::cout << "  Kernel events: " << kernel_count << "\n";
+        std::cout << "  Memcpy events: " << memcpy_count << "\n";
+        std::cout << "  Memset events: " << memset_count << "\n";
+        std::cout << "  Sync events: " << sync_count << "\n";
+        
+        // Save to file
+        const std::string sbt_file = "metax_trace.sbt";
+        SBTWriter writer(sbt_file);
         writer.writeEvents(events);
         writer.finalize();
-        std::cout << "Saved to metax_trace.sbt" << std::endl;
-    }
-    
-    // Export to Perfetto JSON
-    {
+        
+        std::cout << "\nTrace saved to: " << sbt_file << "\n";
+        
+        // Export to Perfetto
+        const std::string json_file = "metax_trace.json";
         PerfettoExporter exporter;
-        exporter.exportToFile(events, "metax_trace.json");
-        std::cout << "Saved to metax_trace.json" << std::endl;
-        std::cout << "View at: https://ui.perfetto.dev" << std::endl;
+        exporter.exportEvents(events, json_file);
+        
+        std::cout << "Perfetto JSON exported to: " << json_file << "\n";
+        std::cout << "View at: https://ui.perfetto.dev\n";
     }
     
-    // Cleanup
     profiler->finalize();
+#else
+    std::cout << "MACA support not enabled in this build.\n";
 #endif
+}
+
+int main() {
+    std::cout << "TraceSmith MetaX GPU Profiling Example\n";
+    std::cout << "Version: " << getVersionString() << "\n";
+    std::cout << std::string(60, '=') << "\n";
+    
+    // Check MACA availability
+    std::cout << "\nChecking MetaX GPU availability...\n";
+    
+    if (isMACAAvailable()) {
+        std::cout << "MetaX GPU detected!\n";
+        std::cout << "  Device count: " << getMACADeviceCount() << "\n";
+        std::cout << "  Driver version: " << getMACADriverVersion() << "\n";
+        
+        printDeviceInfo();
+        profileWithMCPTI();
+    } else {
+        std::cout << "No MetaX GPU detected.\n";
+        std::cout << "\nPossible reasons:\n";
+        std::cout << "  1. No MetaX GPU installed\n";
+        std::cout << "  2. MACA driver not loaded\n";
+        std::cout << "  3. TraceSmith built without MACA support\n";
+        
+#ifdef TRACESMITH_ENABLE_MACA
+        std::cout << "\nMACA support is enabled in this build.\n";
+        std::cout << "Check if MACA driver is loaded: mx-smi\n";
+#else
+        std::cout << "\nMACA support is NOT enabled in this build.\n";
+        std::cout << "Rebuild with: cmake -DTRACESMITH_ENABLE_MACA=ON ..\n";
+#endif
+    }
     
     printSeparator("Example Complete");
     return 0;

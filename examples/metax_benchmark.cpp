@@ -1,28 +1,21 @@
 /**
- * TraceSmith MetaX GPU Benchmark Example
+ * MetaX GPU Benchmark Example
  * 
- * A comprehensive benchmark demonstrating MCPTI profiling capabilities
- * on MetaX GPUs with various workloads and profiling scenarios.
+ * This example benchmarks memory bandwidth and profiling overhead
+ * on MetaX GPUs (C500, C550) using MCPTI.
  * 
- * This example shows:
- * - High-throughput event capture
- * - Multi-stream profiling
- * - Kernel execution statistics
- * - Memory bandwidth analysis
- * - Timeline generation
- * 
- * Build: cmake -DTRACESMITH_ENABLE_MACA=ON ..
- * Run: ./metax_benchmark [iterations]
+ * Build with:
+ *   cmake -DTRACESMITH_ENABLE_MACA=ON ..
+ *   make metax_benchmark
  */
 
-#include <tracesmith/tracesmith.hpp>
 #include <iostream>
 #include <iomanip>
-#include <chrono>
 #include <vector>
-#include <map>
+#include <chrono>
 #include <numeric>
 #include <algorithm>
+#include <tracesmith/tracesmith.hpp>
 
 #ifdef TRACESMITH_ENABLE_MACA
 #include <mcr/mc_runtime_api.h>
@@ -31,321 +24,290 @@
 using namespace tracesmith;
 using Clock = std::chrono::high_resolution_clock;
 
-// Benchmark configuration
-struct BenchmarkConfig {
-    int iterations = 100;
-    size_t data_size = 4 * 1024 * 1024;  // 4 MB
-    int num_streams = 4;
-    bool verbose = false;
+struct BenchmarkResult {
+    std::string name;
+    double mean_ms;
+    double stddev_ms;
+    double bandwidth_gbps;
+    size_t bytes;
 };
 
-// Benchmark results
-struct BenchmarkResults {
-    double total_time_ms = 0;
-    size_t total_events = 0;
-    size_t kernel_events = 0;
-    size_t memcpy_events = 0;
-    size_t memset_events = 0;
-    size_t sync_events = 0;
-    double events_per_second = 0;
-    double avg_kernel_time_us = 0;
-    double total_bandwidth_gbps = 0;
-};
-
-void printSeparator(const std::string& title = "") {
+void printResult(const BenchmarkResult& result) {
+    std::cout << std::left << std::setw(30) << result.name
+              << std::right << std::setw(12) << std::fixed << std::setprecision(3) 
+              << result.mean_ms << " ms"
+              << std::setw(12) << result.stddev_ms << " ms";
+    
+    if (result.bandwidth_gbps > 0) {
+        std::cout << std::setw(12) << result.bandwidth_gbps << " GB/s";
+    }
     std::cout << "\n";
-    if (!title.empty()) {
-        std::cout << "=== " << title << " ===" << std::endl;
-    }
-    std::cout << std::string(60, '-') << std::endl;
 }
 
+class MetaXBenchmark {
+public:
+    MetaXBenchmark(int device_id = 0) : device_id_(device_id) {
 #ifdef TRACESMITH_ENABLE_MACA
-// Multi-stream workload
-void runMultiStreamWorkload(const BenchmarkConfig& config) {
-    std::vector<mcStream_t> streams(config.num_streams);
-    std::vector<float*> d_buffers(config.num_streams);
-    
-    // Create streams and allocate memory
-    for (int i = 0; i < config.num_streams; i++) {
-        mcStreamCreate(&streams[i]);
-        mcMalloc((void**)&d_buffers[i], config.data_size);
-    }
-    
-    // Host buffer
-    std::vector<float> h_buffer(config.data_size / sizeof(float));
-    
-    // Run iterations across streams
-    for (int iter = 0; iter < config.iterations; iter++) {
-        int stream_idx = iter % config.num_streams;
+        mcSetDevice(device_id);
+        mcGetDeviceProperties(&prop_, device_id);
         
-        // H2D transfer
-        mcMemcpyAsync(d_buffers[stream_idx], h_buffer.data(), 
-                      config.data_size, mcMemcpyHostToDevice, 
-                      streams[stream_idx]);
+        std::cout << "Benchmark Device: " << prop_.name << "\n";
+        std::cout << "  Total Memory: " << (prop_.totalGlobalMem / (1024.0*1024*1024)) << " GB\n";
+        std::cout << "  Memory Clock: " << (prop_.memoryClockRate / 1000.0) << " MHz\n";
+        std::cout << "  Memory Bus: " << prop_.memoryBusWidth << " bit\n";
         
-        // Memset
-        mcMemsetAsync(d_buffers[stream_idx], 0, config.data_size, 
-                      streams[stream_idx]);
-        
-        // D2H transfer
-        mcMemcpyAsync(h_buffer.data(), d_buffers[stream_idx],
-                      config.data_size, mcMemcpyDeviceToHost,
-                      streams[stream_idx]);
-    }
-    
-    // Synchronize all streams
-    for (int i = 0; i < config.num_streams; i++) {
-        mcStreamSynchronize(streams[i]);
-    }
-    
-    // Cleanup
-    for (int i = 0; i < config.num_streams; i++) {
-        mcFree(d_buffers[i]);
-        mcStreamDestroy(streams[i]);
-    }
-}
-
-// Memory bandwidth test
-void runBandwidthTest(const BenchmarkConfig& config) {
-    float* d_src = nullptr;
-    float* d_dst = nullptr;
-    
-    mcMalloc((void**)&d_src, config.data_size);
-    mcMalloc((void**)&d_dst, config.data_size);
-    
-    // Device to device copies
-    for (int i = 0; i < config.iterations / 2; i++) {
-        mcMemcpy(d_dst, d_src, config.data_size, mcMemcpyDeviceToDevice);
-    }
-    
-    mcDeviceSynchronize();
-    
-    mcFree(d_src);
-    mcFree(d_dst);
-}
-
-// Analyze captured events
-BenchmarkResults analyzeEvents(const std::vector<TraceEvent>& events, 
-                               double elapsed_ms) {
-    BenchmarkResults results;
-    results.total_events = events.size();
-    results.total_time_ms = elapsed_ms;
-    
-    std::vector<uint64_t> kernel_durations;
-    size_t total_bytes_transferred = 0;
-    
-    for (const auto& ev : events) {
-        switch (ev.type) {
-            case EventType::KernelLaunch:
-            case EventType::KernelComplete:
-                results.kernel_events++;
-                if (ev.duration > 0) {
-                    kernel_durations.push_back(ev.duration);
-                }
-                break;
-                
-            case EventType::MemcpyH2D:
-            case EventType::MemcpyD2H:
-            case EventType::MemcpyD2D:
-                results.memcpy_events++;
-                // Extract bytes from metadata
-                if (ev.metadata.count("bytes")) {
-                    total_bytes_transferred += std::stoull(ev.metadata.at("bytes"));
-                }
-                break;
-                
-            case EventType::MemsetDevice:
-                results.memset_events++;
-                if (ev.metadata.count("bytes")) {
-                    total_bytes_transferred += std::stoull(ev.metadata.at("bytes"));
-                }
-                break;
-                
-            case EventType::StreamSync:
-            case EventType::DeviceSync:
-                results.sync_events++;
-                break;
-                
-            default:
-                break;
-        }
-    }
-    
-    // Calculate statistics
-    results.events_per_second = (results.total_events / elapsed_ms) * 1000.0;
-    
-    if (!kernel_durations.empty()) {
-        uint64_t total_duration = std::accumulate(
-            kernel_durations.begin(), kernel_durations.end(), 0ULL);
-        results.avg_kernel_time_us = (total_duration / kernel_durations.size()) / 1000.0;
-    }
-    
-    // Bandwidth in GB/s
-    results.total_bandwidth_gbps = (total_bytes_transferred / elapsed_ms) / 1e6;
-    
-    return results;
-}
-
-void printResults(const BenchmarkResults& results) {
-    std::cout << std::fixed << std::setprecision(2);
-    
-    std::cout << "\nBenchmark Results:" << std::endl;
-    std::cout << "  Total time:        " << results.total_time_ms << " ms" << std::endl;
-    std::cout << "  Total events:      " << results.total_events << std::endl;
-    std::cout << "  Events/second:     " << results.events_per_second << std::endl;
-    
-    std::cout << "\nEvent Breakdown:" << std::endl;
-    std::cout << "  Kernel events:     " << results.kernel_events << std::endl;
-    std::cout << "  Memcpy events:     " << results.memcpy_events << std::endl;
-    std::cout << "  Memset events:     " << results.memset_events << std::endl;
-    std::cout << "  Sync events:       " << results.sync_events << std::endl;
-    
-    if (results.avg_kernel_time_us > 0) {
-        std::cout << "\nKernel Statistics:" << std::endl;
-        std::cout << "  Avg kernel time:   " << results.avg_kernel_time_us << " µs" << std::endl;
-    }
-    
-    if (results.total_bandwidth_gbps > 0) {
-        std::cout << "\nMemory Statistics:" << std::endl;
-        std::cout << "  Effective BW:      " << results.total_bandwidth_gbps << " GB/s" << std::endl;
-    }
-}
+        // Theoretical peak bandwidth
+        double peak_bandwidth = 2.0 * prop_.memoryClockRate * 1000.0 * (prop_.memoryBusWidth / 8.0) / 1e9;
+        std::cout << "  Peak Bandwidth: " << std::fixed << std::setprecision(1) << peak_bandwidth << " GB/s\n\n";
 #endif
-
-int main(int argc, char* argv[]) {
-    std::cout << "TraceSmith MetaX GPU Benchmark" << std::endl;
-    std::cout << "Version: " << getVersionString() << std::endl;
-    
-    BenchmarkConfig config;
-    if (argc > 1) {
-        config.iterations = std::atoi(argv[1]);
     }
     
-    printSeparator("Configuration");
-    std::cout << "Iterations:  " << config.iterations << std::endl;
-    std::cout << "Data size:   " << (config.data_size / (1024*1024)) << " MB" << std::endl;
-    std::cout << "Streams:     " << config.num_streams << std::endl;
+    ~MetaXBenchmark() = default;
     
+    BenchmarkResult benchmarkH2D(size_t bytes, int iterations = 10) {
+        BenchmarkResult result;
+        result.name = "Host to Device";
+        result.bytes = bytes;
+        
 #ifdef TRACESMITH_ENABLE_MACA
-    // Check MACA availability
-    printSeparator("Platform Detection");
+        std::vector<double> times;
+        
+        // Allocate
+        float* h_data = new float[bytes / sizeof(float)];
+        float* d_data = nullptr;
+        mcMalloc(&d_data, bytes);
+        
+        // Warm up
+        mcMemcpy(d_data, h_data, bytes, mcMemcpyHostToDevice);
+        mcDeviceSynchronize();
+        
+        // Benchmark
+        for (int i = 0; i < iterations; ++i) {
+            auto start = Clock::now();
+            mcMemcpy(d_data, h_data, bytes, mcMemcpyHostToDevice);
+            mcDeviceSynchronize();
+            auto end = Clock::now();
+            
+            double ms = std::chrono::duration<double, std::milli>(end - start).count();
+            times.push_back(ms);
+        }
+        
+        // Calculate statistics
+        double sum = std::accumulate(times.begin(), times.end(), 0.0);
+        result.mean_ms = sum / times.size();
+        
+        double sq_sum = std::inner_product(times.begin(), times.end(), times.begin(), 0.0);
+        result.stddev_ms = std::sqrt(sq_sum / times.size() - result.mean_ms * result.mean_ms);
+        
+        result.bandwidth_gbps = (bytes / 1e9) / (result.mean_ms / 1000.0);
+        
+        // Cleanup
+        mcFree(d_data);
+        delete[] h_data;
+#endif
+        return result;
+    }
+    
+    BenchmarkResult benchmarkD2H(size_t bytes, int iterations = 10) {
+        BenchmarkResult result;
+        result.name = "Device to Host";
+        result.bytes = bytes;
+        
+#ifdef TRACESMITH_ENABLE_MACA
+        std::vector<double> times;
+        
+        float* h_data = new float[bytes / sizeof(float)];
+        float* d_data = nullptr;
+        mcMalloc(&d_data, bytes);
+        
+        mcMemcpy(d_data, h_data, bytes, mcMemcpyHostToDevice);
+        mcDeviceSynchronize();
+        
+        for (int i = 0; i < iterations; ++i) {
+            auto start = Clock::now();
+            mcMemcpy(h_data, d_data, bytes, mcMemcpyDeviceToHost);
+            mcDeviceSynchronize();
+            auto end = Clock::now();
+            
+            double ms = std::chrono::duration<double, std::milli>(end - start).count();
+            times.push_back(ms);
+        }
+        
+        double sum = std::accumulate(times.begin(), times.end(), 0.0);
+        result.mean_ms = sum / times.size();
+        
+        double sq_sum = std::inner_product(times.begin(), times.end(), times.begin(), 0.0);
+        result.stddev_ms = std::sqrt(sq_sum / times.size() - result.mean_ms * result.mean_ms);
+        
+        result.bandwidth_gbps = (bytes / 1e9) / (result.mean_ms / 1000.0);
+        
+        mcFree(d_data);
+        delete[] h_data;
+#endif
+        return result;
+    }
+    
+    BenchmarkResult benchmarkD2D(size_t bytes, int iterations = 10) {
+        BenchmarkResult result;
+        result.name = "Device to Device";
+        result.bytes = bytes;
+        
+#ifdef TRACESMITH_ENABLE_MACA
+        std::vector<double> times;
+        
+        float* d_src = nullptr;
+        float* d_dst = nullptr;
+        mcMalloc(&d_src, bytes);
+        mcMalloc(&d_dst, bytes);
+        mcMemset(d_src, 0, bytes);
+        mcDeviceSynchronize();
+        
+        // Warm up
+        mcMemcpy(d_dst, d_src, bytes, mcMemcpyDeviceToDevice);
+        mcDeviceSynchronize();
+        
+        for (int i = 0; i < iterations; ++i) {
+            auto start = Clock::now();
+            mcMemcpy(d_dst, d_src, bytes, mcMemcpyDeviceToDevice);
+            mcDeviceSynchronize();
+            auto end = Clock::now();
+            
+            double ms = std::chrono::duration<double, std::milli>(end - start).count();
+            times.push_back(ms);
+        }
+        
+        double sum = std::accumulate(times.begin(), times.end(), 0.0);
+        result.mean_ms = sum / times.size();
+        
+        double sq_sum = std::inner_product(times.begin(), times.end(), times.begin(), 0.0);
+        result.stddev_ms = std::sqrt(sq_sum / times.size() - result.mean_ms * result.mean_ms);
+        
+        result.bandwidth_gbps = (bytes / 1e9) / (result.mean_ms / 1000.0);
+        
+        mcFree(d_src);
+        mcFree(d_dst);
+#endif
+        return result;
+    }
+    
+    void benchmarkProfilingOverhead(int iterations = 100) {
+        std::cout << "\n=== Profiling Overhead Test ===\n\n";
+        
+#ifdef TRACESMITH_ENABLE_MACA
+        const size_t bytes = 64 * 1024 * 1024;  // 64 MB
+        
+        float* h_data = new float[bytes / sizeof(float)];
+        float* d_data = nullptr;
+        mcMalloc(&d_data, bytes);
+        
+        // Without profiling
+        std::vector<double> times_noprofile;
+        for (int i = 0; i < iterations; ++i) {
+            auto start = Clock::now();
+            mcMemcpy(d_data, h_data, bytes, mcMemcpyHostToDevice);
+            mcDeviceSynchronize();
+            auto end = Clock::now();
+            times_noprofile.push_back(std::chrono::duration<double, std::milli>(end - start).count());
+        }
+        
+        double mean_noprofile = std::accumulate(times_noprofile.begin(), times_noprofile.end(), 0.0) / times_noprofile.size();
+        
+        // With MCPTI profiling
+        auto profiler = createProfiler(PlatformType::MACA);
+        if (!profiler) {
+            std::cerr << "Failed to create profiler\n";
+            mcFree(d_data);
+            delete[] h_data;
+            return;
+        }
+        
+        ProfilerConfig config;
+        config.capture_memcpy = true;
+        profiler->initialize(config);
+        profiler->startCapture();
+        
+        std::vector<double> times_profile;
+        for (int i = 0; i < iterations; ++i) {
+            auto start = Clock::now();
+            mcMemcpy(d_data, h_data, bytes, mcMemcpyHostToDevice);
+            mcDeviceSynchronize();
+            auto end = Clock::now();
+            times_profile.push_back(std::chrono::duration<double, std::milli>(end - start).count());
+        }
+        
+        profiler->stopCapture();
+        
+        double mean_profile = std::accumulate(times_profile.begin(), times_profile.end(), 0.0) / times_profile.size();
+        
+        double overhead = ((mean_profile - mean_noprofile) / mean_noprofile) * 100.0;
+        
+        std::cout << "Without profiling: " << std::fixed << std::setprecision(3) << mean_noprofile << " ms\n";
+        std::cout << "With MCPTI profiling: " << mean_profile << " ms\n";
+        std::cout << "Overhead: " << std::setprecision(1) << overhead << "%\n";
+        
+        std::vector<TraceEvent> events;
+        profiler->getEvents(events);
+        std::cout << "Events captured: " << events.size() << "\n";
+        
+        profiler->finalize();
+        mcFree(d_data);
+        delete[] h_data;
+#else
+        std::cout << "MACA support not enabled.\n";
+#endif
+    }
+    
+private:
+    int device_id_;
+#ifdef TRACESMITH_ENABLE_MACA
+    mcDeviceProp_t prop_;
+#endif
+};
+
+int main() {
+    std::cout << "TraceSmith MetaX GPU Benchmark\n";
+    std::cout << "Version: " << getVersionString() << "\n";
+    std::cout << std::string(60, '=') << "\n\n";
     
     if (!isMACAAvailable()) {
-        std::cerr << "MetaX GPU not detected" << std::endl;
+        std::cout << "No MetaX GPU detected.\n";
+        std::cout << "Build with -DTRACESMITH_ENABLE_MACA=ON and ensure driver is loaded.\n";
         return 1;
     }
     
-    std::cout << "MetaX GPU detected" << std::endl;
-    std::cout << "Device count: " << getMACADeviceCount() << std::endl;
+    std::cout << "MetaX GPUs detected: " << getMACADeviceCount() << "\n\n";
     
-    // Create profiler
-    printSeparator("Initialize Profiler");
+    MetaXBenchmark benchmark(0);
     
-    auto profiler = createProfiler(PlatformType::MACA);
-    if (!profiler) {
-        std::cerr << "Failed to create profiler" << std::endl;
-        return 1;
+    // Memory bandwidth tests
+    std::cout << "\n=== Memory Bandwidth Tests ===\n\n";
+    
+    std::vector<size_t> sizes = {
+        1 * 1024 * 1024,    // 1 MB
+        16 * 1024 * 1024,   // 16 MB
+        64 * 1024 * 1024,   // 64 MB
+        256 * 1024 * 1024,  // 256 MB
+    };
+    
+    std::cout << std::left << std::setw(30) << "Test"
+              << std::right << std::setw(15) << "Mean"
+              << std::setw(15) << "StdDev"
+              << std::setw(15) << "Bandwidth" << "\n";
+    std::cout << std::string(75, '-') << "\n";
+    
+    for (size_t size : sizes) {
+        std::cout << "\nSize: " << (size / (1024*1024)) << " MB\n";
+        
+        printResult(benchmark.benchmarkH2D(size));
+        printResult(benchmark.benchmarkD2H(size));
+        printResult(benchmark.benchmarkD2D(size));
     }
     
-    // Print device info
-    auto devices = profiler->getDeviceInfo();
-    for (const auto& dev : devices) {
-        std::cout << "Device " << dev.device_id << ": " << dev.name << std::endl;
-        std::cout << "  Memory: " << (dev.total_memory / (1024*1024*1024)) << " GB" << std::endl;
-        std::cout << "  CUs: " << dev.multiprocessor_count << std::endl;
-    }
+    // Profiling overhead test
+    benchmark.benchmarkProfilingOverhead();
     
-    // Configure and initialize
-    ProfilerConfig prof_config;
-    prof_config.capture_kernels = true;
-    prof_config.capture_memcpy = true;
-    prof_config.capture_memset = true;
-    prof_config.capture_sync = true;
-    prof_config.buffer_size = 10 * 1024 * 1024;  // 10M events
+    std::cout << "\n" << std::string(60, '=') << "\n";
+    std::cout << "Benchmark complete!\n";
     
-    if (!profiler->initialize(prof_config)) {
-        std::cerr << "Failed to initialize profiler" << std::endl;
-        return 1;
-    }
-    
-    // =========================================================================
-    // Benchmark 1: Multi-Stream Workload
-    // =========================================================================
-    printSeparator("Benchmark 1: Multi-Stream Workload");
-    
-    profiler->startCapture();
-    auto start = Clock::now();
-    
-    runMultiStreamWorkload(config);
-    
-    auto end = Clock::now();
-    profiler->stopCapture();
-    
-    double elapsed_ms = std::chrono::duration<double, std::milli>(end - start).count();
-    
-    std::vector<TraceEvent> events;
-    profiler->getEvents(events);
-    
-    auto results1 = analyzeEvents(events, elapsed_ms);
-    printResults(results1);
-    
-    // Export benchmark 1 results
-    {
-        SBTWriter writer("metax_multistream.sbt");
-        writer.writeHeader();
-        writer.writeEvents(events);
-        writer.finalize();
-        std::cout << "\nSaved to metax_multistream.sbt" << std::endl;
-    }
-    
-    // =========================================================================
-    // Benchmark 2: Memory Bandwidth
-    // =========================================================================
-    printSeparator("Benchmark 2: Memory Bandwidth Test");
-    
-    events.clear();
-    profiler->startCapture();
-    start = Clock::now();
-    
-    runBandwidthTest(config);
-    
-    end = Clock::now();
-    profiler->stopCapture();
-    
-    elapsed_ms = std::chrono::duration<double, std::milli>(end - start).count();
-    profiler->getEvents(events);
-    
-    auto results2 = analyzeEvents(events, elapsed_ms);
-    printResults(results2);
-    
-    // Export benchmark 2 results
-    {
-        PerfettoExporter exporter;
-        exporter.exportToFile(events, "metax_bandwidth.json");
-        std::cout << "\nSaved to metax_bandwidth.json" << std::endl;
-    }
-    
-    // =========================================================================
-    // Summary
-    // =========================================================================
-    printSeparator("Summary");
-    
-    std::cout << "Total events captured: " 
-              << (results1.total_events + results2.total_events) << std::endl;
-    std::cout << "Output files:" << std::endl;
-    std::cout << "  - metax_multistream.sbt" << std::endl;
-    std::cout << "  - metax_bandwidth.json" << std::endl;
-    std::cout << "\nView traces at: https://ui.perfetto.dev" << std::endl;
-    
-    profiler->finalize();
-    
-#else
-    std::cerr << "MACA support not enabled" << std::endl;
-    std::cerr << "Rebuild with -DTRACESMITH_ENABLE_MACA=ON" << std::endl;
-    return 1;
-#endif
-    
-    printSeparator("Benchmark Complete");
     return 0;
 }
