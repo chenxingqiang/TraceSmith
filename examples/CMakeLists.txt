@@ -293,17 +293,35 @@ if(TRACESMITH_ENABLE_MACA AND MACA_ROOT)
     add_executable(metax_benchmark
         metax_benchmark.cpp
     )
-    
+
     target_include_directories(metax_benchmark PRIVATE
         ${MACA_ROOT}/include
         ${MACA_ROOT}/include/mcr
     )
-    
+
     target_link_libraries(metax_benchmark PRIVATE
         tracesmith-common
         tracesmith-format
         tracesmith-capture
         tracesmith-state
+    )
+    
+    # MetaX cluster profiling example
+    add_executable(metax_cluster_example
+        metax_cluster_example.cpp
+    )
+
+    target_include_directories(metax_cluster_example PRIVATE
+        ${MACA_ROOT}/include
+        ${MACA_ROOT}/include/mcr
+    )
+
+    target_link_libraries(metax_cluster_example PRIVATE
+        tracesmith-common
+        tracesmith-format
+        tracesmith-capture
+        tracesmith-state
+        tracesmith-cluster
     )
 endif()
 
@@ -422,7 +440,8 @@ endif()
 if(TRACESMITH_ENABLE_MACA)
     message(STATUS "  MetaX examples (MetaX GPU):")
     message(STATUS "    - metax_example (MetaX MCPTI profiling)")
-    message(STATUS "    - metax_benchmark (MetaX benchmark with multi-stream)")
+    message(STATUS "    - metax_benchmark (MetaX memory bandwidth test)")
+    message(STATUS "    - metax_cluster_example (MetaX multi-GPU cluster profiling)")
 endif()
 message(STATUS "  Python examples:")
 message(STATUS "    - python_example.py (Python API demonstration)")

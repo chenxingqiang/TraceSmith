@@ -27,7 +27,11 @@ enum class GPULinkType {
     NVLink2,        // NVLink 2.0 (25 GB/s per link)
     NVLink3,        // NVLink 3.0 (50 GB/s per link)
     NVLink4,        // NVLink 4.0 (100 GB/s per link)
-    NVSwitch        // NVSwitch connection
+    NVSwitch,       // NVSwitch connection
+    // MetaX link types
+    MXLink1,        // MetaX MXLink 1.0
+    MXLink2,        // MetaX MXLink 2.0
+    MXSwitch        // MetaX Switch connection
 };
 
 /**
@@ -42,6 +46,9 @@ inline const char* linkTypeToString(GPULinkType type) {
         case GPULinkType::NVLink3:  return "NVLink3";
         case GPULinkType::NVLink4:  return "NVLink4";
         case GPULinkType::NVSwitch: return "NVSwitch";
+        case GPULinkType::MXLink1:  return "MXLink1";
+        case GPULinkType::MXLink2:  return "MXLink2";
+        case GPULinkType::MXSwitch: return "MXSwitch";
         default:                    return "Unknown";
     }
 }
@@ -55,8 +62,11 @@ inline double getLinkBandwidth(GPULinkType type) {
         case GPULinkType::NVLink2:  return 25.0;
         case GPULinkType::NVLink3:  return 50.0;
         case GPULinkType::NVLink4:  return 100.0;
-        case GPULinkType::PCIe:     return 16.0;  // PCIe 4.0 x16
-        case GPULinkType::NVSwitch: return 900.0; // Full bisection
+        case GPULinkType::PCIe:     return 16.0;   // PCIe 4.0 x16
+        case GPULinkType::NVSwitch: return 900.0;  // Full bisection
+        case GPULinkType::MXLink1:  return 50.0;   // MetaX MXLink 1.0
+        case GPULinkType::MXLink2:  return 100.0;  // MetaX MXLink 2.0
+        case GPULinkType::MXSwitch: return 800.0;  // MetaX Switch
         default:                    return 0.0;
     }
 }
@@ -75,6 +85,17 @@ struct GPULink {
 };
 
 /**
+ * GPU vendor type
+ */
+enum class GPUVendor {
+    Unknown,
+    NVIDIA,
+    AMD,
+    MetaX,
+    Apple
+};
+
+/**
  * GPU device information for topology
  */
 struct GPUDeviceTopology {
@@ -82,8 +103,14 @@ struct GPUDeviceTopology {
     std::string name;           // Device name
     std::string pci_bus_id;     // PCI bus ID
     uint32_t numa_node;         // NUMA node affinity
-    bool has_nvlink;            // Has NVLink capability
+    GPUVendor vendor;           // GPU vendor
+    bool has_nvlink;            // Has NVLink capability (NVIDIA)
     uint32_t nvlink_count;      // Number of NVLink connections
+    bool has_mxlink;            // Has MXLink capability (MetaX)
+    uint32_t mxlink_count;      // Number of MXLink connections
+    size_t total_memory;        // Total memory in bytes
+    int compute_major;          // Compute capability major
+    int compute_minor;          // Compute capability minor
 };
 
 /**
@@ -222,6 +249,7 @@ private:
     // Internal discovery methods
     bool discoverNVML();
     bool discoverCUDA();
+    bool discoverMACA();
     void buildLinkMatrix();
     
     GPUTopologyInfo topology_;
@@ -237,6 +265,16 @@ bool isNVMLAvailable();
  * Get NVML version string
  */
 std::string getNVMLVersion();
+
+/**
+ * Check if MACA management is available (MetaX)
+ */
+bool isMACAMgmtAvailable();
+
+/**
+ * Get MACA version string
+ */
+std::string getMACAVersion();
 
 } // namespace cluster
 } // namespace tracesmith

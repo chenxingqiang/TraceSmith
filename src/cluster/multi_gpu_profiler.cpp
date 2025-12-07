@@ -16,6 +16,12 @@
 #include "tracesmith/capture/cupti_profiler.hpp"
 #endif
 
+#ifdef TRACESMITH_ENABLE_MACA
+#include <mcr/maca.h>
+#include <mcr/mc_runtime_api.h>
+#include "tracesmith/capture/mcpti_profiler.hpp"
+#endif
+
 namespace tracesmith {
 namespace cluster {
 
@@ -78,9 +84,54 @@ MultiGPUProfiler& MultiGPUProfiler::operator=(MultiGPUProfiler&& other) noexcept
 bool MultiGPUProfiler::initialize() {
     if (initialized_) return true;
     
-#ifdef TRACESMITH_ENABLE_CUDA
-    // Get available GPU count
     int deviceCount = 0;
+    
+    // Try MACA first (MetaX GPUs)
+#ifdef TRACESMITH_ENABLE_MACA
+    mcError_t mcErr = mcInit(0);
+    if (mcErr == mcSuccess) {
+        mcErr = mcGetDeviceCount(&deviceCount);
+        if (mcErr == mcSuccess && deviceCount > 0) {
+            available_gpu_count_ = deviceCount;
+            
+            // Discover topology if requested
+            if (config_.capture_topology) {
+                topology_ = std::make_unique<GPUTopology>();
+                if (!topology_->discover()) {
+                    std::cerr << "MultiGPUProfiler: Failed to discover GPU topology\n";
+                    // Continue anyway - topology is optional
+                }
+            }
+            
+            // Add GPUs
+            std::vector<uint32_t> gpus_to_add;
+            if (config_.gpu_ids.empty()) {
+                for (int i = 0; i < deviceCount; ++i) {
+                    gpus_to_add.push_back(i);
+                }
+            } else {
+                gpus_to_add = config_.gpu_ids;
+            }
+            
+            for (uint32_t gpu_id : gpus_to_add) {
+                if (!addGPU(gpu_id)) {
+                    std::cerr << "MultiGPUProfiler: Failed to add GPU " << gpu_id << "\n";
+                }
+            }
+            
+            // Setup peer access if enabled
+            if (config_.enable_peer_access_tracking) {
+                setupPeerAccess();
+            }
+            
+            initialized_ = true;
+            return true;
+        }
+    }
+#endif
+    
+    // Try CUDA (NVIDIA GPUs)
+#ifdef TRACESMITH_ENABLE_CUDA
     cudaError_t err = cudaGetDeviceCount(&deviceCount);
     if (err != cudaSuccess || deviceCount == 0) {
         std::cerr << "MultiGPUProfiler: No CUDA devices available\n";
@@ -122,10 +173,10 @@ bool MultiGPUProfiler::initialize() {
     initialized_ = true;
     return true;
     
-#else
-    std::cerr << "MultiGPUProfiler: CUDA support not enabled\n";
-    return false;
 #endif
+
+    std::cerr << "MultiGPUProfiler: No GPU support enabled (CUDA or MACA required)\n";
+    return false;
 }
 
 void MultiGPUProfiler::finalize() {
@@ -165,58 +216,107 @@ bool MultiGPUProfiler::addGPU(uint32_t gpu_id) {
         return true;
     }
     
-#ifdef TRACESMITH_ENABLE_CUDA
-    // Validate GPU ID
-    int deviceCount = 0;
-    cudaGetDeviceCount(&deviceCount);
-    if (gpu_id >= static_cast<uint32_t>(deviceCount)) {
-        std::cerr << "MultiGPUProfiler: Invalid GPU ID " << gpu_id << "\n";
-        return false;
-    }
-    
     // Create context
     auto ctx = std::make_unique<GPUContext>();
     ctx->gpu_id = gpu_id;
     ctx->device_index = gpu_id;
     
-    // Set device and get info
-    cudaSetDevice(gpu_id);
-    
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, gpu_id);
-    
-    ctx->device_info.name = prop.name;
-    ctx->device_info.compute_major = prop.major;
-    ctx->device_info.compute_minor = prop.minor;
-    ctx->device_info.total_memory = prop.totalGlobalMem;
-    ctx->device_info.multiprocessor_count = prop.multiProcessorCount;
-    ctx->device_info.clock_rate = prop.clockRate;
-    ctx->device_info.memory_clock_rate = prop.memoryClockRate;
-    ctx->device_info.memory_bus_width = prop.memoryBusWidth;
-    ctx->device_info.max_threads_per_mp = prop.maxThreadsPerMultiProcessor;
-    ctx->device_info.warp_size = prop.warpSize;
-    
-    // Create profiler for this GPU
-    ctx->profiler = std::make_unique<CUPTIProfiler>();
-    
-    ProfilerConfig prof_config;
-    prof_config.buffer_size = config_.per_gpu_buffer_size;
-    prof_config.overflow_policy = config_.overflow_policy;
-    
-    if (!ctx->profiler->initialize(prof_config)) {
-        std::cerr << "MultiGPUProfiler: Failed to initialize profiler for GPU " << gpu_id << "\n";
-        return false;
+    // Try MACA first (MetaX GPUs)
+#ifdef TRACESMITH_ENABLE_MACA
+    {
+        int deviceCount = 0;
+        mcError_t err = mcGetDeviceCount(&deviceCount);
+        if (err == mcSuccess && gpu_id < static_cast<uint32_t>(deviceCount)) {
+            // Set device and get info
+            mcSetDevice(gpu_id);
+            
+            mcDeviceProp_t prop;
+            if (mcGetDeviceProperties(&prop, gpu_id) == mcSuccess) {
+                ctx->device_info.name = prop.name;
+                ctx->device_info.compute_major = prop.major;
+                ctx->device_info.compute_minor = prop.minor;
+                ctx->device_info.total_memory = prop.totalGlobalMem;
+                ctx->device_info.multiprocessor_count = prop.multiProcessorCount;
+                ctx->device_info.clock_rate = prop.clockRate;
+                ctx->device_info.memory_clock_rate = prop.memoryClockRate;
+                ctx->device_info.memory_bus_width = prop.memoryBusWidth;
+                ctx->device_info.max_threads_per_mp = prop.maxThreadsPerMultiProcessor;
+                ctx->device_info.warp_size = prop.warpSize;
+                ctx->device_info.vendor = "MetaX";
+                
+                // Create MCPTI profiler for this GPU
+                ctx->profiler = std::make_unique<MCPTIProfiler>();
+                
+                ProfilerConfig prof_config;
+                prof_config.buffer_size = config_.per_gpu_buffer_size;
+                prof_config.overflow_policy = config_.overflow_policy;
+                
+                if (!ctx->profiler->initialize(prof_config)) {
+                    std::cerr << "MultiGPUProfiler: Failed to initialize MCPTI profiler for GPU " << gpu_id << "\n";
+                    return false;
+                }
+                
+                ctx->local_events.reserve(config_.per_gpu_buffer_size);
+                ctx->active = true;
+                
+                gpu_contexts_[gpu_id] = std::move(ctx);
+                return true;
+            }
+        }
     }
-    
-    ctx->local_events.reserve(config_.per_gpu_buffer_size);
-    ctx->active = true;
-    
-    gpu_contexts_[gpu_id] = std::move(ctx);
-    return true;
-    
-#else
-    return false;
 #endif
+    
+    // Try CUDA (NVIDIA GPUs)
+#ifdef TRACESMITH_ENABLE_CUDA
+    {
+        // Validate GPU ID
+        int deviceCount = 0;
+        cudaGetDeviceCount(&deviceCount);
+        if (gpu_id >= static_cast<uint32_t>(deviceCount)) {
+            std::cerr << "MultiGPUProfiler: Invalid GPU ID " << gpu_id << "\n";
+            return false;
+        }
+        
+        // Set device and get info
+        cudaSetDevice(gpu_id);
+        
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, gpu_id);
+        
+        ctx->device_info.name = prop.name;
+        ctx->device_info.compute_major = prop.major;
+        ctx->device_info.compute_minor = prop.minor;
+        ctx->device_info.total_memory = prop.totalGlobalMem;
+        ctx->device_info.multiprocessor_count = prop.multiProcessorCount;
+        ctx->device_info.clock_rate = prop.clockRate;
+        ctx->device_info.memory_clock_rate = prop.memoryClockRate;
+        ctx->device_info.memory_bus_width = prop.memoryBusWidth;
+        ctx->device_info.max_threads_per_mp = prop.maxThreadsPerMultiProcessor;
+        ctx->device_info.warp_size = prop.warpSize;
+        ctx->device_info.vendor = "NVIDIA";
+        
+        // Create CUPTI profiler for this GPU
+        ctx->profiler = std::make_unique<CUPTIProfiler>();
+        
+        ProfilerConfig prof_config;
+        prof_config.buffer_size = config_.per_gpu_buffer_size;
+        prof_config.overflow_policy = config_.overflow_policy;
+        
+        if (!ctx->profiler->initialize(prof_config)) {
+            std::cerr << "MultiGPUProfiler: Failed to initialize profiler for GPU " << gpu_id << "\n";
+            return false;
+        }
+        
+        ctx->local_events.reserve(config_.per_gpu_buffer_size);
+        ctx->active = true;
+        
+        gpu_contexts_[gpu_id] = std::move(ctx);
+        return true;
+    }
+#endif
+    
+    std::cerr << "MultiGPUProfiler: No GPU support available\n";
+    return false;
 }
 
 bool MultiGPUProfiler::removeGPU(uint32_t gpu_id) {

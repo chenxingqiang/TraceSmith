@@ -8,6 +8,11 @@
 #include <cuda_runtime.h>
 #endif
 
+#ifdef TRACESMITH_ENABLE_MACA
+#include <mcr/maca.h>
+#include <mcr/mc_runtime_api.h>
+#endif
+
 namespace tracesmith::cluster {
 
 // =============================================================================
@@ -44,6 +49,9 @@ bool TimeSync::initialize() {
         case TimeSyncMethod::CUDA:
             result = syncCUDA(0);
             break;
+        case TimeSyncMethod::MACA:
+            result = syncMACA(0);
+            break;
         default:
             result = syncSystemClock();
             break;
@@ -77,6 +85,9 @@ SyncResult TimeSync::synchronize() {
             break;
         case TimeSyncMethod::CUDA:
             result = syncCUDA(0);
+            break;
+        case TimeSyncMethod::MACA:
+            result = syncMACA(0);
             break;
         default:
             result = syncSystemClock();
@@ -283,6 +294,38 @@ SyncResult TimeSync::syncCUDA(uint32_t gpu_id) {
     return result;
 }
 
+SyncResult TimeSync::syncMACA(uint32_t gpu_id) {
+    SyncResult result;
+    
+#ifdef TRACESMITH_ENABLE_MACA
+    mcError_t err = mcSetDevice(gpu_id);
+    if (err != mcSuccess) {
+        result.success = false;
+        result.error_message = "Failed to set MACA device";
+        return result;
+    }
+    
+    // Synchronize to establish baseline
+    err = mcDeviceSynchronize();
+    if (err != mcSuccess) {
+        result.success = false;
+        result.error_message = "MACA device synchronization failed";
+        return result;
+    }
+    
+    result.success = true;
+    result.offset_ns = 0;
+    result.uncertainty_ns = 100.0;  // MACA timestamps precision
+    result.sync_time = getCurrentTimestamp();
+#else
+    result.success = false;
+    result.error_message = "MACA not available";
+    (void)gpu_id;
+#endif
+    
+    return result;
+}
+
 // =============================================================================
 // ClockCorrelator Implementation
 // =============================================================================
@@ -460,6 +503,7 @@ const char* timeSyncMethodToString(TimeSyncMethod method) {
         case TimeSyncMethod::NTP: return "NTP";
         case TimeSyncMethod::PTP: return "PTP";
         case TimeSyncMethod::CUDA: return "CUDA";
+        case TimeSyncMethod::MACA: return "MACA";
         case TimeSyncMethod::Custom: return "Custom";
         default: return "Unknown";
     }
@@ -470,6 +514,7 @@ TimeSyncMethod stringToTimeSyncMethod(const std::string& str) {
     if (str == "NTP" || str == "ntp") return TimeSyncMethod::NTP;
     if (str == "PTP" || str == "ptp") return TimeSyncMethod::PTP;
     if (str == "CUDA" || str == "cuda") return TimeSyncMethod::CUDA;
+    if (str == "MACA" || str == "maca") return TimeSyncMethod::MACA;
     if (str == "Custom" || str == "custom") return TimeSyncMethod::Custom;
     return TimeSyncMethod::SystemClock;
 }

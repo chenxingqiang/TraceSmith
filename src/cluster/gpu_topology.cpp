@@ -21,6 +21,11 @@
 #include <cuda_runtime.h>
 #endif
 
+#ifdef TRACESMITH_ENABLE_MACA
+#include <mcr/maca.h>
+#include <mcr/mc_runtime_api.h>
+#endif
+
 namespace tracesmith {
 namespace cluster {
 
@@ -106,7 +111,16 @@ GPUTopology::~GPUTopology() {
 bool GPUTopology::discover() {
     if (discovered_) return true;
     
-    // Try NVML first
+    // Try MACA first (MetaX GPUs)
+#ifdef TRACESMITH_ENABLE_MACA
+    if (discoverMACA()) {
+        buildLinkMatrix();
+        discovered_ = true;
+        return true;
+    }
+#endif
+    
+    // Try NVML (NVIDIA GPUs)
 #ifdef TRACESMITH_HAS_NVML
     if (discoverNVML()) {
         buildLinkMatrix();
@@ -585,6 +599,128 @@ std::string GPUTopology::toJSON() const {
 
 void GPUTopology::printSummary() const {
     std::cout << toASCII();
+}
+
+// ============================================================================
+// MACA Discovery Implementation (MetaX GPUs)
+// ============================================================================
+
+#ifdef TRACESMITH_ENABLE_MACA
+
+bool GPUTopology::discoverMACA() {
+    // Initialize MACA runtime
+    mcError_t err = mcInit(0);
+    if (err != mcSuccess) {
+        return false;
+    }
+    
+    // Get device count
+    int deviceCount = 0;
+    err = mcGetDeviceCount(&deviceCount);
+    if (err != mcSuccess || deviceCount == 0) {
+        return false;
+    }
+    
+    topology_.gpu_count = deviceCount;
+    topology_.devices.clear();
+    topology_.links.clear();
+    topology_.has_nvswitch = false;  // MetaX may have MXSwitch
+    
+    // Discover each device
+    for (int i = 0; i < deviceCount; ++i) {
+        GPUDeviceTopology devInfo;
+        devInfo.gpu_id = i;
+        devInfo.vendor = GPUVendor::MetaX;
+        devInfo.has_nvlink = false;
+        devInfo.nvlink_count = 0;
+        devInfo.has_mxlink = false;
+        devInfo.mxlink_count = 0;
+        
+        // Get device properties
+        mcDeviceProp_t prop;
+        if (mcGetDeviceProperties(&prop, i) == mcSuccess) {
+            devInfo.name = prop.name;
+            devInfo.total_memory = prop.totalGlobalMem;
+            devInfo.compute_major = prop.major;
+            devInfo.compute_minor = prop.minor;
+            
+            // Get PCI bus ID if available
+            char pciBusId[16];
+            if (mcDeviceGetPCIBusId(pciBusId, sizeof(pciBusId), i) == mcSuccess) {
+                devInfo.pci_bus_id = pciBusId;
+            }
+        } else {
+            devInfo.name = "MetaX GPU";
+        }
+        
+        devInfo.numa_node = 0;  // Default
+        
+        topology_.devices.push_back(devInfo);
+    }
+    
+    // Discover peer access topology (PCIe connections)
+    for (int i = 0; i < deviceCount; ++i) {
+        for (int j = i + 1; j < deviceCount; ++j) {
+            int canAccessPeer = 0;
+            mcDeviceCanAccessPeer(&canAccessPeer, i, j);
+            
+            if (canAccessPeer) {
+                GPULink link;
+                link.gpu_a = i;
+                link.gpu_b = j;
+                link.type = GPULinkType::PCIe;  // Default to PCIe for now
+                link.link_count = 1;
+                link.bandwidth_gbps = getLinkBandwidth(GPULinkType::PCIe);
+                link.measured_bandwidth = 0.0;
+                link.bidirectional = true;
+                
+                // TODO: Check for MXLink if MetaX provides API
+                // For now, all peer-accessible devices are considered PCIe
+                
+                topology_.links.push_back(link);
+            }
+        }
+    }
+    
+    return true;
+}
+
+#else
+
+bool GPUTopology::discoverMACA() {
+    return false;
+}
+
+#endif // TRACESMITH_ENABLE_MACA
+
+// ============================================================================
+// MACA Global Functions
+// ============================================================================
+
+bool isMACAMgmtAvailable() {
+#ifdef TRACESMITH_ENABLE_MACA
+    mcError_t err = mcInit(0);
+    if (err != mcSuccess) {
+        return false;
+    }
+    int count = 0;
+    err = mcGetDeviceCount(&count);
+    return (err == mcSuccess && count > 0);
+#else
+    return false;
+#endif
+}
+
+std::string getMACAVersion() {
+#ifdef TRACESMITH_ENABLE_MACA
+    int version = 0;
+    if (mcDriverGetVersion(&version) == mcSuccess) {
+        int major = version / 1000;
+        int minor = (version % 1000) / 10;
+        return std::to_string(major) + "." + std::to_string(minor);
+    }
+#endif
+    return "N/A";
 }
 
 } // namespace cluster

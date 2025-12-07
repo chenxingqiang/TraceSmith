@@ -14,7 +14,8 @@ enum class TimeSyncMethod {
     SystemClock,    // Use system clock (basic)
     NTP,            // Network Time Protocol (~1ms accuracy)
     PTP,            // Precision Time Protocol (~1µs accuracy)
-    CUDA,           // CUDA event timestamps (GPU-local)
+    CUDA,           // CUDA event timestamps (GPU-local, NVIDIA)
+    MACA,           // MACA event timestamps (GPU-local, MetaX)
     Custom          // Custom sync protocol
 };
 
@@ -84,6 +85,7 @@ private:
     SyncResult syncNTP();
     SyncResult syncPTP();
     SyncResult syncCUDA(uint32_t gpu_id);
+    SyncResult syncMACA(uint32_t gpu_id);
     
     TimeSyncConfig config_;
     std::atomic<int64_t> current_offset_{0};
