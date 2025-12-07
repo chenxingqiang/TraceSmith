@@ -35,7 +35,8 @@ enum class PlatformType {
     Unknown,
     CUDA,
     ROCm,
-    Metal
+    Metal,
+    MACA    // MetaX MACA (C500, C550, etc.)
 };
 
 /// Convert PlatformType to string
@@ -44,6 +45,7 @@ inline const char* platformTypeToString(PlatformType type) {
         case PlatformType::CUDA:  return "CUDA";
         case PlatformType::ROCm:  return "ROCm";
         case PlatformType::Metal: return "Metal";
+        case PlatformType::MACA:  return "MACA";
         default:                  return "Unknown";
     }
 }

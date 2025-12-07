@@ -170,6 +170,22 @@ from ._tracesmith import (  # noqa: I001 - imports organized by category
     detect_platform,
 )
 
+# MetaX MACA functions - may not be available on all builds
+try:
+    from ._tracesmith import (
+        is_maca_available,
+        get_maca_driver_version,
+        get_maca_device_count,
+    )
+except ImportError:
+    # MACA not available in this build
+    def is_maca_available():
+        return False
+    def get_maca_driver_version():
+        return 0
+    def get_maca_device_count():
+        return 0
+
 # ============================================================================
 # Cluster Module - Multi-GPU Profiling (v0.7.0)
 # Optional: Only available when compiled with cluster support
@@ -413,6 +429,9 @@ __all__ = [
     'get_cuda_driver_version',
     'is_metal_available',
     'get_metal_device_count',
+    'is_maca_available',
+    'get_maca_driver_version',
+    'get_maca_device_count',
     'detect_platform',
 
     # High-level convenience functions

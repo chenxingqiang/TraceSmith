@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.8.0] - 2025-12-07
 
 ### Added
+- **MetaX MACA/MCPTI Integration**: Support for MetaX GPUs (C500, C550)
+  - `MCPTIProfiler`: GPU profiler using MetaX mcpti API
+  - Kernel execution tracing
+  - Memory copy/memset tracking
+  - Synchronization events
+  - API compatible with CUPTI for easy migration
+  - Python bindings: `is_maca_available()`, `get_maca_device_count()`
+
 - **Apple Instruments (xctrace) Integration**: Real Metal GPU profiling on macOS
   - `XCTraceProfiler`: Python wrapper for xctrace
   - Automatic Metal GPU event parsing from Instruments traces

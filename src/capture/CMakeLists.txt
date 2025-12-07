@@ -31,6 +31,26 @@ if(TRACESMITH_ENABLE_ROCM)
     # TODO: Add ROCm profiler
 endif()
 
+if(TRACESMITH_ENABLE_MACA)
+    message(STATUS "Building MCPTI profiler for MetaX GPUs")
+    target_sources(tracesmith-capture PRIVATE mcpti_profiler.cpp)
+    
+    # Find MACA SDK (typically in /opt/maca)
+    if(NOT MACA_ROOT)
+        set(MACA_ROOT "/opt/maca" CACHE PATH "Path to MACA SDK")
+    endif()
+    
+    if(EXISTS "${MACA_ROOT}/include/mcpti/mcpti.h")
+        message(STATUS "  MACA SDK found at: ${MACA_ROOT}")
+        target_include_directories(tracesmith-capture PRIVATE ${MACA_ROOT}/include)
+        target_link_directories(tracesmith-capture PRIVATE ${MACA_ROOT}/lib)
+        target_link_libraries(tracesmith-capture PUBLIC mcpti mcc)
+        target_compile_definitions(tracesmith-capture PUBLIC TRACESMITH_ENABLE_MACA)
+    else()
+        message(WARNING "MACA SDK not found at ${MACA_ROOT}. Set MACA_ROOT to the correct path.")
+    endif()
+endif()
+
 if(TRACESMITH_ENABLE_METAL)
     message(STATUS "Building Metal profiler")
     # Objective-C++ source file (use full path to avoid path resolution issues)

@@ -5,6 +5,7 @@
  * - CUDA (NVIDIA via CUPTI)
  * - ROCm (AMD)
  * - Metal (Apple)
+ * - MACA (MetaX via MCPTI)
  */
 
 #include "tracesmith/capture/profiler.hpp"
@@ -13,6 +14,9 @@
 #endif
 #ifdef TRACESMITH_ENABLE_METAL
 #include "tracesmith/capture/metal_profiler.hpp"
+#endif
+#ifdef TRACESMITH_ENABLE_MACA
+#include "tracesmith/capture/mcpti_profiler.hpp"
 #endif
 
 namespace tracesmith {
@@ -32,6 +36,13 @@ int getCUDADeviceCount() { return 0; }
 // Stub implementations when Metal is not enabled
 bool isMetalAvailable() { return false; }
 int getMetalDeviceCount() { return 0; }
+#endif
+
+#ifndef TRACESMITH_ENABLE_MACA
+// Stub implementations when MACA is not enabled
+bool isMACAAvailable() { return false; }
+int getMACADriverVersion() { return 0; }
+int getMACADeviceCount() { return 0; }
 #endif
 
 // ============================================================================
@@ -70,6 +81,17 @@ std::unique_ptr<IPlatformProfiler> createProfiler(PlatformType type) {
 #endif
             return nullptr;  // Metal not available
         
+        case PlatformType::MACA:
+#ifdef TRACESMITH_ENABLE_MACA
+            {
+                auto profiler = std::make_unique<MCPTIProfiler>();
+                if (profiler->isAvailable()) {
+                    return profiler;
+                }
+            }
+#endif
+            return nullptr;  // MACA not available
+        
         default:
             return nullptr;  // No supported GPU platform
     }
@@ -79,6 +101,12 @@ PlatformType detectPlatform() {
 #ifdef TRACESMITH_ENABLE_CUDA
     if (isCUDAAvailable()) {
         return PlatformType::CUDA;
+    }
+#endif
+    
+#ifdef TRACESMITH_ENABLE_MACA
+    if (isMACAAvailable()) {
+        return PlatformType::MACA;
     }
 #endif
     

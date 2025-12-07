@@ -55,6 +55,7 @@
 | NVIDIA | CUPTI SDK | ✅ Production |
 | Apple | Metal API | ✅ Production |
 | Apple | Instruments (xctrace) | ✅ Production |
+| MetaX | MCPTI SDK | ✅ Production |
 | AMD | ROCm | 🔜 Coming Soon |
 | Linux | eBPF | ✅ Available |
 

@@ -274,6 +274,7 @@ PYBIND11_MODULE(_tracesmith, m) {
         .value("CUDA", PlatformType::CUDA)
         .value("ROCm", PlatformType::ROCm)
         .value("Metal", PlatformType::Metal)
+        .value("MACA", PlatformType::MACA)
         .export_values();
     
     // Platform type to string helper
@@ -935,7 +936,7 @@ PYBIND11_MODULE(_tracesmith, m) {
     m.def("create_profiler", [](PlatformType type) -> std::shared_ptr<IPlatformProfiler> {
         return createProfiler(type);
     }, py::arg("platform") = PlatformType::Unknown,
-    "Create a profiler for the specified platform (CUDA, ROCm, Metal, or auto-detect with Unknown)");
+    "Create a profiler for the specified platform (CUDA, ROCm, Metal, MACA, or auto-detect with Unknown)");
     
     // Platform detection functions
     m.def("is_cuda_available", &isCUDAAvailable,
@@ -949,9 +950,19 @@ PYBIND11_MODULE(_tracesmith, m) {
     
     m.def("is_metal_available", &isMetalAvailable,
           "Check if Metal is available on this system (macOS only)");
-    
+
     m.def("get_metal_device_count", &getMetalDeviceCount,
           "Get number of Metal-capable devices");
+
+    // MetaX MACA functions
+    m.def("is_maca_available", &isMACAAvailable,
+          "Check if MetaX MACA is available on this system");
+
+    m.def("get_maca_driver_version", &getMACADriverVersion,
+          "Get MetaX MACA driver version");
+
+    m.def("get_maca_device_count", &getMACADeviceCount,
+          "Get number of MetaX GPU devices");
     
     m.def("detect_platform", &detectPlatform,
           "Auto-detect the best available GPU platform");
