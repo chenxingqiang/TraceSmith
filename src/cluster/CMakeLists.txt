@@ -24,6 +24,26 @@ target_link_libraries(tracesmith-cluster PUBLIC
     tracesmith-capture
 )
 
+# MACA support for MetaX GPU topology discovery
+if(TRACESMITH_ENABLE_MACA AND MACA_ROOT)
+    message(STATUS "Cluster module: Adding MACA support")
+    target_include_directories(tracesmith-cluster PRIVATE 
+        ${MACA_ROOT}/include
+        ${MACA_ROOT}/include/mcr
+        ${MACA_ROOT}/include/mcpti
+    )
+    
+    # Find and link MACA libraries
+    find_library(MCPTI_LIB mcpti PATHS ${MACA_ROOT}/lib ${MACA_ROOT}/lib64 NO_DEFAULT_PATH)
+    find_library(MCRUNTIME_LIB mcruntime PATHS ${MACA_ROOT}/lib ${MACA_ROOT}/lib64 NO_DEFAULT_PATH)
+    
+    if(MCPTI_LIB AND MCRUNTIME_LIB)
+        target_link_libraries(tracesmith-cluster PRIVATE ${MCPTI_LIB} ${MCRUNTIME_LIB})
+    endif()
+    
+    target_compile_definitions(tracesmith-cluster PRIVATE TRACESMITH_ENABLE_MACA)
+endif()
+
 # NVML support for GPU topology discovery
 if(TRACESMITH_ENABLE_CUDA)
     # Find NVML (comes with CUDA toolkit)

@@ -48,7 +48,9 @@ if(TRACESMITH_ENABLE_MACA)
     
     if(MACA_ROOT AND EXISTS "${MACA_ROOT}/include/mcpti/mcpti.h")
         message(STATUS "  MACA SDK found at: ${MACA_ROOT}")
-        target_include_directories(tracesmith-capture PRIVATE 
+        # Use PUBLIC so downstream targets can include mcpti_profiler.hpp
+        # which requires <mcr/maca.h>, <mcr/mc_runtime_api.h>, <mcpti/mcpti.h>
+        target_include_directories(tracesmith-capture PUBLIC 
             ${MACA_ROOT}/include
             ${MACA_ROOT}/include/mcr
             ${MACA_ROOT}/include/mcpti
