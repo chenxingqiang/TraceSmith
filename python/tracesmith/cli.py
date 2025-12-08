@@ -372,6 +372,85 @@ def cmd_record(args):
 
 
 # =============================================================================
+# Helper: Run Python code in the same process (for CUPTI capture)
+# =============================================================================
+def _run_python_in_process(command):
+    """
+    Run Python code in the same process so CUPTI can capture GPU events.
+    
+    CUPTI can only capture GPU activity in the SAME process, not child processes.
+    This function handles:
+      - python script.py [args]
+      - python -c "code"
+      - python -m module [args]
+    """
+    import runpy
+    import sys
+    
+    # Parse Python command
+    # command = ['python', ...] or ['python3', ...]
+    python_args = command[1:]  # Skip 'python'
+    
+    if not python_args:
+        print_warning("No Python script or code specified")
+        return 1
+    
+    # Save original sys.argv
+    original_argv = sys.argv.copy()
+    
+    exit_code = 0
+    try:
+        if python_args[0] == '-c':
+            # python -c "code"
+            if len(python_args) < 2:
+                print_error("No code provided after -c")
+                return 1
+            code = python_args[1]
+            sys.argv = ['<string>'] + python_args[2:]
+            exec(compile(code, '<string>', 'exec'), {'__name__': '__main__'})
+            
+        elif python_args[0] == '-m':
+            # python -m module [args]
+            if len(python_args) < 2:
+                print_error("No module name provided after -m")
+                return 1
+            module_name = python_args[1]
+            sys.argv = python_args[1:]  # module name becomes argv[0]
+            runpy.run_module(module_name, run_name='__main__', alter_sys=True)
+            
+        else:
+            # python script.py [args]
+            script_path = python_args[0]
+            sys.argv = python_args  # script path becomes argv[0]
+            
+            # Check if file exists
+            import os
+            if not os.path.exists(script_path):
+                print_error(f"Script not found: {script_path}")
+                return 1
+            
+            runpy.run_path(script_path, run_name='__main__')
+            
+    except SystemExit as e:
+        # Script called sys.exit()
+        exit_code = e.code if isinstance(e.code, int) else (1 if e.code else 0)
+    except KeyboardInterrupt:
+        print()
+        print_warning("Interrupted by user (Ctrl+C)")
+        exit_code = 130
+    except Exception as e:
+        import traceback
+        print_error(f"Exception in Python code: {e}")
+        traceback.print_exc()
+        exit_code = 1
+    finally:
+        # Restore original sys.argv
+        sys.argv = original_argv
+    
+    return exit_code
+
+
+# =============================================================================
 # Command: profile - Profile a Command (Record + Execute)
 # =============================================================================
 def cmd_profile(args):
@@ -518,24 +597,39 @@ def cmd_profile(args):
 
     # Execute command
     exit_code = 0
-    try:
-        # Run the command
-        result = subprocess.run(
-            command,
-            shell=False,
-            env=os.environ.copy()
-        )
-        exit_code = result.returncode
-    except KeyboardInterrupt:
-        print()
-        print_warning("Command interrupted by user (Ctrl+C)")
-        exit_code = 130
-    except FileNotFoundError:
-        print_error(f"Command not found: {command[0]}")
-        exit_code = 127
-    except Exception as e:
-        print_error(f"Failed to execute command: {e}")
-        exit_code = 1
+    
+    # Check if this is a Python script/command that we can run in-process
+    # CUPTI can only capture GPU events in the SAME process
+    is_python_cmd = (command[0] == 'python' or command[0] == 'python3' or 
+                     command[0].endswith('python') or command[0].endswith('python3'))
+    
+    if is_python_cmd and profiler is not None:
+        # Run Python code in the same process for CUPTI to capture events
+        exit_code = _run_python_in_process(command)
+    else:
+        # Fallback to subprocess (won't capture GPU events from child process)
+        if profiler is not None:
+            print_warning("Running as subprocess - CUPTI cannot capture GPU events from child processes")
+            print_info("For Python scripts, tracesmith runs them in-process automatically")
+            print()
+        try:
+            # Run the command
+            result = subprocess.run(
+                command,
+                shell=False,
+                env=os.environ.copy()
+            )
+            exit_code = result.returncode
+        except KeyboardInterrupt:
+            print()
+            print_warning("Command interrupted by user (Ctrl+C)")
+            exit_code = 130
+        except FileNotFoundError:
+            print_error(f"Command not found: {command[0]}")
+            exit_code = 127
+        except Exception as e:
+            print_error(f"Failed to execute command: {e}")
+            exit_code = 1
 
     print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
     print()
