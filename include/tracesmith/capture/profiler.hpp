@@ -117,4 +117,8 @@ int getCUDADriverVersion();
 bool isMetalAvailable();
 int getMetalDeviceCount();
 
+bool isMACAAvailable();
+int getMACADriverVersion();
+int getMACADeviceCount();
+
 } // namespace tracesmith
