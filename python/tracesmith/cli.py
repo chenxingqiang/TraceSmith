@@ -19,9 +19,12 @@ Or via Python module:
 """
 
 import argparse  # noqa: I001
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 # =============================================================================
 # ANSI Color Codes
@@ -180,8 +183,19 @@ def cmd_info(args):
     proto_status = f"{colorize(Color.GREEN)}✓{colorize(Color.RESET)}" if is_protobuf_available() else f"{colorize(Color.YELLOW)}✗{colorize(Color.RESET)}"
     bpf_status = f"{colorize(Color.GREEN)}✓{colorize(Color.RESET)}" if is_bpf_available() else f"{colorize(Color.YELLOW)}✗ (Linux only){colorize(Color.RESET)}"
 
+    # Check nsys availability
+    nsys_available = _is_nsys_available()
+    nsys_version = _get_nsys_version() if nsys_available else None
+    if nsys_available and nsys_version:
+        nsys_status = f"{colorize(Color.GREEN)}✓ {nsys_version}{colorize(Color.RESET)}"
+    elif nsys_available:
+        nsys_status = f"{colorize(Color.GREEN)}✓ Available{colorize(Color.RESET)}"
+    else:
+        nsys_status = f"{colorize(Color.YELLOW)}✗ Not installed{colorize(Color.RESET)}"
+
     print(f"  Perfetto Protobuf: {proto_status}")
     print(f"  BPF Tracing:       {bpf_status}")
+    print(f"  Nsight Systems:    {nsys_status}")
     print()
 
     return 0
@@ -277,6 +291,8 @@ def cmd_record(args):
 
     output_file = args.output or "trace.sbt"
     duration_sec = args.duration
+    use_nsys = getattr(args, 'nsys', False)
+    keep_nsys = getattr(args, 'keep_nsys', False)
     
     # Parse exec command if provided
     exec_command = getattr(args, 'exec', None)
@@ -288,6 +304,21 @@ def cmd_record(args):
             exec_command = [exec_command]
     
     print_section("Recording GPU Trace")
+
+    # Check if nsys mode is requested
+    if use_nsys:
+        if not _is_nsys_available():
+            print_error("nsys (NVIDIA Nsight Systems) not found.")
+            print("Install from: https://developer.nvidia.com/nsight-systems")
+            return 1
+        
+        if not exec_command:
+            print_error("--nsys requires --exec to specify the command to profile")
+            print(f"  Example: tracesmith-cli record --nsys --exec python train.py")
+            return 1
+        
+        # Use nsys for profiling
+        return _cmd_record_nsys(args, exec_command, output_file, duration_sec, keep_nsys)
 
     print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
     print(f"  Output:   {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
@@ -493,6 +524,382 @@ def cmd_record(args):
 
 
 # =============================================================================
+# Helper: Record with nsys (NVIDIA Nsight Systems)
+# =============================================================================
+def _cmd_record_nsys(args, command, output_file, duration_sec, keep_nsys):
+    """Record GPU events using NVIDIA Nsight Systems (nsys)."""
+    import time
+    
+    from . import (
+        SBTWriter,
+        TraceMetadata,
+        export_perfetto,
+    )
+    
+    print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
+    print(f"  Output:   {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+    print(f"  Execute:  {colorize(Color.CYAN)}{' '.join(command)}{colorize(Color.RESET)}")
+    print(f"  Backend:  {colorize(Color.GREEN)}NVIDIA Nsight Systems (nsys){colorize(Color.RESET)}")
+    print(f"  Mode:     {colorize(Color.GREEN)}System-wide GPU profiling (cross-process){colorize(Color.RESET)}")
+    print()
+    
+    # Show nsys version
+    nsys_version = _get_nsys_version()
+    if nsys_version:
+        print_success(f"nsys available: {nsys_version}")
+    else:
+        print_success("nsys available")
+    print()
+    
+    print(f"{colorize(Color.GREEN)}▶ Starting nsys profiling...{colorize(Color.RESET)}")
+    print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+    
+    start_time = time.time()
+    
+    # Run with nsys
+    exit_code, nsys_rep, events = _run_with_nsys(
+        command=command,
+        output_file=output_file,
+        duration=duration_sec if duration_sec != 5.0 else None,  # Only set if not default
+        gpu_metrics=True,
+        cuda_api=True,
+        nvtx=True,
+        sample_cpu=False,
+    )
+    
+    print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+    print()
+    
+    end_time = time.time()
+    duration_actual = end_time - start_time
+    
+    # Show command result
+    if exit_code == 0:
+        print_success("Command completed successfully")
+    else:
+        print_warning(f"Command exited with code: {exit_code}")
+    
+    print_success("nsys profiling stopped")
+    print()
+    
+    # Save events to SBT format
+    writer = SBTWriter(output_file)
+    if writer.is_open():
+        metadata = TraceMetadata()
+        metadata.application_name = os.path.basename(command[0])
+        metadata.command_line = ' '.join(command)
+        writer.write_metadata(metadata)
+        
+        if events:
+            writer.write_events(events)
+        
+        writer.finalize()
+    
+    # Print summary
+    print_section("Recording Complete")
+    
+    print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
+    print(f"  Backend:      NVIDIA Nsight Systems")
+    print(f"  Duration:     {duration_actual:.2f} seconds")
+    print(f"  GPU Events:   {colorize(Color.GREEN)}{len(events)}{colorize(Color.RESET)}")
+    print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+    
+    # Show nsys report location
+    if nsys_rep and os.path.exists(nsys_rep):
+        if keep_nsys:
+            print(f"  nsys Report:  {colorize(Color.CYAN)}{nsys_rep}{colorize(Color.RESET)}")
+        else:
+            # Cleanup nsys files
+            base_name = output_file.replace('.sbt', '').replace('.json', '')
+            _cleanup_nsys_files(f"{base_name}_nsys")
+    
+    # Analyze events if any
+    if events:
+        from collections import Counter
+        from . import EventType
+        
+        type_counts = Counter(e.type for e in events)
+        kernel_count = type_counts.get(EventType.KernelLaunch, 0)
+        memcpy_count = sum(type_counts.get(t, 0) for t in 
+                          [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D])
+        
+        print()
+        print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
+        print(f"  Kernel Launches: {kernel_count}")
+        print(f"  Memory Copies:   {memcpy_count}")
+        print(f"  Other Events:    {len(events) - kernel_count - memcpy_count}")
+    print()
+    
+    # Export to Perfetto if requested
+    if getattr(args, 'perfetto', False) and events:
+        perfetto_file = output_file.replace('.sbt', '.json')
+        if export_perfetto(events, perfetto_file):
+            print_success(f"Exported Perfetto trace: {perfetto_file}")
+            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+        else:
+            print_warning("Failed to export Perfetto trace")
+        print()
+    
+    print_success(f"Trace saved to {output_file}")
+    print("\nNext steps:")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
+    if nsys_rep and keep_nsys and os.path.exists(nsys_rep):
+        print(f"  {colorize(Color.CYAN)}nsys-ui {nsys_rep}{colorize(Color.RESET)}  # Open in Nsight Systems UI")
+    
+    return exit_code
+
+
+# =============================================================================
+# Helper: NVIDIA Nsight Systems (nsys) Integration
+# =============================================================================
+def _is_nsys_available() -> bool:
+    """Check if nsys (NVIDIA Nsight Systems) is available."""
+    return shutil.which('nsys') is not None
+
+
+def _get_nsys_version() -> Optional[str]:
+    """Get nsys version string."""
+    try:
+        result = subprocess.run(['nsys', '--version'], capture_output=True, text=True)
+        if result.returncode == 0:
+            # Parse version from output like "NVIDIA Nsight Systems version 2023.4.1.97-..."
+            for line in result.stdout.split('\n'):
+                if 'version' in line.lower():
+                    return line.strip()
+        return None
+    except Exception:
+        return None
+
+
+def _run_with_nsys(
+    command: List[str],
+    output_file: str,
+    duration: Optional[float] = None,
+    gpu_metrics: bool = True,
+    cuda_api: bool = True,
+    nvtx: bool = True,
+    sample_cpu: bool = False,
+) -> Tuple[int, str, List]:
+    """
+    Run a command with nsys profiling and return captured events.
+    
+    Args:
+        command: Command to execute
+        output_file: Output file path (without extension)
+        duration: Optional max duration in seconds
+        gpu_metrics: Capture GPU metrics
+        cuda_api: Capture CUDA API calls
+        nvtx: Capture NVTX annotations
+        sample_cpu: Sample CPU activity
+    
+    Returns:
+        Tuple of (exit_code, nsys_report_path, events)
+    """
+    import json
+    import tempfile
+    
+    # Generate temp file for nsys output
+    base_name = output_file.replace('.sbt', '').replace('.json', '')
+    nsys_output = f"{base_name}_nsys"
+    
+    # Build nsys command
+    nsys_cmd = [
+        'nsys', 'profile',
+        '-o', nsys_output,
+        '--force-overwrite=true',
+        '--export=json',  # Export to JSON for parsing
+    ]
+    
+    # Add trace options
+    trace_opts = []
+    if cuda_api:
+        trace_opts.append('cuda')
+    if nvtx:
+        trace_opts.append('nvtx')
+    if gpu_metrics:
+        trace_opts.append('cublas')
+        trace_opts.append('cudnn')
+    
+    if trace_opts:
+        nsys_cmd.extend(['--trace=' + ','.join(trace_opts)])
+    
+    # Add duration limit if specified
+    if duration:
+        nsys_cmd.extend(['--duration', str(int(duration))])
+    
+    # Disable CPU sampling by default (faster)
+    if not sample_cpu:
+        nsys_cmd.extend(['--sample=none'])
+    
+    # Add the user command
+    nsys_cmd.append('--')
+    nsys_cmd.extend(command)
+    
+    print_info(f"Running: {' '.join(nsys_cmd[:8])}...")
+    
+    # Execute nsys
+    try:
+        result = subprocess.run(nsys_cmd, capture_output=False)
+        exit_code = result.returncode
+    except FileNotFoundError:
+        print_error("nsys not found. Install NVIDIA Nsight Systems.")
+        return 1, "", []
+    except Exception as e:
+        print_error(f"nsys failed: {e}")
+        return 1, "", []
+    
+    # Find the generated files
+    nsys_rep = f"{nsys_output}.nsys-rep"
+    nsys_json = f"{nsys_output}.json"
+    
+    # Parse events from JSON if available
+    events = []
+    if os.path.exists(nsys_json):
+        events = _parse_nsys_json(nsys_json)
+    elif os.path.exists(nsys_rep):
+        # Try to export JSON from nsys-rep
+        try:
+            export_result = subprocess.run(
+                ['nsys', 'export', '-t', 'json', '-o', nsys_json, nsys_rep],
+                capture_output=True
+            )
+            if export_result.returncode == 0 and os.path.exists(nsys_json):
+                events = _parse_nsys_json(nsys_json)
+        except Exception:
+            pass
+    
+    return exit_code, nsys_rep, events
+
+
+def _parse_nsys_json(json_path: str) -> List:
+    """
+    Parse nsys JSON export and convert to TraceSmith TraceEvent format.
+    
+    Args:
+        json_path: Path to nsys JSON export file
+    
+    Returns:
+        List of TraceEvent objects
+    """
+    import json
+    
+    from . import EventType, TraceEvent
+    
+    events = []
+    
+    try:
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+    except Exception as e:
+        print_warning(f"Failed to parse nsys JSON: {e}")
+        return events
+    
+    # nsys JSON format varies by version, handle common formats
+    # Look for CUDA API events, kernel events, memory events
+    
+    # Try to find events in various nsys JSON structures
+    cuda_api_events = []
+    kernel_events = []
+    memcpy_events = []
+    
+    # nsys export JSON structure
+    if isinstance(data, dict):
+        # Check for 'traceEvents' (Chrome trace format)
+        if 'traceEvents' in data:
+            cuda_api_events = data['traceEvents']
+        # Check for 'CudaEvent' or similar
+        elif 'CudaEvent' in data:
+            cuda_api_events = data['CudaEvent']
+        # Check for nested structure
+        elif 'StringTable' in data and 'TraceProcessEvents' in data:
+            # Older nsys format
+            pass
+    elif isinstance(data, list):
+        # Direct list of events
+        cuda_api_events = data
+    
+    # Convert to TraceEvent format
+    correlation_id = 0
+    for raw_event in cuda_api_events:
+        if not isinstance(raw_event, dict):
+            continue
+        
+        event = TraceEvent()
+        event.correlation_id = correlation_id
+        correlation_id += 1
+        
+        # Get event name/type
+        name = raw_event.get('name', raw_event.get('Name', ''))
+        cat = raw_event.get('cat', raw_event.get('Category', ''))
+        
+        # Determine event type
+        name_lower = name.lower()
+        if 'kernel' in name_lower or 'launch' in name_lower:
+            event.type = EventType.KernelLaunch
+        elif 'memcpy' in name_lower:
+            if 'htod' in name_lower or 'h2d' in name_lower:
+                event.type = EventType.MemcpyH2D
+            elif 'dtoh' in name_lower or 'd2h' in name_lower:
+                event.type = EventType.MemcpyD2H
+            elif 'dtod' in name_lower or 'd2d' in name_lower:
+                event.type = EventType.MemcpyD2D
+            else:
+                event.type = EventType.MemcpyH2D
+        elif 'memset' in name_lower:
+            event.type = EventType.MemsetDevice
+        elif 'sync' in name_lower:
+            event.type = EventType.StreamSync
+        elif 'malloc' in name_lower or 'alloc' in name_lower:
+            event.type = EventType.MemAlloc
+        elif 'free' in name_lower:
+            event.type = EventType.MemFree
+        else:
+            event.type = EventType.Marker
+        
+        event.name = name
+        
+        # Get timing (nsys uses microseconds or nanoseconds)
+        ts = raw_event.get('ts', raw_event.get('Timestamp', 0))
+        dur = raw_event.get('dur', raw_event.get('Duration', 0))
+        
+        # nsys typically uses microseconds in Chrome format
+        if 'ts' in raw_event:
+            event.timestamp = int(ts * 1000)  # us to ns
+            event.duration = int(dur * 1000) if dur else 0
+        else:
+            event.timestamp = int(ts)
+            event.duration = int(dur) if dur else 0
+        
+        # Get thread/stream info
+        event.thread_id = raw_event.get('tid', raw_event.get('ThreadId', 0))
+        event.stream_id = raw_event.get('args', {}).get('stream', 0) if isinstance(raw_event.get('args'), dict) else 0
+        event.device_id = raw_event.get('args', {}).get('device', 0) if isinstance(raw_event.get('args'), dict) else 0
+        
+        # Store additional args as metadata
+        args = raw_event.get('args', {})
+        if isinstance(args, dict):
+            for k, v in args.items():
+                if isinstance(v, (str, int, float)):
+                    event.metadata[str(k)] = str(v)
+        
+        events.append(event)
+    
+    return events
+
+
+def _cleanup_nsys_files(base_path: str):
+    """Clean up nsys temporary files."""
+    for ext in ['.nsys-rep', '.json', '.sqlite', '.qdstrm']:
+        path = f"{base_path}{ext}"
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+
+
+# =============================================================================
 # Helper: Run Python code in the same process (for CUPTI capture)
 # =============================================================================
 def _run_python_in_process(command):
@@ -615,19 +1022,11 @@ def cmd_profile(args):
         print(f"  tracesmith-cli profile -- python -c \"import torch; x=torch.randn(1000).cuda()\"")
         return 1
     
-    # Check if xctrace should be used
+    # Check if xctrace or nsys should be used
     use_xctrace = getattr(args, 'xctrace', False)
+    use_nsys = getattr(args, 'nsys', False)
+    keep_nsys = getattr(args, 'keep_nsys', False)
     
-    # On macOS with Metal, suggest xctrace if not specified
-    platform = detect_platform()
-    if sys.platform == 'darwin' and platform == PlatformType.Metal and not use_xctrace:
-        print_info("Tip: Use --xctrace for real Metal GPU events on macOS")
-        print()
-    
-    # Use xctrace if requested
-    if use_xctrace:
-        return _cmd_profile_xctrace(args, command)
-
     # Output file
     if args.output:
         output_file = args.output
@@ -635,6 +1034,29 @@ def cmd_profile(args):
         # Generate output name from command
         cmd_name = os.path.basename(command[0]).replace('.py', '').replace('.sh', '')
         output_file = f"{cmd_name}_trace.sbt"
+    
+    # Use nsys if requested
+    if use_nsys:
+        if not _is_nsys_available():
+            print_error("nsys (NVIDIA Nsight Systems) not found.")
+            print("Install from: https://developer.nvidia.com/nsight-systems")
+            return 1
+        return _cmd_profile_nsys(args, command, output_file, keep_nsys)
+    
+    # On macOS with Metal, suggest xctrace if not specified
+    platform = detect_platform()
+    if sys.platform == 'darwin' and platform == PlatformType.Metal and not use_xctrace:
+        print_info("Tip: Use --xctrace for real Metal GPU events on macOS")
+        print()
+    
+    # On Linux/Windows with CUDA, suggest nsys if not specified
+    if sys.platform != 'darwin' and platform == PlatformType.CUDA:
+        print_info("Tip: Use --nsys for system-wide GPU profiling (can capture any process)")
+        print()
+    
+    # Use xctrace if requested
+    if use_xctrace:
+        return _cmd_profile_xctrace(args, command)
 
     print_section("TraceSmith Profile")
 
@@ -832,6 +1254,132 @@ def cmd_profile(args):
     print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
     print(f"  {colorize(Color.CYAN)}tracesmith-cli analyze {output_file}{colorize(Color.RESET)}")
 
+    return exit_code
+
+
+def _cmd_profile_nsys(args, command, output_file, keep_nsys):
+    """Profile a command using NVIDIA Nsight Systems (nsys)."""
+    import time
+    
+    from . import (
+        SBTWriter,
+        TraceMetadata,
+        export_perfetto,
+    )
+    
+    print_section("TraceSmith Profile (nsys)")
+    
+    print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
+    print(f"  Command:  {colorize(Color.CYAN)}{' '.join(command)}{colorize(Color.RESET)}")
+    print(f"  Output:   {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+    print(f"  Backend:  {colorize(Color.GREEN)}NVIDIA Nsight Systems (nsys){colorize(Color.RESET)}")
+    print()
+    
+    # Show nsys version
+    nsys_version = _get_nsys_version()
+    if nsys_version:
+        print_success(f"nsys: {nsys_version}")
+    else:
+        print_success("nsys available")
+    print()
+    
+    print(f"{colorize(Color.GREEN)}▶ Starting nsys profiling...{colorize(Color.RESET)}")
+    print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+    
+    start_time = time.time()
+    
+    # Run with nsys
+    exit_code, nsys_rep, events = _run_with_nsys(
+        command=command,
+        output_file=output_file,
+        duration=None,  # No duration limit for profile command
+        gpu_metrics=True,
+        cuda_api=True,
+        nvtx=True,
+        sample_cpu=False,
+    )
+    
+    print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+    print()
+    
+    end_time = time.time()
+    duration_sec = end_time - start_time
+    
+    # Show command result
+    if exit_code == 0:
+        print_success("Command completed successfully")
+    else:
+        print_warning(f"Command exited with code: {exit_code}")
+    
+    print_success("nsys profiling stopped")
+    
+    # Save events to SBT format
+    writer = SBTWriter(output_file)
+    if writer.is_open():
+        metadata = TraceMetadata()
+        metadata.application_name = os.path.basename(command[0])
+        metadata.command_line = ' '.join(command)
+        writer.write_metadata(metadata)
+        
+        if events:
+            writer.write_events(events)
+        
+        writer.finalize()
+    
+    # Print summary
+    print_section("Profile Complete")
+    
+    print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
+    print(f"  Command:      {' '.join(command)}")
+    print(f"  Duration:     {duration_sec:.2f} seconds")
+    print(f"  GPU Events:   {colorize(Color.GREEN)}{len(events)}{colorize(Color.RESET)}")
+    print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+    
+    # Show nsys report location
+    if nsys_rep and os.path.exists(nsys_rep):
+        if keep_nsys:
+            print(f"  nsys Report:  {colorize(Color.CYAN)}{nsys_rep}{colorize(Color.RESET)}")
+        else:
+            # Cleanup nsys files
+            base_name = output_file.replace('.sbt', '').replace('.json', '')
+            _cleanup_nsys_files(f"{base_name}_nsys")
+    
+    # Analyze events if any
+    if events:
+        from collections import Counter
+        from . import EventType
+        
+        type_counts = Counter(e.type for e in events)
+        kernel_count = type_counts.get(EventType.KernelLaunch, 0)
+        memcpy_count = sum(type_counts.get(t, 0) for t in 
+                          [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D])
+        
+        print()
+        print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
+        print(f"  Kernel Launches: {kernel_count}")
+        print(f"  Memory Copies:   {memcpy_count}")
+        print(f"  Other Events:    {len(events) - kernel_count - memcpy_count}")
+    
+    print()
+    
+    # Export to Perfetto if requested
+    if getattr(args, 'perfetto', False) and events:
+        perfetto_file = output_file.replace('.sbt', '.json')
+        if export_perfetto(events, perfetto_file):
+            print_success(f"Exported Perfetto trace: {perfetto_file}")
+            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+        else:
+            print_warning("Failed to export Perfetto trace")
+        print()
+    
+    # Next steps
+    print(f"{colorize(Color.BOLD)}Next steps:{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli analyze {output_file}{colorize(Color.RESET)}")
+    if nsys_rep and keep_nsys and os.path.exists(nsys_rep):
+        print(f"  {colorize(Color.CYAN)}nsys-ui {nsys_rep}{colorize(Color.RESET)}  # Open in Nsight Systems UI")
+    
     return exit_code
 
 
@@ -1791,8 +2339,13 @@ Examples:
                                help='Duration in seconds (for passive mode without --exec)')
     record_parser.add_argument('-p', '--platform', choices=['cuda', 'metal', 'rocm', 'auto'], default='auto')
     record_parser.add_argument('--exec', dest='exec', nargs=argparse.REMAINDER,
-                               help='Execute command in same process (REQUIRED for CUPTI capture). '
+                               help='Execute command in same process (CUPTI capture). '
                                     'Example: --exec python train.py')
+    record_parser.add_argument('--nsys', action='store_true',
+                               help='Use NVIDIA Nsight Systems for system-wide GPU profiling. '
+                                    'Requires --exec. Can capture GPU events from any process.')
+    record_parser.add_argument('--keep-nsys', action='store_true',
+                               help='Keep nsys report file (.nsys-rep) after profiling')
     record_parser.add_argument('--perfetto', action='store_true',
                                help='Also export to Perfetto JSON format')
     record_parser.set_defaults(func=cmd_record)
@@ -1818,6 +2371,11 @@ Examples:
                                 help='Also export to Perfetto JSON format')
     profile_parser.add_argument('--buffer-size', type=int, default=1000000,
                                 help='Event buffer size (default: 1000000)')
+    profile_parser.add_argument('--nsys', action='store_true',
+                                help='Use NVIDIA Nsight Systems for system-wide GPU profiling. '
+                                     'Can capture GPU events from any process (subprocess or external).')
+    profile_parser.add_argument('--keep-nsys', action='store_true',
+                                help='Keep nsys report file (.nsys-rep) after profiling')
     profile_parser.add_argument('--xctrace', action='store_true',
                                 help='Use Apple Instruments (xctrace) for Metal GPU profiling on macOS')
     profile_parser.add_argument('--xctrace-template', default='Metal System Trace',
