@@ -98,3 +98,4 @@ coverage.xml
 # Perfetto trace files
 *.perfetto-trace
 *.pftrace
+build_test/
