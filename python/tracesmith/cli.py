@@ -261,25 +261,42 @@ def cmd_devices(args):
 # =============================================================================
 def cmd_record(args):
     """Record GPU events to a trace file."""
-    print_section("Recording GPU Trace")
-
+    import threading
     import time
 
     from . import (
         PlatformType,
         ProfilerConfig,
         SBTWriter,
+        TraceMetadata,
         create_profiler,
         detect_platform,
+        export_perfetto,
         platform_type_to_string,
     )
 
     output_file = args.output or "trace.sbt"
     duration_sec = args.duration
+    
+    # Parse exec command if provided
+    exec_command = getattr(args, 'exec', None)
+    if exec_command:
+        # Handle the case where exec is a list
+        if isinstance(exec_command, list):
+            exec_command = exec_command
+        else:
+            exec_command = [exec_command]
+    
+    print_section("Recording GPU Trace")
 
     print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
     print(f"  Output:   {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
-    print(f"  Duration: {duration_sec} seconds")
+    if exec_command:
+        print(f"  Execute:  {colorize(Color.CYAN)}{' '.join(exec_command)}{colorize(Color.RESET)}")
+        print(f"  Mode:     {colorize(Color.GREEN)}In-process execution (CUPTI compatible){colorize(Color.RESET)}")
+    else:
+        print(f"  Duration: {duration_sec} seconds")
+        print(f"  Mode:     {colorize(Color.YELLOW)}Passive recording (waiting for GPU activity){colorize(Color.RESET)}")
     print()
 
     # Detect platform
@@ -308,6 +325,15 @@ def cmd_record(args):
         return 1
 
     print_success("Profiler initialized")
+    
+    # Show warning if no exec command and using CUPTI
+    if not exec_command:
+        print()
+        print_warning("CUPTI can only capture GPU events from the SAME process.")
+        print_info("To capture events, use --exec to run GPU code in this process:")
+        print(f"  {colorize(Color.CYAN)}tracesmith-cli record --exec 'python train.py'{colorize(Color.RESET)}")
+        print(f"  {colorize(Color.CYAN)}tracesmith-cli record --exec 'python -c \"import torch; ...\"'{colorize(Color.RESET)}")
+        print()
 
     # Create writer
     writer = SBTWriter(output_file)
@@ -315,60 +341,155 @@ def cmd_record(args):
         print_error(f"Failed to open output file: {output_file}")
         return 1
 
-    # Start capture
-    print(f"\n{colorize(Color.GREEN)}▶ Recording...{colorize(Color.RESET)} (Press Ctrl+C to stop)\n")
+    # Write metadata
+    metadata = TraceMetadata()
+    metadata.application_name = "tracesmith-record"
+    if exec_command:
+        metadata.command_line = ' '.join(exec_command)
+    writer.write_metadata(metadata)
 
-    profiler.start_capture()
+    # Event collection
+    all_events = []
+    events_lock = threading.Lock()
+    total_events = [0]
+    stop_collection = threading.Event()
 
-    total_events = 0
-    start_time = time.time()
-
-    try:
-        while time.time() - start_time < duration_sec:
+    def collect_events():
+        """Background thread to collect events."""
+        while not stop_collection.is_set():
             events = profiler.get_events(10000)
             if events:
-                writer.write_events(events)
-                total_events += len(events)
+                with events_lock:
+                    all_events.extend(events)
+                    total_events[0] += len(events)
+            time.sleep(0.05)
 
-            # Progress
-            elapsed = time.time() - start_time
-            progress = min(elapsed / duration_sec, 1.0)
-            bar_width = 40
-            filled = int(bar_width * progress)
-            bar = f"{colorize(Color.GREEN)}{'█' * filled}{colorize(Color.RESET)}{'░' * (bar_width - filled)}"
-            print(f"\r  [{bar}] {progress*100:.0f}% | Events: {total_events}     ", end='', flush=True)
+    # Start capture
+    profiler.start_capture()
+    
+    # Start collection thread
+    collector_thread = threading.Thread(target=collect_events, daemon=True)
+    collector_thread.start()
 
-            time.sleep(0.1)
-    except KeyboardInterrupt:
-        print("\n")
-        print_info("Recording interrupted by user")
+    start_time = time.time()
+    exit_code = 0
 
-    # Stop
+    if exec_command:
+        # Execute command in the same process
+        print(f"\n{colorize(Color.GREEN)}▶ Recording with in-process execution...{colorize(Color.RESET)}\n")
+        print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+        
+        # Check if this is a Python command
+        is_python_cmd = (exec_command[0] == 'python' or exec_command[0] == 'python3' or 
+                         exec_command[0].endswith('python') or exec_command[0].endswith('python3'))
+        
+        if is_python_cmd:
+            # Run Python in the same process for CUPTI capture
+            exit_code = _run_python_in_process(exec_command)
+        else:
+            # For non-Python commands, we need to warn user
+            print_warning("Non-Python commands run as subprocess - CUPTI cannot capture their GPU events")
+            print_info("Consider using Python wrapper or tracesmith Python API")
+            import subprocess
+            try:
+                result = subprocess.run(exec_command, shell=False)
+                exit_code = result.returncode
+            except Exception as e:
+                print_error(f"Failed to execute command: {e}")
+                exit_code = 1
+        
+        print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+    else:
+        # Passive recording mode - just wait
+        print(f"\n{colorize(Color.GREEN)}▶ Recording...{colorize(Color.RESET)} (Press Ctrl+C to stop)\n")
+        
+        try:
+            while time.time() - start_time < duration_sec:
+                # Progress
+                elapsed = time.time() - start_time
+                progress = min(elapsed / duration_sec, 1.0)
+                bar_width = 40
+                filled = int(bar_width * progress)
+                bar = f"{colorize(Color.GREEN)}{'█' * filled}{colorize(Color.RESET)}{'░' * (bar_width - filled)}"
+                print(f"\r  [{bar}] {progress*100:.0f}% | Events: {total_events[0]}     ", end='', flush=True)
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            print("\n")
+            print_info("Recording interrupted by user")
+
+    # Stop collection
+    stop_collection.set()
+    collector_thread.join(timeout=1.0)
+
+    # Stop profiler
     profiler.stop_capture()
 
-    # Drain remaining
+    # Drain remaining events
     remaining = profiler.get_events()
     if remaining:
-        writer.write_events(remaining)
-        total_events += len(remaining)
+        with events_lock:
+            all_events.extend(remaining)
+            total_events[0] += len(remaining)
+
+    # Write events
+    if all_events:
+        writer.write_events(all_events)
 
     writer.finalize()
+
+    end_time = time.time()
+    duration_actual = end_time - start_time
 
     print("\n")
     print_section("Recording Complete")
 
+    # Show command result if exec was used
+    if exec_command:
+        if exit_code == 0:
+            print_success("Command completed successfully")
+        else:
+            print_warning(f"Command exited with code: {exit_code}")
+        print()
+
     print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
     print(f"  Platform:     {platform_name}")
-    print(f"  Total events: {colorize(Color.GREEN)}{total_events}{colorize(Color.RESET)}")
+    print(f"  Duration:     {duration_actual:.2f} seconds")
+    print(f"  Total events: {colorize(Color.GREEN)}{total_events[0]}{colorize(Color.RESET)}")
     print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+    
+    # Analyze events if any
+    if all_events:
+        from collections import Counter
+        from . import EventType
+        
+        type_counts = Counter(e.type for e in all_events)
+        kernel_count = type_counts.get(EventType.KernelLaunch, 0)
+        memcpy_count = sum(type_counts.get(t, 0) for t in 
+                          [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D])
+        
+        print()
+        print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
+        print(f"  Kernel Launches: {kernel_count}")
+        print(f"  Memory Copies:   {memcpy_count}")
+        print(f"  Other Events:    {total_events[0] - kernel_count - memcpy_count}")
     print()
+
+    # Export to Perfetto if requested
+    if getattr(args, 'perfetto', False) and all_events:
+        perfetto_file = output_file.replace('.sbt', '.json')
+        if export_perfetto(all_events, perfetto_file):
+            print_success(f"Exported Perfetto trace: {perfetto_file}")
+            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+        else:
+            print_warning("Failed to export Perfetto trace")
+        print()
 
     print_success(f"Trace saved to {output_file}")
     print("\nNext steps:")
     print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
     print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
 
-    return 0
+    return exit_code
 
 
 # =============================================================================
@@ -1649,10 +1770,31 @@ Run '{colorize(Color.CYAN)}tracesmith-cli <command> --help{colorize(Color.RESET)
     devices_parser.set_defaults(func=cmd_devices)
 
     # record command
-    record_parser = subparsers.add_parser('record', help='Record GPU events')
+    record_parser = subparsers.add_parser(
+        'record', 
+        help='Record GPU events',
+        description='''
+Record GPU events to a trace file.
+
+IMPORTANT: CUPTI can only capture GPU events from the SAME process.
+Use --exec to run GPU code in this process for event capture.
+
+Examples:
+  tracesmith-cli record --exec "python train.py"
+  tracesmith-cli record --exec "python -c \\"import torch; x=torch.randn(1000).cuda()\\""
+  tracesmith-cli record -o trace.sbt -d 10  # Passive mode (no events without --exec)
+''',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     record_parser.add_argument('-o', '--output', help='Output file (default: trace.sbt)')
-    record_parser.add_argument('-d', '--duration', type=float, default=5.0, help='Duration in seconds')
+    record_parser.add_argument('-d', '--duration', type=float, default=5.0, 
+                               help='Duration in seconds (for passive mode without --exec)')
     record_parser.add_argument('-p', '--platform', choices=['cuda', 'metal', 'rocm', 'auto'], default='auto')
+    record_parser.add_argument('--exec', dest='exec', nargs=argparse.REMAINDER,
+                               help='Execute command in same process (REQUIRED for CUPTI capture). '
+                                    'Example: --exec python train.py')
+    record_parser.add_argument('--perfetto', action='store_true',
+                               help='Also export to Perfetto JSON format')
     record_parser.set_defaults(func=cmd_record)
 
     # profile command (NEW!)
