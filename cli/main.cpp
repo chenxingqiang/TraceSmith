@@ -397,6 +397,38 @@ int cmdDevices([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
         std::cout << "  " << C(Yellow) << "Not available" << C(Reset) << "\n";
     }
     
+    // Check MetaX MACA
+    std::cout << "\n" << C(Bold) << "MetaX MACA:" << C(Reset) << "\n";
+    if (isMACAAvailable()) {
+        int count = getMACADeviceCount();
+        int driver = getMACADriverVersion();
+        printSuccess("MACA available");
+        std::cout << "  Devices: " << count << "\n";
+        std::cout << "  Driver:  " << driver << "\n";
+        found_any = true;
+        
+        // Get device info if possible
+        auto profiler = createProfiler(PlatformType::MACA);
+        if (profiler) {
+            ProfilerConfig config;
+            if (profiler->initialize(config)) {
+                auto devices = profiler->getDeviceInfo();
+                for (const auto& dev : devices) {
+                    std::cout << "\n  " << C(Cyan) << "Device " << dev.device_id << ": " 
+                              << C(Reset) << dev.name << "\n";
+                    std::cout << "    Vendor:     " << dev.vendor << "\n";
+                    std::cout << "    Compute:    " << dev.compute_major << "." << dev.compute_minor << "\n";
+                    std::cout << "    Memory:     " << formatByteSize(dev.total_memory) << "\n";
+                    std::cout << "    SMs:        " << dev.multiprocessor_count << "\n";
+                    std::cout << "    Clock:      " << (dev.clock_rate / 1000) << " MHz\n";
+                }
+                profiler->finalize();
+            }
+        }
+    } else {
+        std::cout << "  " << C(Yellow) << "Not available" << C(Reset) << "\n";
+    }
+    
     // Check ROCm
     std::cout << "\n" << C(Bold) << "AMD ROCm:" << C(Reset) << "\n";
     std::cout << "  " << C(Yellow) << "Coming soon" << C(Reset) << "\n";
