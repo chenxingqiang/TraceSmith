@@ -22,6 +22,16 @@
 #include <set>
 #include <mutex>
 
+// Platform-specific thread ID includes
+#ifdef __linux__
+    #include <sys/syscall.h>
+    #include <unistd.h>
+#elif defined(__APPLE__)
+    #include <pthread.h>
+#elif defined(_WIN32)
+    #include <windows.h>
+#endif
+
 using namespace tracesmith;
 
 // Thread-safe event collector
