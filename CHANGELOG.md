@@ -5,6 +5,30 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2025-12-09
+
+### Added
+- **Prerequisites & Dependencies Documentation**: Comprehensive installation guide
+  - Platform-specific dependency installation for Linux, macOS, Windows
+  - NVIDIA CUDA/Nsight Systems setup instructions
+  - MetaX MACA SDK setup instructions
+  - Version requirements table
+
+### Fixed
+- **RingBuffer ConcurrentAccess Test**: Fixed infinite loop bug
+  - Buffer size increased to accommodate all items (was 1024, now 2x num_items)
+  - Added `producer_done` flag to prevent consumer deadlock
+  - Test now completes in <1ms instead of hanging forever
+
+### Changed
+- Improved CLI `--nsys` documentation with version compatibility notes
+- Added CUPTI conflict warning for `--nsys` option
+
+### Tested
+- All 86 unit tests pass on NVIDIA RTX 4090 (CUDA 12.8)
+- Nsight Systems 2024.6.2 integration verified
+- Benchmark: 107K kernels/sec on RTX 4090
+
 ## [0.8.1] - 2025-12-09
 
 ### Added
