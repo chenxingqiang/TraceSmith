@@ -471,6 +471,25 @@ MetaX MACA:
     Clock:      1600 MHz
 ```
 
+**System-Wide Profiling with mcTracer:**
+
+TraceSmith integrates with MetaX's `mcTracer` tool for comprehensive system-wide GPU profiling (similar to NVIDIA nsys):
+
+```bash
+# Profile with mcTracer
+./bin/tracesmith profile --mctracer -- ./my_maca_app
+./bin/tracesmith profile --mctracer --perfetto -- python train.py
+
+# Output is Perfetto-compatible JSON
+# View at: https://ui.perfetto.dev
+```
+
+mcTracer captures:
+- All MACA API calls (mcInit, mcMalloc, mcMemcpy, etc.)
+- GPU memory operations with bandwidth
+- Stream operations and synchronization
+- CPU-GPU launch flow arrows
+
 **Build with MetaX support:**
 
 ```bash
