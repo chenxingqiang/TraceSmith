@@ -81,11 +81,10 @@ jobs:
       - name: Test CLI
         run: |
           echo "=== Build output structure ==="
-          ls -la build/
-          ls -la build/cli/ || echo "CLI directory not found"
+          ls -la build/bin/
           echo "=== Running CLI tests ==="
-          ./build/cli/tracesmith --version
-          ./build/cli/tracesmith devices
+          ./build/bin/tracesmith --version
+          ./build/bin/tracesmith devices
 
   # ===========================================================================
   # Build & Test on macOS
@@ -123,7 +122,7 @@ jobs:
       
       - name: Test CLI
         run: |
-          ./build/cli/tracesmith --version
+          ./build/bin/tracesmith --version
 
   # ===========================================================================
   # Build & Test on Windows
@@ -221,7 +220,7 @@ jobs:
       
       - name: Check CUDA support
         run: |
-          ls -la build/cli/ || echo "CLI directory not found"
-          ./build/cli/tracesmith --version || echo "CLI test skipped (CUDA container)"
+          ls -la build/bin/ || echo "bin directory not found"
+          ./build/bin/tracesmith --version || echo "CLI test skipped (CUDA container)"
           echo "CUDA build successful!"
 
