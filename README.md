@@ -66,6 +66,103 @@
 - `.dot` - Graphviz dependency graph
 - ASCII Timeline - Terminal visualization
 
+## Prerequisites & Dependencies
+
+Before installing TraceSmith, install the required dependencies for your platform.
+
+### Linux (Ubuntu/Debian)
+
+```bash
+# Core build tools
+sudo apt update
+sudo apt install -y cmake g++ make git
+
+# Optional: libunwind for call stack capture
+sudo apt install -y libunwind-dev
+
+# Optional: Python development headers (for Python bindings)
+sudo apt install -y python3-dev python3-pip
+```
+
+### Linux with NVIDIA CUDA
+
+```bash
+# 1. Install CUDA Toolkit (includes CUPTI)
+# Download from: https://developer.nvidia.com/cuda-downloads
+# Or use package manager:
+sudo apt install -y nvidia-cuda-toolkit
+
+# 2. Install Nsight Systems (required for `tracesmith profile --nsys`)
+# Option A: Install from CUDA repository (recommended)
+sudo apt install -y cuda-nsight-systems-12-8  # Match your CUDA version
+
+# Option B: Install standalone
+sudo apt install -y nsight-systems
+
+# 3. Verify installation
+nvcc --version           # CUDA compiler
+nsys --version           # Nsight Systems profiler (2024.x recommended)
+ls /usr/local/cuda/include/cupti.h  # CUPTI headers
+
+# 4. Set environment variables (add to ~/.bashrc)
+export PATH=/usr/local/cuda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+```
+
+### Linux with MetaX MACA
+
+```bash
+# Install MACA SDK (includes MCPTI)
+# Contact MetaX for SDK access: https://www.metax-tech.com
+
+# Set MACA_ROOT environment variable
+export MACA_ROOT=/opt/maca-3.0.0
+
+# Install mcTracer (required for `tracesmith profile --mctracer`)
+# mcTracer is included in MACA SDK
+```
+
+### macOS
+
+```bash
+# Install Xcode Command Line Tools (includes Metal framework)
+xcode-select --install
+
+# Install CMake via Homebrew
+brew install cmake
+
+# Verify Metal support
+xcrun metal --version
+
+# Note: Instruments (xctrace) is included with Xcode
+# Used for `tracesmith profile --xctrace`
+```
+
+### Windows
+
+```powershell
+# Install Visual Studio 2019+ with C++ workload
+# Install CMake: https://cmake.org/download/
+
+# For CUDA support:
+# Install CUDA Toolkit: https://developer.nvidia.com/cuda-downloads
+# Install Nsight Systems: https://developer.nvidia.com/nsight-systems
+```
+
+### Version Requirements
+
+| Dependency | Minimum Version | Recommended | Notes |
+|------------|----------------|-------------|-------|
+| CMake | 3.16 | 3.22+ | Build system |
+| GCC | 8.0 | 11+ | C++17 support |
+| Clang | 8.0 | 14+ | C++17 support |
+| CUDA Toolkit | 11.0 | 12.x | CUPTI included |
+| Nsight Systems | 2022.x | 2024.x | GPU profiling |
+| libunwind | 1.3 | 1.6+ | Stack capture |
+| Python | 3.7 | 3.10+ | Python bindings |
+
+---
+
 ## Quick Start
 
 ### Installation
@@ -102,6 +199,7 @@ TRACESMITH_CUDA=1 pip install .  # with CUDA support
 - C++17 compatible compiler (GCC 8+, Clang 8+, MSVC 2019+)
 - Python 3.7+ (for Python bindings)
 - (Optional) NVIDIA CUDA Toolkit with CUPTI
+- (Optional) Nsight Systems for `--nsys` profiling
 - (Optional) Xcode Command Line Tools (for Metal on macOS)
 
 **Basic Build:**
@@ -295,14 +393,33 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
 > CUPTI/MCPTI can only profile the calling process, not child processes.
 > For CUDA/MACA platforms, you **MUST** use system-level profilers:
 >
-> | Platform | Required Option | Tool |
-> |----------|-----------------|------|
-> | NVIDIA CUDA | `--nsys` | Nsight Systems |
-> | MetaX MACA | `--mctracer` | mcTracer |
-> | Apple Metal | `--xctrace` | Instruments |
+> | Platform | Required Option | Tool | Min Version |
+> |----------|-----------------|------|-------------|
+> | NVIDIA CUDA | `--nsys` | Nsight Systems | 2022.x (2024.x recommended) |
+> | MetaX MACA | `--mctracer` | mcTracer | MACA SDK 3.0+ |
+> | Apple Metal | `--xctrace` | Instruments | Xcode 14+ |
 >
 > The `record` command is **not supported** for CUDA/MACA platforms.
 > Use `profile --nsys` or `profile --mctracer` instead.
+
+**⚠️ Important Notes:**
+
+1. **Nsight Systems Version**: Use version 2024.x or later. Older versions (2021.x) may have compatibility issues with newer CUDA drivers.
+   ```bash
+   # Check your nsys version
+   nsys --version
+   
+   # Install latest version (Ubuntu with CUDA 12.x)
+   sudo apt install cuda-nsight-systems-12-8
+   ```
+
+2. **CUPTI Conflict**: When using `--nsys`, your program should **not** use CUPTI directly (nsys subscribes to CUPTI). If your program uses CUPTI, run it without `--nsys`:
+   ```bash
+   # For programs using CUPTI internally
+   ./bin/cupti_example  # Run directly, not with --nsys
+   ```
+
+3. **Root/Admin Not Required**: Modern nsys (2024.x) does not require root privileges for basic profiling.
 
 **C++ CLI Examples:**
 
