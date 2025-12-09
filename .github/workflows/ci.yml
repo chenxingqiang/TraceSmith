@@ -84,7 +84,7 @@ jobs:
           ls -la build/bin/
           echo "=== Running CLI tests ==="
           ./build/bin/tracesmith --version
-          ./build/bin/tracesmith devices
+          ./build/bin/tracesmith devices || echo "Note: No GPU detected (expected in CI)"
 
   # ===========================================================================
   # Build & Test on macOS
