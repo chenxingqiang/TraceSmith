@@ -242,8 +242,11 @@ void printProfileUsage(const char* program) {
 #ifdef __APPLE__
     std::cout << "    --xctrace                Use Apple Instruments for Metal GPU profiling\n";
     std::cout << "    --xctrace-template <T>   Instruments template (default: 'Metal System Trace')\n";
-    std::cout << "    --keep-trace             Keep the raw .trace file\n";
 #endif
+#ifdef TRACESMITH_ENABLE_MACA
+    std::cout << "    --mctracer               Use MetaX mcTracer for MACA GPU profiling\n";
+#endif
+    std::cout << "    --keep-trace             Keep the raw trace output directory\n";
     std::cout << "    -v, --verbose            Verbose output\n";
     std::cout << "    -h, --help               Show this help message\n\n";
     
@@ -254,12 +257,18 @@ void printProfileUsage(const char* program) {
 #ifdef __APPLE__
     std::cout << "    " << program << " profile --xctrace -- python train.py\n";
 #endif
+#ifdef TRACESMITH_ENABLE_MACA
+    std::cout << "    " << program << " profile --mctracer -- ./my_maca_app\n";
+#endif
     std::cout << "    " << program << " profile -- python -c \"import torch; torch.randn(1000).cuda()\"\n\n";
-    
+
     std::cout << C(Bold) << "NOTE:" << C(Reset) << "\n";
     std::cout << "    Use '--' to separate tracesmith options from the command to profile.\n";
 #ifdef __APPLE__
     std::cout << "    Use --xctrace on macOS for real Metal GPU event capture.\n";
+#endif
+#ifdef TRACESMITH_ENABLE_MACA
+    std::cout << "    Use --mctracer on MetaX systems for system-wide MACA GPU profiling.\n";
 #endif
 }
 
@@ -578,6 +587,176 @@ int cmdProfileXCTrace(
 #endif
 
 // =============================================================================
+// Command: profile with mcTracer (MetaX MACA)
+// =============================================================================
+#ifdef TRACESMITH_ENABLE_MACA
+int cmdProfileMCTracer(
+    const std::vector<std::string>& command,
+    std::string output_file,
+    bool keep_trace,
+    bool export_perfetto_flag
+) {
+    // Build command string for display
+    std::string cmd_str;
+    for (size_t i = 0; i < command.size(); ++i) {
+        if (i > 0) cmd_str += " ";
+        if (command[i].find(' ') != std::string::npos) {
+            cmd_str += "\"" + command[i] + "\"";
+        } else {
+            cmd_str += command[i];
+        }
+    }
+    
+    // Generate output filename if not provided
+    if (output_file.empty()) {
+        std::string cmd_name = command[0];
+        size_t slash_pos = cmd_name.rfind('/');
+        if (slash_pos != std::string::npos) {
+            cmd_name = cmd_name.substr(slash_pos + 1);
+        }
+        size_t dot_pos = cmd_name.rfind('.');
+        if (dot_pos != std::string::npos) {
+            cmd_name = cmd_name.substr(0, dot_pos);
+        }
+        output_file = cmd_name + "_trace.sbt";
+    }
+    
+    printSection("TraceSmith Profile (mcTracer)");
+    
+    std::cout << C(Bold) << "Configuration:" << C(Reset) << "\n";
+    std::cout << "  Command:   " << C(Cyan) << cmd_str << C(Reset) << "\n";
+    std::cout << "  Output:    " << C(Cyan) << output_file << C(Reset) << "\n";
+    std::cout << "  Backend:   " << C(Green) << "MetaX mcTracer (MACA)" << C(Reset) << "\n\n";
+    
+    // Check if mcTracer exists
+    std::string mctracer_path = "/opt/maca-3.0.0/bin/mcTracer";
+    if (access(mctracer_path.c_str(), X_OK) != 0) {
+        // Try alternate path
+        mctracer_path = "/opt/maca/bin/mcTracer";
+        if (access(mctracer_path.c_str(), X_OK) != 0) {
+            printError("mcTracer not found. Please install MACA SDK.");
+            std::cout << "  Expected at: /opt/maca-3.0.0/bin/mcTracer\n";
+            return 1;
+        }
+    }
+    
+    // Create output directory for mcTracer
+    std::string trace_dir = "mctracer_output";
+    std::string mkdir_cmd = "mkdir -p " + trace_dir;
+    system(mkdir_cmd.c_str());
+    
+    // Build mcTracer command
+    std::vector<std::string> mctracer_cmd = {
+        mctracer_path,
+        "--mctx",
+        "--odname", trace_dir,
+        "--name", "tracesmith"
+    };
+    
+    // Add user command
+    for (const auto& arg : command) {
+        mctracer_cmd.push_back(arg);
+    }
+    
+    // Build command line string for system()
+    std::string full_cmd;
+    for (size_t i = 0; i < mctracer_cmd.size(); ++i) {
+        if (i > 0) full_cmd += " ";
+        if (mctracer_cmd[i].find(' ') != std::string::npos) {
+            full_cmd += "'" + mctracer_cmd[i] + "'";
+        } else {
+            full_cmd += mctracer_cmd[i];
+        }
+    }
+    
+    printSuccess("mcTracer profiler initialized");
+    std::cout << "\n";
+    
+    std::cout << C(Green) << "▶ Starting mcTracer profiling..." << C(Reset) << "\n";
+    std::cout << C(Yellow);
+    for (int i = 0; i < 60; ++i) std::cout << "-";
+    std::cout << C(Reset) << "\n";
+    
+    auto start_time = std::chrono::steady_clock::now();
+    
+    // Execute mcTracer
+    int exit_code = system(full_cmd.c_str());
+    
+    std::cout << C(Yellow);
+    for (int i = 0; i < 60; ++i) std::cout << "-";
+    std::cout << C(Reset) << "\n\n";
+    
+    auto end_time = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    
+    if (exit_code != 0) {
+        printWarning("mcTracer returned non-zero exit code");
+    }
+    
+    printSuccess("mcTracer profiling stopped");
+    
+    // Find the generated JSON file
+    std::string find_cmd = "ls -t " + trace_dir + "/tracesmith-*.json 2>/dev/null | head -1";
+    FILE* fp = popen(find_cmd.c_str(), "r");
+    std::string json_file;
+    if (fp) {
+        char buffer[256];
+        if (fgets(buffer, sizeof(buffer), fp)) {
+            json_file = buffer;
+            // Remove trailing newline
+            if (!json_file.empty() && json_file.back() == '\n') {
+                json_file.pop_back();
+            }
+        }
+        pclose(fp);
+    }
+    
+    // Print summary
+    printSection("Profile Complete");
+    
+    std::cout << C(Bold) << "Results:" << C(Reset) << "\n";
+    std::cout << "  Duration:     " << C(Green) << duration.count() << " ms" << C(Reset) << "\n";
+    if (!json_file.empty()) {
+        std::cout << "  Trace file:   " << C(Cyan) << json_file << C(Reset) << "\n";
+    }
+    std::cout << "  Trace dir:    " << C(Cyan) << trace_dir << C(Reset) << "\n\n";
+    
+    // Convert mcTracer JSON to TraceSmith format if requested
+    if (!json_file.empty()) {
+        // mcTracer already outputs Perfetto-compatible JSON
+        std::cout << C(Bold) << "Next steps:" << C(Reset) << "\n";
+        std::cout << "  " << C(Cyan) << "Open in Perfetto: https://ui.perfetto.dev" << C(Reset) << "\n";
+        std::cout << "  " << C(Cyan) << "Load file: " << json_file << C(Reset) << "\n";
+        
+        // Copy to output file if export_perfetto is set
+        if (export_perfetto_flag) {
+            std::string perfetto_output = output_file;
+            size_t dot_pos = perfetto_output.rfind('.');
+            if (dot_pos != std::string::npos) {
+                perfetto_output = perfetto_output.substr(0, dot_pos) + ".json";
+            } else {
+                perfetto_output += ".json";
+            }
+            
+            std::string cp_cmd = "cp \"" + json_file + "\" \"" + perfetto_output + "\"";
+            if (system(cp_cmd.c_str()) == 0) {
+                std::cout << "\n";
+                printSuccess("Exported to: " + perfetto_output);
+            }
+        }
+    }
+    
+    // Cleanup trace directory if not keeping
+    if (!keep_trace && !trace_dir.empty()) {
+        std::cout << "\n" << C(Yellow) << "Note:" << C(Reset) 
+                  << " Use --keep-trace to keep the mcTracer output directory\n";
+    }
+    
+    return exit_code == 0 ? 0 : 1;
+}
+#endif
+
+// =============================================================================
 // Command: profile - Profile a Command (Record + Execute)
 // =============================================================================
 int cmdProfile(int argc, char* argv[]) {
@@ -590,8 +769,13 @@ int cmdProfile(int argc, char* argv[]) {
 #ifdef __APPLE__
     bool use_xctrace = false;
     std::string xctrace_template = "Metal System Trace";
-    bool keep_trace = false;
 #endif
+
+#ifdef TRACESMITH_ENABLE_MACA
+    bool use_mctracer = false;
+#endif
+
+    [[maybe_unused]] bool keep_trace = false;
     
     // Parse arguments
     bool found_separator = false;
@@ -613,9 +797,13 @@ int cmdProfile(int argc, char* argv[]) {
             use_xctrace = true;
         } else if (arg == "--xctrace-template" && i + 1 < argc) {
             xctrace_template = argv[++i];
+#endif
+#ifdef TRACESMITH_ENABLE_MACA
+        } else if (arg == "--mctracer") {
+            use_mctracer = true;
+#endif
         } else if (arg == "--keep-trace") {
             keep_trace = true;
-#endif
         } else if ((arg == "-b" || arg == "--buffer") && i + 1 < argc) {
             buffer_size = std::stoull(argv[++i]);
         } else if (arg == "--perfetto") {
@@ -644,6 +832,9 @@ int cmdProfile(int argc, char* argv[]) {
 #ifdef __APPLE__
         std::cout << "    " << argv[0] << " profile --xctrace -- python train.py\n";
 #endif
+#ifdef TRACESMITH_ENABLE_MACA
+        std::cout << "    " << argv[0] << " profile --mctracer -- ./my_maca_app\n";
+#endif
         return 1;
     }
     
@@ -656,6 +847,19 @@ int cmdProfile(int argc, char* argv[]) {
     // Suggest xctrace on macOS with Metal
     if (detectPlatform() == PlatformType::Metal) {
         printInfo("Tip: Use --xctrace for real Metal GPU events on macOS");
+        std::cout << "\n";
+    }
+#endif
+
+#ifdef TRACESMITH_ENABLE_MACA
+    // Use mcTracer if requested
+    if (use_mctracer) {
+        return cmdProfileMCTracer(command, output_file, keep_trace, export_perfetto);
+    }
+    
+    // Suggest mctracer on MACA systems
+    if (detectPlatform() == PlatformType::MACA) {
+        printInfo("Tip: Use --mctracer for system-wide MetaX GPU profiling");
         std::cout << "\n";
     }
 #endif
