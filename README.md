@@ -20,7 +20,7 @@
 - **High-Performance Event Capture**: Collect 10,000+ GPU instruction-level call stacks without interrupting execution
 - **Lock-Free Ring Buffer**: Minimal overhead event collection using SPSC (Single Producer Single Consumer) design
 - **SBT Binary Trace Format**: Compact, efficient binary format with string interning and delta timestamp encoding
-- **Multi-Platform Support**: NVIDIA CUDA (via CUPTI), AMD ROCm, Apple Metal + Instruments (xctrace)
+- **Multi-Platform Support**: NVIDIA CUDA (via CUPTI/nsys), AMD ROCm, Apple Metal + Instruments (xctrace), MetaX MACA (via MCPTI)
 - **Multi-GPU & Multi-Stream**: Full support for complex GPU topologies and async execution
 - **Multi-GPU Cluster Profiling** (v0.7.x): GPUTopology discovery, TimeSync (NTP/PTP/CUDA), NCCLTracker for distributed training
 - **Perfetto SDK Integration**: Native protobuf export (85% smaller files) + JSON fallback
@@ -122,6 +122,7 @@ cmake --build . -j$(nproc)
 | `TRACESMITH_ENABLE_CUDA` | OFF | Enable NVIDIA CUDA/CUPTI support |
 | `TRACESMITH_ENABLE_ROCM` | OFF | Enable AMD ROCm support |
 | `TRACESMITH_ENABLE_METAL` | OFF | Enable Apple Metal support |
+| `TRACESMITH_ENABLE_MACA` | OFF | Enable MetaX MACA/MCPTI support |
 | `TRACESMITH_BUILD_PYTHON` | OFF | Build Python bindings (pybind11) |
 | `TRACESMITH_BUILD_TESTS` | ON | Build unit tests (Google Test) |
 | `TRACESMITH_BUILD_EXAMPLES` | ON | Build example programs |
@@ -284,7 +285,8 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
 | `export` | Export trace to Perfetto or other formats |
 | `analyze` | Analyze trace for performance insights |
 | `replay` | Replay a captured trace |
-| `devices` | List available GPU devices |
+| `benchmark` | Run 10K GPU call stacks benchmark |
+| `devices` | List available GPU devices (CUDA, Metal, MACA, ROCm) |
 | `version` | Show version information |
 | `help` | Show help message |
 
@@ -363,6 +365,28 @@ tracesmith-cli analyze trace.sbt
 tracesmith-cli replay trace.sbt --mode dry-run
 ```
 
+#### NVIDIA Nsight Systems (nsys) Integration
+
+TraceSmith integrates with NVIDIA Nsight Systems for system-wide GPU profiling, providing comprehensive CUDA kernel and memory operation tracing.
+
+**Usage:**
+
+```bash
+# Profile with nsys (system-wide profiling)
+./bin/tracesmith profile --nsys -- python train.py
+./bin/tracesmith profile --nsys -o trace.sbt -- ./my_cuda_app
+
+# With custom nsys options
+./bin/tracesmith profile --nsys --nsys-args="-t cuda,nvtx" -- python benchmark.py
+```
+
+**Features:**
+- System-wide CUDA kernel tracing
+- Memory transfer profiling (H2D, D2H, D2D)
+- NVTX annotation support
+- Multi-GPU profiling
+- Automatic .nsys-rep to TraceSmith format conversion
+
 #### macOS Metal GPU Profiling with xctrace
 
 On macOS, TraceSmith integrates with Apple Instruments (xctrace) for capturing real Metal GPU events. This provides accurate GPU timing and event capture that the Metal Frame Capture API cannot achieve programmatically.
@@ -421,14 +445,31 @@ TraceSmith supports MetaX GPUs (C500, C550, etc.) using the MCPTI (MACA Profilin
 | MetaX C500 | 64 GB | 104 CUs | 3.0.11 | ✅ Verified |
 | MetaX C550 | - | - | - | 🔜 Planned |
 
-**Benchmark Results (MetaX C500):**
+**Benchmark Results (MetaX C500, MACA 3.0.0):**
 
 | Test | Data Size | Bandwidth |
 |------|-----------|-----------|
-| Host → Device | 256 MB | 8.8 GB/s |
-| Device → Host | 256 MB | 8.7 GB/s |
-| Device → Device | 256 MB | **599 GB/s** |
-| **MCPTI Overhead** | - | **< 2%** |
+| Host → Device | 256 MB | 10.1 GB/s |
+| Device → Host | 256 MB | 9.9 GB/s |
+| Device → Device | 256 MB | **608 GB/s** |
+| **MCPTI Overhead** | - | **< 2%** (negligible) |
+
+**CLI Device Detection:**
+```bash
+$ ./bin/tracesmith devices
+
+MetaX MACA:
+✓ MACA available
+  Devices: 1
+  Driver:  3000
+
+  Device 0: MetaX C500
+    Vendor:     MetaX
+    Compute:    10.0
+    Memory:     63.62 GB
+    SMs:        104
+    Clock:      1600 MHz
+```
 
 **Build with MetaX support:**
 
@@ -893,12 +934,14 @@ for (int i = 0; i < 10000; ++i) {
 |----------|----------|--------------|
 | **NVIDIA CUDA** | CUPTIProfiler | `./bin/cupti_example` |
 | **Apple Metal** | MetalProfiler | `./bin/metal_example` |
+| **MetaX MACA** | MCPTIProfiler | `./bin/metax_example` |
 | **CPU Fallback** | StackCapture | `./bin/stack_capture_example` |
 
 ## Version History
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v0.8.1** | 2025-12 | **nsys & MACA Enhancement** - NVIDIA Nsight Systems integration, MetaX CLI device detection, MACA cluster module support |
 | **v0.8.0** | 2025-12 | **xctrace Integration** - Apple Instruments, Cross-Platform Device Utils, Enhanced Examples |
 | v0.7.1 | 2025-12 | **Multi-GPU Phase 2** - TimeSync, NCCLTracker, ClockCorrelator, CommAnalysis |
 | **v0.7.0** | 2025-12 | **Multi-GPU Cluster** - GPUTopology, MultiGPUProfiler, GitHub Actions CI/CD |
