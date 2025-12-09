@@ -34,6 +34,11 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <cerrno>
+#else
+#include <io.h>
+#define F_OK 0
+#define X_OK 0
+#define access _access
 #endif
 
 using namespace tracesmith;
