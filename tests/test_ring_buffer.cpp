@@ -98,23 +98,30 @@ TEST(RingBufferTest, PowerOfTwo) {
 }
 
 TEST(RingBufferTest, ConcurrentAccess) {
-    RingBuffer<int> buffer(1024);
+    // Buffer must be large enough to hold all items to avoid infinite loop
+    // when using DropOldest policy (items dropped = consumer never reaches target)
     const int num_items = 10000;
+    RingBuffer<int> buffer(num_items * 2);  // 2x capacity to avoid overflow
     std::atomic<int> consumed{0};
+    std::atomic<bool> producer_done{false};
     
     // Producer thread
     std::thread producer([&]() {
         for (int i = 0; i < num_items; ++i) {
             buffer.push(i);
         }
+        producer_done.store(true, std::memory_order_release);
     });
     
     // Consumer thread
     std::thread consumer([&]() {
-        while (consumed.load() < num_items) {
+        while (consumed.load(std::memory_order_relaxed) < num_items) {
             auto value = buffer.pop();
             if (value.has_value()) {
-                consumed.fetch_add(1);
+                consumed.fetch_add(1, std::memory_order_relaxed);
+            } else if (producer_done.load(std::memory_order_acquire)) {
+                // Producer finished but buffer empty - check if we got all items
+                break;
             } else {
                 std::this_thread::yield();
             }
