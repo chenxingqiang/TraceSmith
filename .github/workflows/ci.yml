@@ -67,7 +67,8 @@ jobs:
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DTRACESMITH_BUILD_TESTS=ON \
-            -DTRACESMITH_BUILD_EXAMPLES=ON
+            -DTRACESMITH_BUILD_EXAMPLES=ON \
+            -DTRACESMITH_BUILD_CLI=ON
       
       - name: Build
         run: cmake --build build --parallel 4
@@ -79,6 +80,10 @@ jobs:
       
       - name: Test CLI
         run: |
+          echo "=== Build output structure ==="
+          ls -la build/
+          ls -la build/cli/ || echo "CLI directory not found"
+          echo "=== Running CLI tests ==="
           ./build/cli/tracesmith --version
           ./build/cli/tracesmith devices
 
@@ -105,6 +110,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DTRACESMITH_BUILD_TESTS=ON \
             -DTRACESMITH_BUILD_EXAMPLES=ON \
+            -DTRACESMITH_BUILD_CLI=ON \
             -DTRACESMITH_ENABLE_METAL=ON
       
       - name: Build
@@ -135,7 +141,7 @@ jobs:
       
       - name: Configure CMake
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DTRACESMITH_BUILD_TESTS=ON
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DTRACESMITH_BUILD_TESTS=ON -DTRACESMITH_BUILD_CLI=ON
       
       - name: Build
         run: cmake --build build --config ${{ matrix.build_type }} --parallel 4
