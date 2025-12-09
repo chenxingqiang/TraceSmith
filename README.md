@@ -271,7 +271,7 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
    ██║   ██║  ██║██║  ██║╚██████╗███████╗███████║██║ ╚═╝ ██║██║   ██║   ██║  ██║
    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝
 
-                    GPU Profiling & Replay System v0.8.0
+                    GPU Profiling & Replay System v0.8.1
 ```
 
 **Available Commands:**
@@ -872,7 +872,7 @@ make benchmark_10k_stacks -j8
 
 ```bash
 # Basic installation
-pip install tracesmith==0.8.0
+pip install tracesmith==0.8.1
 
 # With CuPy for real GPU profiling in Python CLI (choose one):
 pip install tracesmith[cuda12]    # CUDA 12.x
@@ -961,6 +961,7 @@ for (int i = 0; i < 10000; ++i) {
 | Version | Date | Highlights |
 |---------|------|------------|
 | **v0.8.1** | 2025-12 | **nsys & MACA Enhancement** - NVIDIA Nsight Systems integration, MetaX CLI device detection, MACA cluster module support |
+| **v0.8.1** | 2025-12 | **mcTracer Integration** - MetaX system-wide profiling, Enhanced MACA CLI, Cluster module support |
 | **v0.8.0** | 2025-12 | **xctrace Integration** - Apple Instruments, Cross-Platform Device Utils, Enhanced Examples |
 | v0.7.1 | 2025-12 | **Multi-GPU Phase 2** - TimeSync, NCCLTracker, ClockCorrelator, CommAnalysis |
 | **v0.7.0** | 2025-12 | **Multi-GPU Cluster** - GPUTopology, MultiGPUProfiler, GitHub Actions CI/CD |
