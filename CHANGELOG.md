@@ -5,6 +5,19 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2025-12-09
+
+### Fixed
+- **PyPI Source Distribution Build**: Fixed wheel build failure on systems without Perfetto SDK
+  - Added `detect_perfetto_sdk()` function to check for SDK files
+  - Perfetto SDK now auto-disabled when files not found (perfetto.h/perfetto.cc are 10MB+)
+  - Improved CMake error output capture for better debugging
+  - Clear message when building without protobuf export support
+
+### Changed
+- Enhanced setup.py error handling with detailed CMake output
+- Better installation instructions for missing CMake
+
 ## [0.8.2] - 2025-12-09
 
 ### Added

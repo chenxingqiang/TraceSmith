@@ -69,6 +69,14 @@ def detect_metal():
     return sys.platform == 'darwin'
 
 
+def detect_perfetto_sdk():
+    """Check if Perfetto SDK files exist."""
+    perfetto_dir = Path(__file__).parent / 'third_party' / 'perfetto'
+    perfetto_h = perfetto_dir / 'perfetto.h'
+    perfetto_cc = perfetto_dir / 'perfetto.cc'
+    return perfetto_h.exists() and perfetto_cc.exists()
+
+
 def find_ninja():
     """Find ninja build tool."""
     return shutil.which('ninja') is not None
@@ -150,13 +158,18 @@ class CMakeBuild(build_ext):
         else:
             cmake_args.append('-DTRACESMITH_ENABLE_METAL=OFF')
 
-        # Perfetto SDK support
+        # Perfetto SDK support (only enable if SDK files exist)
+        perfetto_sdk_exists = detect_perfetto_sdk()
         enable_perfetto = os.environ.get('TRACESMITH_PERFETTO', '1').lower() in ('1', 'true', 'on', 'yes')
-        if enable_perfetto:
+        
+        if enable_perfetto and perfetto_sdk_exists:
             cmake_args.append('-DTRACESMITH_USE_PERFETTO_SDK=ON')
             print("TraceSmith: Building with Perfetto SDK (protobuf export)")
         else:
             cmake_args.append('-DTRACESMITH_USE_PERFETTO_SDK=OFF')
+            if enable_perfetto and not perfetto_sdk_exists:
+                print("TraceSmith: Perfetto SDK files not found, building without protobuf export")
+                print("TraceSmith: (perfetto.h and perfetto.cc required in third_party/perfetto/)")
 
         # Additional build arguments
         build_args = ['--config', cfg]
@@ -172,7 +185,31 @@ class CMakeBuild(build_ext):
         print(f"TraceSmith: CMake args: {' '.join(cmake_args)}")
         print(f"TraceSmith: Building with {cpu_count} parallel jobs")
         
-        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp)
+        # Run CMake configure with error output capture
+        try:
+            result = subprocess.run(
+                ['cmake', ext.sourcedir] + cmake_args,
+                cwd=self.build_temp,
+                capture_output=True,
+                text=True
+            )
+            if result.stdout:
+                print(result.stdout)
+            if result.returncode != 0:
+                print("TraceSmith: CMake configuration failed!")
+                if result.stderr:
+                    print("TraceSmith: CMake stderr:")
+                    print(result.stderr)
+                raise subprocess.CalledProcessError(result.returncode, 'cmake')
+        except FileNotFoundError:
+            raise RuntimeError(
+                "CMake not found. Please install CMake >= 3.16:\n"
+                "  - Linux: apt install cmake or yum install cmake3\n"
+                "  - macOS: brew install cmake\n"
+                "  - Windows: choco install cmake or download from cmake.org"
+            )
+        
+        # Run CMake build
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
 
@@ -182,7 +219,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='tracesmith',
-    version='0.8.2',
+    version='0.8.3',
     author='Xingqiang Chen',
     author_email='chenxingqiang@gmail.com',
     description='Cross-platform GPU Profiling & Replay System',

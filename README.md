@@ -369,7 +369,7 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
    ██║   ██║  ██║██║  ██║╚██████╗███████╗███████║██║ ╚═╝ ██║██║   ██║   ██║  ██║
    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝
 
-                    GPU Profiling & Replay System v0.8.2
+                    GPU Profiling & Replay System v0.8.3
 ```
 
 **Available Commands:**
@@ -1000,7 +1000,7 @@ make benchmark_10k_stacks -j8
 
 ```bash
 # Basic installation
-pip install tracesmith==0.8.2
+pip install tracesmith==0.8.3
 
 # With CuPy for real GPU profiling in Python CLI (choose one):
 pip install tracesmith[cuda12]    # CUDA 12.x
