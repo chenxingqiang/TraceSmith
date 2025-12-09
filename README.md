@@ -290,24 +290,36 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
 | `version` | Show version information |
 | `help` | Show help message |
 
+> **IMPORTANT: GPU Profiling API Limitations**
+>
+> CUPTI/MCPTI can only profile the calling process, not child processes.
+> For CUDA/MACA platforms, you **MUST** use system-level profilers:
+>
+> | Platform | Required Option | Tool |
+> |----------|-----------------|------|
+> | NVIDIA CUDA | `--nsys` | Nsight Systems |
+> | MetaX MACA | `--mctracer` | mcTracer |
+> | Apple Metal | `--xctrace` | Instruments |
+>
+> The `record` command is **not supported** for CUDA/MACA platforms.
+> Use `profile --nsys` or `profile --mctracer` instead.
+
 **C++ CLI Examples:**
 
 ```bash
-# Profile a Python script (records GPU events during execution)
-./bin/tracesmith profile -- python train.py
-./bin/tracesmith profile -o model.sbt -- python train.py --epochs 10
-./bin/tracesmith profile --perfetto -- ./my_cuda_app
+# NVIDIA CUDA - Use --nsys (REQUIRED for GPU profiling)
+./bin/tracesmith profile --nsys -- python train.py
+./bin/tracesmith profile --nsys --perfetto -- ./my_cuda_app
+./bin/tracesmith profile --nsys -o model.sbt -- python train.py --epochs 10
 
-# Use Apple Instruments (xctrace) for real Metal GPU events on macOS
+# MetaX MACA - Use --mctracer (REQUIRED for GPU profiling)
+./bin/tracesmith profile --mctracer -- ./my_maca_app
+./bin/tracesmith profile --mctracer --perfetto -- python train.py
+
+# Apple Metal - Use --xctrace for real Metal GPU events
 ./bin/tracesmith profile --xctrace -- python train.py
 ./bin/tracesmith profile --xctrace --keep-trace -- python mps_benchmark.py
 ./bin/tracesmith profile --xctrace --xctrace-template "GPU Driver" -- ./app
-
-# Record a trace (auto-detect GPU platform)
-./bin/tracesmith record -o trace.sbt -d 5
-
-# Record with specific platform
-./bin/tracesmith record -o trace.sbt -d 10 -p cuda
 
 # View trace with statistics
 ./bin/tracesmith view trace.sbt --stats
@@ -334,23 +346,22 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
 **Python CLI Examples:**
 
 ```bash
-# Profile a command (record + execute in one step)
-tracesmith-cli profile -- python train.py
-tracesmith-cli profile -o model.sbt -- python train.py --epochs 10
-tracesmith-cli profile --perfetto -- python inference.py
+# NVIDIA CUDA - Use --nsys (REQUIRED for GPU profiling)
+tracesmith-cli profile --nsys -- python train.py
+tracesmith-cli profile --nsys --perfetto -- ./my_cuda_app
+tracesmith-cli profile --nsys -o model.sbt -- python train.py --epochs 10
 
-# Use Apple Instruments (xctrace) for real Metal GPU events on macOS
+# MetaX MACA - Use --mctracer (REQUIRED for GPU profiling)
+tracesmith-cli profile --mctracer -- ./my_maca_app
+tracesmith-cli profile --mctracer --perfetto -- python train.py
+
+# Apple Metal - Use --xctrace for real Metal GPU events
 tracesmith-cli profile --xctrace -- python train.py
 tracesmith-cli profile --xctrace --keep-trace -- python mps_benchmark.py
 
-# Show system info
+# Other commands
 tracesmith-cli info
-
-# List GPU devices
 tracesmith-cli devices
-
-# Record a trace
-tracesmith-cli record -o trace.sbt -d 5
 
 # View trace contents
 tracesmith-cli view trace.sbt --stats
@@ -960,6 +971,7 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v0.8.2** | 2025-12 | **CLI Breaking Change** - Enforce --nsys/--mctracer for CUDA/MACA, record command blocked, clearer API limitation messages |
 | **v0.8.1** | 2025-12 | **nsys & MACA Enhancement** - NVIDIA Nsight Systems integration, MetaX CLI device detection, MACA cluster module support |
 | **v0.8.1** | 2025-12 | **mcTracer Integration** - MetaX system-wide profiling, Enhanced MACA CLI, Cluster module support |
 | **v0.8.0** | 2025-12 | **xctrace Integration** - Apple Instruments, Cross-Platform Device Utils, Enhanced Examples |
