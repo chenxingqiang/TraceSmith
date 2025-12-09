@@ -108,6 +108,8 @@ private:
     
     // Correlation ID tracking (to match kernel launch with completion)
     std::unordered_map<uint64_t, Timestamp> kernel_start_times_;
+    // Thread ID tracking for multi-thread support
+    std::unordered_map<uint64_t, uint32_t> correlation_thread_ids_;
     std::mutex correlation_mutex_;
     
 #endif // TRACESMITH_ENABLE_MACA

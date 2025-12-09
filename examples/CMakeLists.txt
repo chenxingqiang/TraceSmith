@@ -89,6 +89,22 @@ target_link_libraries(stack_capture_example PRIVATE
 )
 
 # ----------------------------------------------------------------------------
+# Multi-Thread Example - Multi-thread event recording with thread_id tracking
+# ----------------------------------------------------------------------------
+add_executable(multithread_example
+    multithread_example.cpp
+)
+
+target_link_libraries(multithread_example PRIVATE
+    tracesmith-common
+    tracesmith-format
+    tracesmith-capture
+    tracesmith-state
+)
+
+target_compile_features(multithread_example PRIVATE cxx_std_17)
+
+# ----------------------------------------------------------------------------
 # XRay Example - LLVM XRay trace importing
 # ----------------------------------------------------------------------------
 add_executable(xray_example

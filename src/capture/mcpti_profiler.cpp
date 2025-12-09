@@ -2,6 +2,17 @@
 #include <iostream>
 #include <cstring>
 #include <algorithm>
+#include <thread>
+
+// Platform-specific thread ID includes
+#ifdef __linux__
+    #include <sys/syscall.h>
+    #include <unistd.h>
+#elif defined(__APPLE__)
+    #include <pthread.h>
+#elif defined(_WIN32)
+    #include <windows.h>
+#endif
 
 namespace tracesmith {
 
@@ -409,10 +420,27 @@ void MCPTIAPI MCPTIProfiler::callbackHandler(void* userdata,
     if (domain == MCPTI_CB_DOMAIN_RUNTIME_API) {
         const MCpti_CallbackData* cbInfo = static_cast<const MCpti_CallbackData*>(cbdata);
         
-        // Track kernel launches (MACA uses similar API)
+        // Track all runtime API calls at ENTER to capture thread ID
         if (cbInfo->callbackSite == MCPTI_API_ENTER) {
-            // Record correlation ID -> timestamp mapping
             std::lock_guard<std::mutex> lock(self->correlation_mutex_);
+            
+            // Get current thread ID
+            uint32_t thread_id = 0;
+#ifdef __linux__
+            thread_id = static_cast<uint32_t>(syscall(SYS_gettid));
+#elif defined(__APPLE__)
+            uint64_t tid;
+            pthread_threadid_np(nullptr, &tid);
+            thread_id = static_cast<uint32_t>(tid);
+#elif defined(_WIN32)
+            thread_id = static_cast<uint32_t>(GetCurrentThreadId());
+#else
+            thread_id = static_cast<uint32_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+#endif
+            // Store correlation ID -> thread ID mapping
+            self->correlation_thread_ids_[cbInfo->correlationId] = thread_id;
+            
+            // Record correlation ID -> timestamp mapping
             auto now = std::chrono::high_resolution_clock::now();
             self->kernel_start_times_[cbInfo->correlationId] = 
                 static_cast<Timestamp>(now.time_since_epoch().count());
@@ -450,6 +478,16 @@ void MCPTIProfiler::processActivity(MCpti_Activity* record) {
 }
 
 void MCPTIProfiler::processKernelActivity(const MCpti_ActivityKernel4* kernel) {
+    // Get thread ID from correlation map
+    uint32_t thread_id = 0;
+    {
+        std::lock_guard<std::mutex> lock(correlation_mutex_);
+        auto it = correlation_thread_ids_.find(kernel->correlationId);
+        if (it != correlation_thread_ids_.end()) {
+            thread_id = it->second;
+        }
+    }
+    
     // Create kernel launch event
     TraceEvent launch_event;
     launch_event.type = EventType::KernelLaunch;
@@ -457,6 +495,7 @@ void MCPTIProfiler::processKernelActivity(const MCpti_ActivityKernel4* kernel) {
     launch_event.correlation_id = kernel->correlationId;
     launch_event.device_id = kernel->deviceId;
     launch_event.stream_id = kernel->streamId;
+    launch_event.thread_id = thread_id;
     launch_event.name = kernel->name ? kernel->name : "unknown_kernel";
     
     // Kernel parameters
@@ -482,6 +521,7 @@ void MCPTIProfiler::processKernelActivity(const MCpti_ActivityKernel4* kernel) {
     complete_event.correlation_id = kernel->correlationId;
     complete_event.device_id = kernel->deviceId;
     complete_event.stream_id = kernel->streamId;
+    complete_event.thread_id = thread_id;
     complete_event.name = kernel->name ? kernel->name : "unknown_kernel";
     
     // Duration in nanoseconds
@@ -492,6 +532,16 @@ void MCPTIProfiler::processKernelActivity(const MCpti_ActivityKernel4* kernel) {
 }
 
 void MCPTIProfiler::processMemcpyActivity(const MCpti_ActivityMemcpy* memcpy) {
+    // Get thread ID from correlation map
+    uint32_t thread_id = 0;
+    {
+        std::lock_guard<std::mutex> lock(correlation_mutex_);
+        auto it = correlation_thread_ids_.find(memcpy->correlationId);
+        if (it != correlation_thread_ids_.end()) {
+            thread_id = it->second;
+        }
+    }
+    
     TraceEvent event;
     
     // Determine memcpy direction
@@ -523,6 +573,7 @@ void MCPTIProfiler::processMemcpyActivity(const MCpti_ActivityMemcpy* memcpy) {
     event.correlation_id = memcpy->correlationId;
     event.device_id = memcpy->deviceId;
     event.stream_id = memcpy->streamId;
+    event.thread_id = thread_id;
     
     // Memory transfer details
     event.metadata["bytes"] = std::to_string(memcpy->bytes);
@@ -542,6 +593,16 @@ void MCPTIProfiler::processMemcpyActivity(const MCpti_ActivityMemcpy* memcpy) {
 }
 
 void MCPTIProfiler::processMemsetActivity(const MCpti_ActivityMemset* memset) {
+    // Get thread ID from correlation map
+    uint32_t thread_id = 0;
+    {
+        std::lock_guard<std::mutex> lock(correlation_mutex_);
+        auto it = correlation_thread_ids_.find(memset->correlationId);
+        if (it != correlation_thread_ids_.end()) {
+            thread_id = it->second;
+        }
+    }
+    
     TraceEvent event;
     event.type = EventType::MemsetDevice;
     event.name = "mcMemset";
@@ -550,6 +611,7 @@ void MCPTIProfiler::processMemsetActivity(const MCpti_ActivityMemset* memset) {
     event.correlation_id = memset->correlationId;
     event.device_id = memset->deviceId;
     event.stream_id = memset->streamId;
+    event.thread_id = thread_id;
     
     event.metadata["bytes"] = std::to_string(memset->bytes);
     event.metadata["value"] = std::to_string(memset->value);
@@ -560,6 +622,16 @@ void MCPTIProfiler::processMemsetActivity(const MCpti_ActivityMemset* memset) {
 }
 
 void MCPTIProfiler::processSyncActivity(const MCpti_ActivitySynchronization* sync) {
+    // Get thread ID from correlation map
+    uint32_t thread_id = 0;
+    {
+        std::lock_guard<std::mutex> lock(correlation_mutex_);
+        auto it = correlation_thread_ids_.find(sync->correlationId);
+        if (it != correlation_thread_ids_.end()) {
+            thread_id = it->second;
+        }
+    }
+    
     TraceEvent event;
     
     switch (sync->type) {
@@ -585,6 +657,7 @@ void MCPTIProfiler::processSyncActivity(const MCpti_ActivitySynchronization* syn
     event.duration = sync->end - sync->start;
     event.correlation_id = sync->correlationId;
     event.stream_id = sync->streamId;
+    event.thread_id = thread_id;
     
     event.metadata["duration_ns"] = std::to_string(sync->end - sync->start);
     event.metadata["platform"] = "MetaX";
