@@ -336,8 +336,47 @@ def cmd_record(args):
 
     if platform == PlatformType.Unknown:
         print_error("No supported GPU platform detected.")
-        print("Supported: CUDA (NVIDIA), ROCm (AMD), Metal (Apple)")
+        print("Supported: CUDA (NVIDIA), ROCm (AMD), Metal (Apple), MACA (MetaX)")
         return 1
+
+    # For CUDA/MACA, the record command is not useful without --nsys
+    # because CUPTI/MCPTI can only profile the calling process
+    if platform == PlatformType.CUDA:
+        print()
+        print(f"{colorize(Color.RED)}╔════════════════════════════════════════════════════════════════╗{colorize(Color.RESET)}")
+        print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.BOLD)}  ERROR: 'record' command not supported for CUDA                {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}")
+        print(f"{colorize(Color.RED)}╠════════════════════════════════════════════════════════════════╣{colorize(Color.RESET)}")
+        print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}  CUPTI can only profile the calling process, not external apps.{colorize(Color.RED)}║{colorize(Color.RESET)}")
+        print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}                                                                 {colorize(Color.RED)}║{colorize(Color.RESET)}")
+        print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.GREEN)}  Use system-level profiler instead:                            {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}")
+        print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.CYAN)}    tracesmith-cli profile --nsys -- <your-command>{colorize(Color.RESET)}            {colorize(Color.RED)}║{colorize(Color.RESET)}")
+        print(f"{colorize(Color.RED)}╚════════════════════════════════════════════════════════════════╝{colorize(Color.RESET)}")
+        print()
+        print(f"{colorize(Color.BOLD)}Example:{colorize(Color.RESET)}")
+        print(f"  tracesmith-cli profile --nsys -- python train.py")
+        print(f"  tracesmith-cli profile --nsys --perfetto -- ./my_cuda_app")
+        return 1
+
+    # Check for MACA platform
+    try:
+        from . import is_maca_available
+        if is_maca_available():
+            print()
+            print(f"{colorize(Color.RED)}╔════════════════════════════════════════════════════════════════╗{colorize(Color.RESET)}")
+            print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.BOLD)}  ERROR: 'record' command not supported for MACA                {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}")
+            print(f"{colorize(Color.RED)}╠════════════════════════════════════════════════════════════════╣{colorize(Color.RESET)}")
+            print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}  MCPTI can only profile the calling process, not external apps.{colorize(Color.RED)}║{colorize(Color.RESET)}")
+            print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}                                                                 {colorize(Color.RED)}║{colorize(Color.RESET)}")
+            print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.GREEN)}  Use system-level profiler instead:                            {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}")
+            print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.CYAN)}    tracesmith-cli profile --mctracer -- <your-command>{colorize(Color.RESET)}        {colorize(Color.RED)}║{colorize(Color.RESET)}")
+            print(f"{colorize(Color.RED)}╚════════════════════════════════════════════════════════════════╝{colorize(Color.RESET)}")
+            print()
+            print(f"{colorize(Color.BOLD)}Example:{colorize(Color.RESET)}")
+            print(f"  tracesmith-cli profile --mctracer -- ./my_maca_app")
+            print(f"  tracesmith-cli profile --mctracer --perfetto -- python train.py")
+            return 1
+    except ImportError:
+        pass
 
     print(f"  Platform: {platform_name}")
 
@@ -1035,6 +1074,9 @@ def cmd_profile(args):
         cmd_name = os.path.basename(command[0]).replace('.py', '').replace('.sh', '')
         output_file = f"{cmd_name}_trace.sbt"
     
+    # Detect platform first
+    platform = detect_platform()
+    
     # Use nsys if requested
     if use_nsys:
         if not _is_nsys_available():
@@ -1043,20 +1085,49 @@ def cmd_profile(args):
             return 1
         return _cmd_profile_nsys(args, command, output_file, keep_nsys)
     
-    # On macOS with Metal, suggest xctrace if not specified
-    platform = detect_platform()
-    if sys.platform == 'darwin' and platform == PlatformType.Metal and not use_xctrace:
-        print_info("Tip: Use --xctrace for real Metal GPU events on macOS")
-        print()
-    
-    # On Linux/Windows with CUDA, suggest nsys if not specified
-    if sys.platform != 'darwin' and platform == PlatformType.CUDA:
-        print_info("Tip: Use --nsys for system-wide GPU profiling (can capture any process)")
-        print()
-    
     # Use xctrace if requested
     if use_xctrace:
         return _cmd_profile_xctrace(args, command)
+    
+    # Check for --mctracer option
+    use_mctracer = getattr(args, 'mctracer', False)
+    if use_mctracer:
+        return _cmd_profile_mctracer(args, command, output_file)
+    
+    # For CUDA, require --nsys
+    if platform == PlatformType.CUDA:
+        print_error("CUDA detected. Please use --nsys for GPU profiling.")
+        print()
+        print(f"{colorize(Color.BOLD)}Usage:{colorize(Color.RESET)}")
+        print(f"  {colorize(Color.CYAN)}tracesmith-cli profile --nsys -- {colorize(Color.RESET)}<your-command>")
+        print()
+        print(f"{colorize(Color.BOLD)}Example:{colorize(Color.RESET)}")
+        print(f"  tracesmith-cli profile --nsys -- python train.py")
+        print()
+        print("CUPTI cannot profile child processes. nsys provides system-wide profiling.")
+        return 1
+    
+    # Check for MACA platform and require --mctracer
+    try:
+        from . import is_maca_available
+        if is_maca_available():
+            print_error("MACA detected. Please use --mctracer for GPU profiling.")
+            print()
+            print(f"{colorize(Color.BOLD)}Usage:{colorize(Color.RESET)}")
+            print(f"  {colorize(Color.CYAN)}tracesmith-cli profile --mctracer -- {colorize(Color.RESET)}<your-command>")
+            print()
+            print(f"{colorize(Color.BOLD)}Example:{colorize(Color.RESET)}")
+            print(f"  tracesmith-cli profile --mctracer -- ./my_maca_app")
+            print()
+            print("MCPTI cannot profile child processes. mcTracer provides system-wide profiling.")
+            return 1
+    except ImportError:
+        pass
+    
+    # On macOS with Metal, suggest xctrace if not specified
+    if sys.platform == 'darwin' and platform == PlatformType.Metal and not use_xctrace:
+        print_info("Tip: Use --xctrace for real Metal GPU events on macOS")
+        print()
 
     print_section("TraceSmith Profile")
 
@@ -1379,6 +1450,199 @@ def _cmd_profile_nsys(args, command, output_file, keep_nsys):
     print(f"  {colorize(Color.CYAN)}tracesmith-cli analyze {output_file}{colorize(Color.RESET)}")
     if nsys_rep and keep_nsys and os.path.exists(nsys_rep):
         print(f"  {colorize(Color.CYAN)}nsys-ui {nsys_rep}{colorize(Color.RESET)}  # Open in Nsight Systems UI")
+    
+    return exit_code
+
+
+def _cmd_profile_mctracer(args, command, output_file):
+    """Profile a command using MetaX mcTracer for MACA GPU profiling."""
+    import shutil
+    import time
+    
+    from . import (
+        SBTWriter,
+        TraceMetadata,
+        export_perfetto,
+    )
+    
+    print_section("TraceSmith Profile (mcTracer)")
+    
+    print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
+    print(f"  Command:  {colorize(Color.CYAN)}{' '.join(command)}{colorize(Color.RESET)}")
+    print(f"  Output:   {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+    print(f"  Backend:  {colorize(Color.GREEN)}MetaX mcTracer (MACA){colorize(Color.RESET)}")
+    print()
+    
+    # Check if mcTracer exists
+    mctracer_path = None
+    for path in ['/opt/maca-3.0.0/bin/mcTracer', '/opt/maca/bin/mcTracer']:
+        if shutil.which(path) or os.path.exists(path):
+            mctracer_path = path
+            break
+    
+    if not mctracer_path:
+        # Try PATH
+        mctracer_path = shutil.which('mcTracer')
+    
+    if not mctracer_path:
+        print_error("mcTracer not found. Please install MACA SDK.")
+        print("  Expected at: /opt/maca-3.0.0/bin/mcTracer")
+        return 1
+    
+    print_success(f"mcTracer found: {mctracer_path}")
+    print()
+    
+    # Create output directory for mcTracer
+    trace_dir = "mctracer_output"
+    os.makedirs(trace_dir, exist_ok=True)
+    
+    # Build mcTracer command
+    mctracer_cmd = [
+        mctracer_path,
+        "--mctx",
+        "--odname", trace_dir,
+        "--name", "tracesmith",
+        "--"
+    ] + command
+    
+    print(f"{colorize(Color.GREEN)}▶ Starting mcTracer profiling...{colorize(Color.RESET)}")
+    print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+    
+    start_time = time.time()
+    
+    # Execute mcTracer
+    try:
+        result = subprocess.run(mctracer_cmd, capture_output=False)
+        exit_code = result.returncode
+    except FileNotFoundError:
+        print_error("mcTracer not found")
+        return 1
+    except Exception as e:
+        print_error(f"mcTracer failed: {e}")
+        return 1
+    
+    print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
+    print()
+    
+    end_time = time.time()
+    duration_sec = end_time - start_time
+    
+    # Show command result
+    if exit_code == 0:
+        print_success("Command completed successfully")
+    else:
+        print_warning(f"Command exited with code: {exit_code}")
+    
+    print_success("mcTracer profiling stopped")
+    
+    # Find the generated JSON file
+    import glob
+    json_files = glob.glob(os.path.join(trace_dir, "tracesmith-*.json"))
+    
+    events = []
+    if json_files:
+        json_file = sorted(json_files)[-1]  # Get the most recent
+        print_info(f"Found mcTracer output: {json_file}")
+        
+        # Parse events from JSON (Chrome trace format)
+        try:
+            import json
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+            
+            from . import EventType, TraceEvent
+            
+            trace_events = data.get('traceEvents', []) if isinstance(data, dict) else data
+            
+            for raw_event in trace_events:
+                if not isinstance(raw_event, dict):
+                    continue
+                
+                event = TraceEvent()
+                name = raw_event.get('name', '')
+                event.name = name
+                
+                # Determine event type
+                name_lower = name.lower()
+                if 'kernel' in name_lower or 'launch' in name_lower:
+                    event.type = EventType.KernelLaunch
+                elif 'memcpy' in name_lower:
+                    if 'htod' in name_lower or 'h2d' in name_lower:
+                        event.type = EventType.MemcpyH2D
+                    elif 'dtoh' in name_lower or 'd2h' in name_lower:
+                        event.type = EventType.MemcpyD2H
+                    else:
+                        event.type = EventType.MemcpyD2D
+                elif 'memset' in name_lower:
+                    event.type = EventType.MemsetDevice
+                else:
+                    event.type = EventType.Marker
+                
+                ts = raw_event.get('ts', 0)
+                dur = raw_event.get('dur', 0)
+                event.timestamp = int(ts * 1000)  # us to ns
+                event.duration = int(dur * 1000) if dur else 0
+                event.thread_id = raw_event.get('tid', 0)
+                event.stream_id = raw_event.get('args', {}).get('stream', 0) if isinstance(raw_event.get('args'), dict) else 0
+                
+                events.append(event)
+        except Exception as e:
+            print_warning(f"Failed to parse mcTracer JSON: {e}")
+    
+    # Save to SBT format
+    writer = SBTWriter(output_file)
+    if writer.is_open():
+        metadata = TraceMetadata()
+        metadata.application_name = os.path.basename(command[0])
+        metadata.command_line = ' '.join(command)
+        writer.write_metadata(metadata)
+        
+        if events:
+            writer.write_events(events)
+        
+        writer.finalize()
+    
+    # Print summary
+    print_section("Profile Complete")
+    
+    print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
+    print(f"  Command:      {' '.join(command)}")
+    print(f"  Duration:     {duration_sec:.2f} seconds")
+    print(f"  GPU Events:   {colorize(Color.GREEN)}{len(events)}{colorize(Color.RESET)}")
+    print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
+    
+    # Event breakdown
+    if events:
+        from collections import Counter
+        from . import EventType
+        
+        type_counts = Counter(e.type for e in events)
+        kernel_count = type_counts.get(EventType.KernelLaunch, 0)
+        memcpy_count = sum(type_counts.get(t, 0) for t in 
+                          [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D])
+        
+        print()
+        print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
+        print(f"  Kernel Launches: {kernel_count}")
+        print(f"  Memory Copies:   {memcpy_count}")
+        print(f"  Other Events:    {len(events) - kernel_count - memcpy_count}")
+    
+    print()
+    
+    # Export to Perfetto if requested
+    if getattr(args, 'perfetto', False) and events:
+        perfetto_file = output_file.replace('.sbt', '.json')
+        if export_perfetto(events, perfetto_file):
+            print_success(f"Exported Perfetto trace: {perfetto_file}")
+            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+        else:
+            print_warning("Failed to export Perfetto trace")
+        print()
+    
+    # Next steps
+    print(f"{colorize(Color.BOLD)}Next steps:{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
     
     return exit_code
 
@@ -2324,13 +2588,16 @@ Run '{colorize(Color.CYAN)}tracesmith-cli <command> --help{colorize(Color.RESET)
         description='''
 Record GPU events to a trace file.
 
-IMPORTANT: CUPTI can only capture GPU events from the SAME process.
-Use --exec to run GPU code in this process for event capture.
+IMPORTANT (CUDA/MACA):
+  CUPTI/MCPTI only captures events from the TraceSmith process itself.
+  The 'record' command is NOT supported for CUDA/MACA platforms.
+  
+  To profile external applications, use:
+    tracesmith-cli profile --nsys -- <command>      (NVIDIA)
+    tracesmith-cli profile --mctracer -- <command>  (MetaX)
 
-Examples:
-  tracesmith-cli record --exec "python train.py"
-  tracesmith-cli record --exec "python -c \\"import torch; x=torch.randn(1000).cuda()\\""
-  tracesmith-cli record -o trace.sbt -d 10  # Passive mode (no events without --exec)
+For Metal/ROCm platforms, record works normally:
+  tracesmith-cli record -o trace.sbt -d 10
 ''',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -2357,11 +2624,25 @@ Examples:
         description='''
 Profile a command by recording GPU events during its execution.
 
-Examples:
-  tracesmith-cli profile -- python train.py
-  tracesmith-cli profile -o model_trace.sbt -- python train.py --epochs 10
-  tracesmith-cli profile --perfetto -- ./my_cuda_app
-  tracesmith-cli profile -- python -c "import torch; torch.randn(1000,1000).cuda()"
+IMPORTANT: For CUDA/MACA, you MUST use system-level profilers:
+  --nsys       NVIDIA GPU profiling (uses Nsight Systems)
+  --mctracer   MetaX MACA GPU profiling (uses mcTracer)
+  --xctrace    Apple Metal GPU profiling (uses Instruments)
+
+Examples (Recommended):
+  NVIDIA CUDA:
+    tracesmith-cli profile --nsys -- python train.py
+    tracesmith-cli profile --nsys --perfetto -- ./my_cuda_app
+
+  MetaX MACA:
+    tracesmith-cli profile --mctracer -- ./my_maca_app
+    tracesmith-cli profile --mctracer --perfetto -- python train.py
+
+  Apple Metal:
+    tracesmith-cli profile --xctrace -- python train.py
+
+NOTE: Without --nsys/--mctracer/--xctrace, child process GPU events
+cannot be captured due to CUPTI/MCPTI API limitations.
 ''',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -2380,6 +2661,8 @@ Examples:
                                 help='Use Apple Instruments (xctrace) for Metal GPU profiling on macOS')
     profile_parser.add_argument('--xctrace-template', default='Metal System Trace',
                                 help="Instruments template (default: 'Metal System Trace')")
+    profile_parser.add_argument('--mctracer', action='store_true',
+                                help='Use MetaX mcTracer for MACA GPU profiling')
     profile_parser.add_argument('--keep-trace', action='store_true',
                                 help='Keep the raw .trace file after profiling (xctrace only)')
     profile_parser.add_argument('command', nargs=argparse.REMAINDER,
