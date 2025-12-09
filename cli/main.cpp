@@ -210,11 +210,17 @@ void printRecordUsage(const char* program) {
     std::cout << C(Bold) << "DESCRIPTION:" << C(Reset) << "\n";
     std::cout << "    Record GPU events to a trace file using real GPU profiling.\n\n";
     
+    std::cout << C(Yellow) << "IMPORTANT (CUDA/MACA):" << C(Reset) << "\n";
+    std::cout << "    CUPTI/MCPTI only captures events from the TraceSmith process itself.\n";
+    std::cout << "    To profile external applications, use:\n";
+    std::cout << "      " << C(Cyan) << program << " profile --nsys -- <command>" << C(Reset) << "      (NVIDIA)\n";
+    std::cout << "      " << C(Cyan) << program << " profile --mctracer -- <command>" << C(Reset) << "  (MetaX)\n\n";
+    
     std::cout << C(Bold) << "OPTIONS:" << C(Reset) << "\n";
     std::cout << "    -o, --output <FILE>      Output trace file (default: trace.sbt)\n";
     std::cout << "    -d, --duration <SEC>     Recording duration in seconds (default: 5)\n";
     std::cout << "    -b, --buffer <SIZE>      Ring buffer size in events (default: 1M)\n";
-    std::cout << "    -p, --platform <TYPE>    GPU platform: cuda, rocm, metal, auto (default: auto)\n";
+    std::cout << "    -p, --platform <TYPE>    GPU platform: cuda, rocm, metal, maca, auto (default: auto)\n";
     std::cout << "    -k, --kernels            Capture kernel events (default: on)\n";
     std::cout << "    -m, --memory             Capture memory events (default: on)\n";
     std::cout << "    -s, --stacks             Capture call stacks (default: off)\n";
@@ -232,44 +238,47 @@ void printProfileUsage(const char* program) {
     std::cout << "    " << program << " profile [OPTIONS] -- <COMMAND> [ARGS...]\n\n";
     
     std::cout << C(Bold) << "DESCRIPTION:" << C(Reset) << "\n";
-    std::cout << "    Profile a command by recording GPU events during its execution.\n";
-    std::cout << "    This starts GPU profiling, executes the command, then stops profiling.\n\n";
+    std::cout << "    Profile a command by recording GPU events during its execution.\n\n";
+    
+    std::cout << C(Yellow) << "IMPORTANT:" << C(Reset) << " For CUDA/MACA, you " << C(Bold) << "MUST" << C(Reset) << " use system-level profilers:\n";
+    std::cout << "    " << C(Green) << "--nsys" << C(Reset) << "       NVIDIA GPU profiling (uses Nsight Systems)\n";
+    std::cout << "    " << C(Green) << "--mctracer" << C(Reset) << "   MetaX MACA GPU profiling (uses mcTracer)\n";
+    std::cout << "    " << C(Green) << "--xctrace" << C(Reset) << "    Apple Metal GPU profiling (uses Instruments)\n\n";
     
     std::cout << C(Bold) << "OPTIONS:" << C(Reset) << "\n";
     std::cout << "    -o, --output <FILE>      Output trace file (default: <command>_trace.sbt)\n";
     std::cout << "    -b, --buffer <SIZE>      Ring buffer size in events (default: 1M)\n";
     std::cout << "    --perfetto               Also export to Perfetto JSON format\n";
+    std::cout << "    --nsys                   " << C(Green) << "[NVIDIA]" << C(Reset) << " Use Nsight Systems for CUDA profiling\n";
 #ifdef __APPLE__
-    std::cout << "    --xctrace                Use Apple Instruments for Metal GPU profiling\n";
+    std::cout << "    --xctrace                " << C(Green) << "[Apple]" << C(Reset) << " Use Instruments for Metal GPU profiling\n";
     std::cout << "    --xctrace-template <T>   Instruments template (default: 'Metal System Trace')\n";
 #endif
 #ifdef TRACESMITH_ENABLE_MACA
-    std::cout << "    --mctracer               Use MetaX mcTracer for MACA GPU profiling\n";
+    std::cout << "    --mctracer               " << C(Green) << "[MetaX]" << C(Reset) << " Use mcTracer for MACA GPU profiling\n";
 #endif
     std::cout << "    --keep-trace             Keep the raw trace output directory\n";
     std::cout << "    -v, --verbose            Verbose output\n";
     std::cout << "    -h, --help               Show this help message\n\n";
     
-    std::cout << C(Bold) << "EXAMPLES:" << C(Reset) << "\n";
-    std::cout << "    " << program << " profile -- python train.py\n";
-    std::cout << "    " << program << " profile -o model.sbt -- python train.py --epochs 10\n";
-    std::cout << "    " << program << " profile --perfetto -- ./my_cuda_app\n";
-#ifdef __APPLE__
-    std::cout << "    " << program << " profile --xctrace -- python train.py\n";
-#endif
+    std::cout << C(Bold) << "EXAMPLES (Recommended):" << C(Reset) << "\n";
+    std::cout << C(Green) << "  NVIDIA CUDA:" << C(Reset) << "\n";
+    std::cout << "    " << program << " profile --nsys -- python train.py\n";
+    std::cout << "    " << program << " profile --nsys --perfetto -- ./my_cuda_app\n\n";
 #ifdef TRACESMITH_ENABLE_MACA
+    std::cout << C(Green) << "  MetaX MACA:" << C(Reset) << "\n";
     std::cout << "    " << program << " profile --mctracer -- ./my_maca_app\n";
+    std::cout << "    " << program << " profile --mctracer --perfetto -- python train.py\n\n";
 #endif
-    std::cout << "    " << program << " profile -- python -c \"import torch; torch.randn(1000).cuda()\"\n\n";
+#ifdef __APPLE__
+    std::cout << C(Green) << "  Apple Metal:" << C(Reset) << "\n";
+    std::cout << "    " << program << " profile --xctrace -- python train.py\n\n";
+#endif
 
     std::cout << C(Bold) << "NOTE:" << C(Reset) << "\n";
     std::cout << "    Use '--' to separate tracesmith options from the command to profile.\n";
-#ifdef __APPLE__
-    std::cout << "    Use --xctrace on macOS for real Metal GPU event capture.\n";
-#endif
-#ifdef TRACESMITH_ENABLE_MACA
-    std::cout << "    Use --mctracer on MetaX systems for system-wide MACA GPU profiling.\n";
-#endif
+    std::cout << "    Without --nsys/--mctracer/--xctrace, child process GPU events cannot be captured\n";
+    std::cout << "    due to CUPTI/MCPTI API limitations (only profiles the calling process).\n";
 }
 
 void printViewUsage(const char* program) {
@@ -587,6 +596,143 @@ int cmdProfileXCTrace(
 #endif
 
 // =============================================================================
+// Command: profile with nsys (NVIDIA Nsight Systems)
+// =============================================================================
+int cmdProfileNsys(
+    const std::vector<std::string>& command,
+    std::string output_file,
+    bool keep_trace,
+    bool export_perfetto_flag
+) {
+    // Build command string for display
+    std::string cmd_str;
+    for (size_t i = 0; i < command.size(); ++i) {
+        if (i > 0) cmd_str += " ";
+        if (command[i].find(' ') != std::string::npos) {
+            cmd_str += "\"" + command[i] + "\"";
+        } else {
+            cmd_str += command[i];
+        }
+    }
+    
+    // Generate output filename if not provided
+    std::string json_output;
+    if (output_file.empty()) {
+        std::string cmd_name = command[0];
+        size_t slash_pos = cmd_name.rfind('/');
+        if (slash_pos != std::string::npos) {
+            cmd_name = cmd_name.substr(slash_pos + 1);
+        }
+        size_t dot_pos = cmd_name.rfind('.');
+        if (dot_pos != std::string::npos) {
+            cmd_name = cmd_name.substr(0, dot_pos);
+        }
+        output_file = cmd_name + "_trace";
+        json_output = cmd_name + "_trace.json";
+    } else {
+        // Remove extension if any
+        size_t dot_pos = output_file.rfind('.');
+        if (dot_pos != std::string::npos) {
+            output_file = output_file.substr(0, dot_pos);
+        }
+        json_output = output_file + ".json";
+    }
+    
+    printSection("TraceSmith Profile (nsys)");
+    
+    std::cout << C(Bold) << "Configuration:" << C(Reset) << "\n";
+    std::cout << "  Command:   " << C(Cyan) << cmd_str << C(Reset) << "\n";
+    std::cout << "  Output:    " << C(Cyan) << output_file << ".nsys-rep" << C(Reset) << "\n";
+    std::cout << "  Backend:   " << C(Green) << "NVIDIA Nsight Systems (nsys)" << C(Reset) << "\n\n";
+    
+    // Check if nsys exists
+    std::string nsys_path = "nsys";
+    if (system("which nsys > /dev/null 2>&1") != 0) {
+        printError("nsys not found. Please install NVIDIA Nsight Systems.");
+        std::cout << "  Download: https://developer.nvidia.com/nsight-systems\n";
+        std::cout << "  Or install via: apt-get install nsight-systems (Ubuntu)\n";
+        return 1;
+    }
+    
+    // Build nsys command
+    std::string full_cmd = nsys_path + " profile";
+    full_cmd += " -o " + output_file;
+    full_cmd += " --stats=true";
+    full_cmd += " --force-overwrite true";
+    
+    // Add user command
+    for (const auto& arg : command) {
+        if (arg.find(' ') != std::string::npos) {
+            full_cmd += " '" + arg + "'";
+        } else {
+            full_cmd += " " + arg;
+        }
+    }
+    
+    printSuccess("nsys profiler initialized");
+    std::cout << "\n";
+    
+    std::cout << C(Green) << "▶ Starting nsys profiling..." << C(Reset) << "\n";
+    std::cout << C(Yellow);
+    for (int i = 0; i < 60; ++i) std::cout << "-";
+    std::cout << C(Reset) << "\n";
+    
+    auto start_time = std::chrono::steady_clock::now();
+    
+    // Execute nsys
+    int exit_code = system(full_cmd.c_str());
+    
+    std::cout << C(Yellow);
+    for (int i = 0; i < 60; ++i) std::cout << "-";
+    std::cout << C(Reset) << "\n\n";
+    
+    auto end_time = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    
+    printSection("Profile Complete (nsys)");
+    
+    if (exit_code == 0) {
+        printSuccess("Command completed successfully");
+    } else {
+        printWarning("Command exited with code " + std::to_string(exit_code));
+    }
+    
+    std::cout << "\n" << C(Bold) << "Summary:" << C(Reset) << "\n";
+    std::cout << "  Command:  " << cmd_str << "\n";
+    std::cout << "  Duration: " << std::fixed << std::setprecision(2) 
+              << (duration.count() / 1000.0) << " seconds\n";
+    std::cout << "  Output:   " << C(Cyan) << output_file << ".nsys-rep" << C(Reset) << "\n\n";
+    
+    // Check if output file exists
+    std::string nsys_output = output_file + ".nsys-rep";
+    if (access(nsys_output.c_str(), F_OK) == 0) {
+        printSuccess("Trace saved to " + nsys_output);
+        
+        std::cout << "\n" << C(Bold) << "Next steps:" << C(Reset) << "\n";
+        std::cout << "  " << C(Cyan) << "nsys stats " << nsys_output << C(Reset) << "  # View statistics\n";
+        std::cout << "  " << C(Cyan) << "nsys-ui " << nsys_output << C(Reset) << "  # Open in GUI\n";
+        
+        // Export to JSON if requested
+        if (export_perfetto_flag) {
+            std::cout << "\n" << C(Green) << "▶ Exporting to SQLite/JSON..." << C(Reset) << "\n";
+            std::string export_cmd = "nsys export --type=sqlite -o " + output_file + ".sqlite " + nsys_output + " 2>/dev/null";
+            if (system(export_cmd.c_str()) == 0) {
+                printSuccess("SQLite exported to " + output_file + ".sqlite");
+            }
+        }
+    } else {
+        printWarning("Trace file not created - check nsys output above");
+    }
+    
+    // Cleanup if not keeping trace
+    if (!keep_trace) {
+        // Don't delete by default - nsys traces are valuable
+    }
+    
+    return exit_code == 0 ? 0 : 1;
+}
+
+// =============================================================================
 // Command: profile with mcTracer (MetaX MACA)
 // =============================================================================
 #ifdef TRACESMITH_ENABLE_MACA
@@ -650,7 +796,8 @@ int cmdProfileMCTracer(
         mctracer_path,
         "--mctx",
         "--odname", trace_dir,
-        "--name", "tracesmith"
+        "--name", "tracesmith",
+        "--"  // Separator for user command
     };
     
     // Add user command
@@ -775,6 +922,7 @@ int cmdProfile(int argc, char* argv[]) {
     bool use_mctracer = false;
 #endif
 
+    bool use_nsys = false;
     [[maybe_unused]] bool keep_trace = false;
     
     // Parse arguments
@@ -802,6 +950,8 @@ int cmdProfile(int argc, char* argv[]) {
         } else if (arg == "--mctracer") {
             use_mctracer = true;
 #endif
+        } else if (arg == "--nsys") {
+            use_nsys = true;
         } else if (arg == "--keep-trace") {
             keep_trace = true;
         } else if ((arg == "-b" || arg == "--buffer") && i + 1 < argc) {
@@ -856,11 +1006,36 @@ int cmdProfile(int argc, char* argv[]) {
     if (use_mctracer) {
         return cmdProfileMCTracer(command, output_file, keep_trace, export_perfetto);
     }
+#endif
+
+    // Use nsys if requested (for NVIDIA CUDA)
+    if (use_nsys) {
+        return cmdProfileNsys(command, output_file, keep_trace, export_perfetto);
+    }
     
-    // Suggest mctracer on MACA systems
-    if (detectPlatform() == PlatformType::MACA) {
-        printInfo("Tip: Use --mctracer for system-wide MetaX GPU profiling");
+    // For CUDA, strongly suggest --nsys
+    if (detectPlatform() == PlatformType::CUDA) {
+        printError("CUDA detected. Please use --nsys for GPU profiling.");
         std::cout << "\n";
+        std::cout << C(Bold) << "Usage:" << C(Reset) << "\n";
+        std::cout << "  " << C(Cyan) << "tracesmith profile --nsys -- " << C(Reset) << "<your-command>\n\n";
+        std::cout << C(Bold) << "Example:" << C(Reset) << "\n";
+        std::cout << "  tracesmith profile --nsys -- python train.py\n\n";
+        std::cout << "CUPTI cannot profile child processes. nsys provides system-wide profiling.\n";
+        return 1;
+    }
+    
+#ifdef TRACESMITH_ENABLE_MACA
+    // For MACA, strongly suggest --mctracer
+    if (detectPlatform() == PlatformType::MACA) {
+        printError("MACA detected. Please use --mctracer for GPU profiling.");
+        std::cout << "\n";
+        std::cout << C(Bold) << "Usage:" << C(Reset) << "\n";
+        std::cout << "  " << C(Cyan) << "tracesmith profile --mctracer -- " << C(Reset) << "<your-command>\n\n";
+        std::cout << C(Bold) << "Example:" << C(Reset) << "\n";
+        std::cout << "  tracesmith profile --mctracer -- ./my_maca_app\n\n";
+        std::cout << "MCPTI cannot profile child processes. mcTracer provides system-wide profiling.\n";
+        return 1;
     }
 #endif
     
@@ -906,10 +1081,34 @@ int cmdProfile(int argc, char* argv[]) {
     
     if (platform == PlatformType::Unknown) {
         printWarning("No GPU detected, will execute without GPU profiling");
+    } else if (platform == PlatformType::CUDA || platform == PlatformType::MACA) {
+        // CUDA/MACA: Show limitation warning and suggest system-level tools
+        std::cout << C(Yellow) << "╔════════════════════════════════════════════════════════════════╗" << C(Reset) << "\n";
+        std::cout << C(Yellow) << "║" << C(Reset) << C(Bold) << "  IMPORTANT: GPU Profiling API Limitation                       " << C(Reset) << C(Yellow) << "║" << C(Reset) << "\n";
+        std::cout << C(Yellow) << "╠════════════════════════════════════════════════════════════════╣" << C(Reset) << "\n";
+        std::cout << C(Yellow) << "║" << C(Reset) << "  CUPTI/MCPTI only profiles the calling process, NOT child      " << C(Yellow) << "║" << C(Reset) << "\n";
+        std::cout << C(Yellow) << "║" << C(Reset) << "  processes. This means GPU events from your command will       " << C(Yellow) << "║" << C(Reset) << "\n";
+        std::cout << C(Yellow) << "║" << C(Reset) << "  NOT be captured here.                                         " << C(Yellow) << "║" << C(Reset) << "\n";
+        std::cout << C(Yellow) << "║" << C(Reset) << "                                                                 " << C(Yellow) << "║" << C(Reset) << "\n";
+        std::cout << C(Yellow) << "║" << C(Reset) << C(Green) << "  RECOMMENDED: Use system-level profiler instead:              " << C(Reset) << C(Yellow) << "║" << C(Reset) << "\n";
+        if (platform == PlatformType::CUDA) {
+            std::cout << C(Yellow) << "║" << C(Reset) << C(Cyan) << "    tracesmith profile --nsys -- " << C(Reset) << "<your-command>              " << C(Yellow) << "║" << C(Reset) << "\n";
+        } else {
+            std::cout << C(Yellow) << "║" << C(Reset) << C(Cyan) << "    tracesmith profile --mctracer -- " << C(Reset) << "<your-command>          " << C(Yellow) << "║" << C(Reset) << "\n";
+        }
+        std::cout << C(Yellow) << "╚════════════════════════════════════════════════════════════════╝" << C(Reset) << "\n\n";
+        
+        printWarning("Proceeding without GPU profiling for child process.");
+        std::cout << "  The command will be executed but GPU events won't be captured.\n";
+        std::cout << "  Use " << C(Cyan) << (platform == PlatformType::CUDA ? "--nsys" : "--mctracer") << C(Reset) 
+                  << " for system-wide GPU profiling.\n\n";
+        
+        // Don't create profiler - it won't help
+        profiler = nullptr;
     } else {
         printSuccess("Detected GPU platform: " + platform_name);
         
-        // Create profiler
+        // Create profiler (Metal, ROCm, etc.)
         profiler = createProfiler(platform);
         if (!profiler) {
             printWarning("Failed to create profiler for " + platform_name);
@@ -1141,11 +1340,39 @@ int cmdRecord(int argc, char* argv[]) {
     // Check platform
     if (platform == PlatformType::Unknown) {
         printError("No supported GPU platform detected.");
-        std::cout << "Supported: CUDA (NVIDIA), ROCm (AMD), Metal (Apple)\n";
+        std::cout << "Supported: CUDA (NVIDIA), ROCm (AMD), Metal (Apple), MACA (MetaX)\n";
         return 1;
     }
     
-    // Create profiler
+    // For CUDA/MACA platforms, the record command is not useful
+    // because CUPTI/MCPTI can only profile the calling process
+    if (platform == PlatformType::CUDA || platform == PlatformType::MACA) {
+        std::cout << C(Red) << "╔════════════════════════════════════════════════════════════════╗" << C(Reset) << "\n";
+        std::cout << C(Red) << "║" << C(Reset) << C(Bold) << "  ERROR: 'record' command not supported for CUDA/MACA           " << C(Reset) << C(Red) << "║" << C(Reset) << "\n";
+        std::cout << C(Red) << "╠════════════════════════════════════════════════════════════════╣" << C(Reset) << "\n";
+        std::cout << C(Red) << "║" << C(Reset) << "  CUPTI/MCPTI APIs can only profile the calling process itself. " << C(Red) << "║" << C(Reset) << "\n";
+        std::cout << C(Red) << "║" << C(Reset) << "  The 'record' command cannot capture external GPU activity.    " << C(Red) << "║" << C(Reset) << "\n";
+        std::cout << C(Red) << "║" << C(Reset) << "                                                                 " << C(Red) << "║" << C(Reset) << "\n";
+        std::cout << C(Red) << "║" << C(Reset) << C(Green) << "  Use system-level profiler instead:                            " << C(Reset) << C(Red) << "║" << C(Reset) << "\n";
+        if (platform == PlatformType::CUDA) {
+            std::cout << C(Red) << "║" << C(Reset) << C(Cyan) << "    tracesmith profile --nsys -- <your-command>" << C(Reset) << "               " << C(Red) << "║" << C(Reset) << "\n";
+        } else {
+            std::cout << C(Red) << "║" << C(Reset) << C(Cyan) << "    tracesmith profile --mctracer -- <your-command>" << C(Reset) << "           " << C(Red) << "║" << C(Reset) << "\n";
+        }
+        std::cout << C(Red) << "╚════════════════════════════════════════════════════════════════╝" << C(Reset) << "\n\n";
+        
+        std::cout << C(Bold) << "Example:" << C(Reset) << "\n";
+        if (platform == PlatformType::CUDA) {
+            std::cout << "  tracesmith profile --nsys -- python train.py\n";
+            std::cout << "  tracesmith profile --nsys --perfetto -- ./my_cuda_app\n";
+        } else {
+            std::cout << "  tracesmith profile --mctracer -- ./my_maca_app\n";
+            std::cout << "  tracesmith profile --mctracer --perfetto -- python train.py\n";
+        }
+        return 1;
+    }
+    
+    // Create profiler (for Metal/ROCm which can record)
     auto profiler = createProfiler(platform);
     if (!profiler) {
         printError("Failed to create profiler for " + platform_name);
