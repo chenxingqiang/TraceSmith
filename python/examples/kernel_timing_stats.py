@@ -9,17 +9,18 @@ Demonstrates how to capture and analyze kernel execution times:
 - CSV/JSON export for further analysis
 """
 
-import tracesmith as ts
-from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 import json
 import statistics
+from dataclasses import dataclass, field
+from typing import Dict, List
+
+import tracesmith as ts
 
 
 @dataclass
 class KernelStats:
     """Statistics for a specific kernel."""
+
     name: str
     count: int = 0
     total_duration_ns: int = 0
@@ -97,9 +98,7 @@ class KernelTimingAnalyzer:
 
             if name not in self.kernel_stats:
                 self.kernel_stats[name] = KernelStats(
-                    name=name,
-                    min_duration_ns=duration,
-                    max_duration_ns=duration
+                    name=name, min_duration_ns=duration, max_duration_ns=duration
                 )
 
             stats = self.kernel_stats[name]
@@ -114,7 +113,7 @@ class KernelTimingAnalyzer:
 
     def print_summary(self, top_n: int = 20, sort_by: str = "total"):
         """Print a formatted summary of kernel statistics.
-        
+
         Args:
             top_n: Number of top kernels to show
             sort_by: Sort criteria - 'total', 'avg', 'count', 'max'
@@ -129,27 +128,17 @@ class KernelTimingAnalyzer:
         # Sort kernels
         if sort_by == "total":
             sorted_stats = sorted(
-                self.kernel_stats.values(),
-                key=lambda x: x.total_duration_ns,
-                reverse=True
+                self.kernel_stats.values(), key=lambda x: x.total_duration_ns, reverse=True
             )
         elif sort_by == "avg":
             sorted_stats = sorted(
-                self.kernel_stats.values(),
-                key=lambda x: x.avg_duration_ns,
-                reverse=True
+                self.kernel_stats.values(), key=lambda x: x.avg_duration_ns, reverse=True
             )
         elif sort_by == "count":
-            sorted_stats = sorted(
-                self.kernel_stats.values(),
-                key=lambda x: x.count,
-                reverse=True
-            )
+            sorted_stats = sorted(self.kernel_stats.values(), key=lambda x: x.count, reverse=True)
         elif sort_by == "max":
             sorted_stats = sorted(
-                self.kernel_stats.values(),
-                key=lambda x: x.max_duration_ns,
-                reverse=True
+                self.kernel_stats.values(), key=lambda x: x.max_duration_ns, reverse=True
             )
         else:
             sorted_stats = list(self.kernel_stats.values())
@@ -166,25 +155,35 @@ class KernelTimingAnalyzer:
         print("-" * 100)
 
         # Table header
-        print(f"{'Kernel Name':<40} {'Count':>8} {'Total(ms)':>12} {'Avg(µs)':>10} "
-              f"{'Min(µs)':>10} {'Max(µs)':>10} {'P95(µs)':>10} {'%Time':>7}")
+        print(
+            f"{'Kernel Name':<40} {'Count':>8} {'Total(ms)':>12} {'Avg(µs)':>10} "
+            f"{'Min(µs)':>10} {'Max(µs)':>10} {'P95(µs)':>10} {'%Time':>7}"
+        )
         print("-" * 100)
 
         for stats in sorted_stats[:top_n]:
-            pct = (stats.total_duration_ns / total_kernel_time * 100) if total_kernel_time > 0 else 0
+            pct = (
+                (stats.total_duration_ns / total_kernel_time * 100) if total_kernel_time > 0 else 0
+            )
             name = stats.name[:38] + ".." if len(stats.name) > 40 else stats.name
 
-            print(f"{name:<40} {stats.count:>8} {stats.total_duration_ns/1e6:>12.3f} "
-                  f"{stats.avg_duration_us:>10.2f} {stats.min_duration_ns/1e3:>10.2f} "
-                  f"{stats.max_duration_ns/1e3:>10.2f} {stats.percentile_95/1e3:>10.2f} {pct:>6.1f}%")
+            print(
+                f"{name:<40} {stats.count:>8} {stats.total_duration_ns / 1e6:>12.3f} "
+                f"{stats.avg_duration_us:>10.2f} {stats.min_duration_ns / 1e3:>10.2f} "
+                f"{stats.max_duration_ns / 1e3:>10.2f} {stats.percentile_95 / 1e3:>10.2f} {pct:>6.1f}%"
+            )
 
         if len(sorted_stats) > top_n:
             remaining = sorted_stats[top_n:]
             remaining_time = sum(s.total_duration_ns for s in remaining)
             remaining_count = sum(s.count for s in remaining)
-            remaining_pct = (remaining_time / total_kernel_time * 100) if total_kernel_time > 0 else 0
-            print(f"... and {len(remaining)} more kernels ({remaining_count} invocations, "
-                  f"{remaining_time/1e6:.3f} ms, {remaining_pct:.1f}%)")
+            remaining_pct = (
+                (remaining_time / total_kernel_time * 100) if total_kernel_time > 0 else 0
+            )
+            print(
+                f"... and {len(remaining)} more kernels ({remaining_count} invocations, "
+                f"{remaining_time / 1e6:.3f} ms, {remaining_pct:.1f}%)"
+            )
 
         print("=" * 100)
 
@@ -199,20 +198,24 @@ class KernelTimingAnalyzer:
             kernel_events.append(event)
 
         if not kernel_events:
-            print(f"No kernel events found" + (f" for '{kernel_name}'" if kernel_name else ""))
+            print("No kernel events found" + (f" for '{kernel_name}'" if kernel_name else ""))
             return
 
-        print(f"\nPer-Invocation Timing Report" + (f" for '{kernel_name}'" if kernel_name else ""))
+        print("\nPer-Invocation Timing Report" + (f" for '{kernel_name}'" if kernel_name else ""))
         print("-" * 80)
-        print(f"{'#':>5} {'Kernel Name':<35} {'Stream':>6} {'Duration(µs)':>12} {'Timestamp(ms)':>15}")
+        print(
+            f"{'#':>5} {'Kernel Name':<35} {'Stream':>6} {'Duration(µs)':>12} {'Timestamp(ms)':>15}"
+        )
         print("-" * 80)
 
         base_time = kernel_events[0].timestamp if kernel_events else 0
         for i, event in enumerate(kernel_events[:limit]):
             name = event.name[:33] + ".." if len(event.name) > 35 else event.name
             relative_time = (event.timestamp - base_time) / 1e6
-            print(f"{i+1:>5} {name:<35} {event.stream_id:>6} "
-                  f"{event.duration/1e3:>12.2f} {relative_time:>15.3f}")
+            print(
+                f"{i + 1:>5} {name:<35} {event.stream_id:>6} "
+                f"{event.duration / 1e3:>12.2f} {relative_time:>15.3f}"
+            )
 
         if len(kernel_events) > limit:
             print(f"... ({len(kernel_events) - limit} more invocations)")
@@ -222,13 +225,17 @@ class KernelTimingAnalyzer:
         if not self._analyzed:
             self.analyze()
 
-        with open(filename, 'w') as f:
-            f.write("kernel_name,count,total_ns,avg_ns,min_ns,max_ns,p50_ns,p95_ns,p99_ns,std_dev\n")
+        with open(filename, "w") as f:
+            f.write(
+                "kernel_name,count,total_ns,avg_ns,min_ns,max_ns,p50_ns,p95_ns,p99_ns,std_dev\n"
+            )
             for name, stats in self.kernel_stats.items():
-                f.write(f'"{name}",{stats.count},{stats.total_duration_ns},'
-                        f'{stats.avg_duration_ns:.2f},{stats.min_duration_ns},'
-                        f'{stats.max_duration_ns},{stats.percentile_50},'
-                        f'{stats.percentile_95},{stats.percentile_99},{stats.std_dev:.2f}\n')
+                f.write(
+                    f'"{name}",{stats.count},{stats.total_duration_ns},'
+                    f"{stats.avg_duration_ns:.2f},{stats.min_duration_ns},"
+                    f"{stats.max_duration_ns},{stats.percentile_50},"
+                    f"{stats.percentile_95},{stats.percentile_99},{stats.std_dev:.2f}\n"
+                )
 
         print(f"Exported to {filename}")
 
@@ -241,9 +248,9 @@ class KernelTimingAnalyzer:
             "summary": {
                 "unique_kernels": len(self.kernel_stats),
                 "total_invocations": sum(s.count for s in self.kernel_stats.values()),
-                "total_time_ns": sum(s.total_duration_ns for s in self.kernel_stats.values())
+                "total_time_ns": sum(s.total_duration_ns for s in self.kernel_stats.values()),
             },
-            "kernels": {}
+            "kernels": {},
         }
 
         for name, stats in self.kernel_stats.items():
@@ -256,12 +263,12 @@ class KernelTimingAnalyzer:
                 "percentiles": {
                     "p50_ns": stats.percentile_50,
                     "p95_ns": stats.percentile_95,
-                    "p99_ns": stats.percentile_99
+                    "p99_ns": stats.percentile_99,
                 },
-                "std_dev_ns": stats.std_dev
+                "std_dev_ns": stats.std_dev,
             }
 
-        with open(filename, 'w') as f:
+        with open(filename, "w") as f:
             json.dump(data, f, indent=2)
 
         print(f"Exported to {filename}")
@@ -270,21 +277,13 @@ class KernelTimingAnalyzer:
         """Get the N slowest kernels by average duration."""
         if not self._analyzed:
             self.analyze()
-        return sorted(
-            self.kernel_stats.values(),
-            key=lambda x: x.avg_duration_ns,
-            reverse=True
-        )[:n]
+        return sorted(self.kernel_stats.values(), key=lambda x: x.avg_duration_ns, reverse=True)[:n]
 
     def get_most_frequent_kernels(self, n: int = 10) -> List[KernelStats]:
         """Get the N most frequently called kernels."""
         if not self._analyzed:
             self.analyze()
-        return sorted(
-            self.kernel_stats.values(),
-            key=lambda x: x.count,
-            reverse=True
-        )[:n]
+        return sorted(self.kernel_stats.values(), key=lambda x: x.count, reverse=True)[:n]
 
 
 def create_sample_trace_events() -> List[ts.TraceEvent]:
@@ -295,16 +294,16 @@ def create_sample_trace_events() -> List[ts.TraceEvent]:
     # Simulate typical DL kernel patterns
     kernel_patterns = [
         # (name, base_duration_ns, variation, count)
-        ("void gemm_kernel<float>", 500000, 50000, 10),     # Matrix multiply
+        ("void gemm_kernel<float>", 500000, 50000, 10),  # Matrix multiply
         ("void conv2d_forward_kernel", 800000, 100000, 8),  # Convolution
-        ("void batch_norm_kernel", 50000, 5000, 16),        # BatchNorm
-        ("void relu_activation", 20000, 2000, 16),          # ReLU
-        ("void add_bias_kernel", 30000, 3000, 8),           # Bias add
-        ("void softmax_kernel", 100000, 10000, 4),          # Softmax
-        ("void cross_entropy_loss", 80000, 8000, 2),        # Loss
-        ("void adam_update_kernel", 150000, 15000, 20),     # Optimizer
-        ("void dropout_forward", 40000, 4000, 8),           # Dropout
-        ("void layernorm_kernel", 60000, 6000, 12),         # LayerNorm
+        ("void batch_norm_kernel", 50000, 5000, 16),  # BatchNorm
+        ("void relu_activation", 20000, 2000, 16),  # ReLU
+        ("void add_bias_kernel", 30000, 3000, 8),  # Bias add
+        ("void softmax_kernel", 100000, 10000, 4),  # Softmax
+        ("void cross_entropy_loss", 80000, 8000, 2),  # Loss
+        ("void adam_update_kernel", 150000, 15000, 20),  # Optimizer
+        ("void dropout_forward", 40000, 4000, 8),  # Dropout
+        ("void layernorm_kernel", 60000, 6000, 12),  # LayerNorm
     ]
 
     current_time = base_time
@@ -315,8 +314,9 @@ def create_sample_trace_events() -> List[ts.TraceEvent]:
         for kernel_name, base_duration, variation, count in kernel_patterns:
             for i in range(count):
                 import random
+
                 duration = base_duration + random.randint(-variation, variation)
-                
+
                 event = ts.TraceEvent()
                 event.type = ts.EventType.KernelLaunch
                 event.name = kernel_name
@@ -359,6 +359,7 @@ def main():
             profiler.start_capture()
 
             import time
+
             time.sleep(0.5)  # Capture window
 
             profiler.stop_capture()

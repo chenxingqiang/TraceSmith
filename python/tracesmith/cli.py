@@ -26,6 +26,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+
 # =============================================================================
 # ANSI Color Codes
 # =============================================================================
@@ -68,17 +69,22 @@ BANNER = """
    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝
 """
 
+
 def print_banner():
     """Print the TraceSmith ASCII art banner."""
     print(colorize(Color.CYAN) + BANNER + colorize(Color.RESET))
     version = get_version()
-    print(f"{colorize(Color.YELLOW)}                    GPU Profiling & Replay System v{version}{colorize(Color.RESET)}\n")
+    print(
+        f"{colorize(Color.YELLOW)}                    GPU Profiling & Replay System v{version}{colorize(Color.RESET)}\n"
+    )
 
 
 def print_compact_banner():
     """Print a compact banner."""
     version = get_version()
-    print(f"{colorize(Color.CYAN)}{colorize(Color.BOLD)}TraceSmith{colorize(Color.RESET)} v{version} - GPU Profiling & Replay System\n")
+    print(
+        f"{colorize(Color.CYAN)}{colorize(Color.BOLD)}TraceSmith{colorize(Color.RESET)} v{version} - GPU Profiling & Replay System\n"
+    )
 
 
 # =============================================================================
@@ -88,6 +94,7 @@ def get_version() -> str:
     """Get TraceSmith version."""
     try:
         from . import __version__
+
         return __version__
     except ImportError:
         return "unknown"
@@ -115,7 +122,7 @@ def print_section(title: str):
 
 def format_bytes(size: int) -> str:
     """Format bytes to human readable string."""
-    for unit in ['B', 'KB', 'MB', 'GB']:
+    for unit in ["B", "KB", "MB", "GB"]:
         if size < 1024:
             return f"{size:.1f} {unit}"
         size /= 1024
@@ -127,11 +134,11 @@ def format_duration(ns: int) -> str:
     if ns < 1000:
         return f"{ns} ns"
     elif ns < 1_000_000:
-        return f"{ns/1000:.2f} µs"
+        return f"{ns / 1000:.2f} µs"
     elif ns < 1_000_000_000:
-        return f"{ns/1_000_000:.2f} ms"
+        return f"{ns / 1_000_000:.2f} ms"
     else:
-        return f"{ns/1_000_000_000:.2f} s"
+        return f"{ns / 1_000_000_000:.2f} s"
 
 
 # =============================================================================
@@ -164,15 +171,25 @@ def cmd_info(args):
     # Platform detection
     print(f"{colorize(Color.BOLD)}Platform Detection:{colorize(Color.RESET)}")
     platform = detect_platform()
-    print(f"  Active Platform: {colorize(Color.CYAN)}{platform_type_to_string(platform)}{colorize(Color.RESET)}")
+    print(
+        f"  Active Platform: {colorize(Color.CYAN)}{platform_type_to_string(platform)}{colorize(Color.RESET)}"
+    )
     print()
 
     print(f"{colorize(Color.BOLD)}GPU Support:{colorize(Color.RESET)}")
     cuda_avail = is_cuda_available()
     metal_avail = is_metal_available()
 
-    cuda_status = f"{colorize(Color.GREEN)}✓ Available ({get_cuda_device_count()} devices){colorize(Color.RESET)}" if cuda_avail else f"{colorize(Color.YELLOW)}✗ Not available{colorize(Color.RESET)}"
-    metal_status = f"{colorize(Color.GREEN)}✓ Available ({get_metal_device_count()} devices){colorize(Color.RESET)}" if metal_avail else f"{colorize(Color.YELLOW)}✗ Not available{colorize(Color.RESET)}"
+    cuda_status = (
+        f"{colorize(Color.GREEN)}✓ Available ({get_cuda_device_count()} devices){colorize(Color.RESET)}"
+        if cuda_avail
+        else f"{colorize(Color.YELLOW)}✗ Not available{colorize(Color.RESET)}"
+    )
+    metal_status = (
+        f"{colorize(Color.GREEN)}✓ Available ({get_metal_device_count()} devices){colorize(Color.RESET)}"
+        if metal_avail
+        else f"{colorize(Color.YELLOW)}✗ Not available{colorize(Color.RESET)}"
+    )
 
     print(f"  NVIDIA CUDA:  {cuda_status}")
     print(f"  Apple Metal:  {metal_status}")
@@ -180,8 +197,16 @@ def cmd_info(args):
     print()
 
     print(f"{colorize(Color.BOLD)}Features:{colorize(Color.RESET)}")
-    proto_status = f"{colorize(Color.GREEN)}✓{colorize(Color.RESET)}" if is_protobuf_available() else f"{colorize(Color.YELLOW)}✗{colorize(Color.RESET)}"
-    bpf_status = f"{colorize(Color.GREEN)}✓{colorize(Color.RESET)}" if is_bpf_available() else f"{colorize(Color.YELLOW)}✗ (Linux only){colorize(Color.RESET)}"
+    proto_status = (
+        f"{colorize(Color.GREEN)}✓{colorize(Color.RESET)}"
+        if is_protobuf_available()
+        else f"{colorize(Color.YELLOW)}✗{colorize(Color.RESET)}"
+    )
+    bpf_status = (
+        f"{colorize(Color.GREEN)}✓{colorize(Color.RESET)}"
+        if is_bpf_available()
+        else f"{colorize(Color.YELLOW)}✗ (Linux only){colorize(Color.RESET)}"
+    )
 
     # Check nsys availability
     nsys_available = _is_nsys_available()
@@ -234,11 +259,13 @@ def cmd_devices(args):
         try:
             profiler = create_profiler(PlatformType.CUDA)
             if profiler:
-                config = __import__('tracesmith').ProfilerConfig()
+                config = __import__("tracesmith").ProfilerConfig()
                 if profiler.initialize(config):
                     devices = profiler.get_device_info()
                     for dev in devices:
-                        print(f"\n  {colorize(Color.CYAN)}Device {dev.device_id}: {colorize(Color.RESET)}{dev.name}")
+                        print(
+                            f"\n  {colorize(Color.CYAN)}Device {dev.device_id}: {colorize(Color.RESET)}{dev.name}"
+                        )
                         print(f"    Vendor:  {dev.vendor}")
                         print(f"    Memory:  {format_bytes(dev.total_memory)}")
                         print(f"    SMs:     {dev.multiprocessor_count}")
@@ -291,18 +318,18 @@ def cmd_record(args):
 
     output_file = args.output or "trace.sbt"
     duration_sec = args.duration
-    use_nsys = getattr(args, 'nsys', False)
-    keep_nsys = getattr(args, 'keep_nsys', False)
-    
+    use_nsys = getattr(args, "nsys", False)
+    keep_nsys = getattr(args, "keep_nsys", False)
+
     # Parse exec command if provided
-    exec_command = getattr(args, 'exec', None)
+    exec_command = getattr(args, "exec", None)
     if exec_command:
         # Handle the case where exec is a list
         if isinstance(exec_command, list):
             exec_command = exec_command
         else:
             exec_command = [exec_command]
-    
+
     print_section("Recording GPU Trace")
 
     # Check if nsys mode is requested
@@ -311,12 +338,12 @@ def cmd_record(args):
             print_error("nsys (NVIDIA Nsight Systems) not found.")
             print("Install from: https://developer.nvidia.com/nsight-systems")
             return 1
-        
+
         if not exec_command:
             print_error("--nsys requires --exec to specify the command to profile")
-            print(f"  Example: tracesmith-cli record --nsys --exec python train.py")
+            print("  Example: tracesmith-cli record --nsys --exec python train.py")
             return 1
-        
+
         # Use nsys for profiling
         return _cmd_record_nsys(args, exec_command, output_file, duration_sec, keep_nsys)
 
@@ -324,10 +351,14 @@ def cmd_record(args):
     print(f"  Output:   {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
     if exec_command:
         print(f"  Execute:  {colorize(Color.CYAN)}{' '.join(exec_command)}{colorize(Color.RESET)}")
-        print(f"  Mode:     {colorize(Color.GREEN)}In-process execution (CUPTI compatible){colorize(Color.RESET)}")
+        print(
+            f"  Mode:     {colorize(Color.GREEN)}In-process execution (CUPTI compatible){colorize(Color.RESET)}"
+        )
     else:
         print(f"  Duration: {duration_sec} seconds")
-        print(f"  Mode:     {colorize(Color.YELLOW)}Passive recording (waiting for GPU activity){colorize(Color.RESET)}")
+        print(
+            f"  Mode:     {colorize(Color.YELLOW)}Passive recording (waiting for GPU activity){colorize(Color.RESET)}"
+        )
     print()
 
     # Detect platform
@@ -343,37 +374,70 @@ def cmd_record(args):
     # because CUPTI/MCPTI can only profile the calling process
     if platform == PlatformType.CUDA:
         print()
-        print(f"{colorize(Color.RED)}╔════════════════════════════════════════════════════════════════╗{colorize(Color.RESET)}")
-        print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.BOLD)}  ERROR: 'record' command not supported for CUDA                {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}")
-        print(f"{colorize(Color.RED)}╠════════════════════════════════════════════════════════════════╣{colorize(Color.RESET)}")
-        print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}  CUPTI can only profile the calling process, not external apps.{colorize(Color.RED)}║{colorize(Color.RESET)}")
-        print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}                                                                 {colorize(Color.RED)}║{colorize(Color.RESET)}")
-        print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.GREEN)}  Use system-level profiler instead:                            {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}")
-        print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.CYAN)}    tracesmith-cli profile --nsys -- <your-command>{colorize(Color.RESET)}            {colorize(Color.RED)}║{colorize(Color.RESET)}")
-        print(f"{colorize(Color.RED)}╚════════════════════════════════════════════════════════════════╝{colorize(Color.RESET)}")
+        print(
+            f"{colorize(Color.RED)}╔════════════════════════════════════════════════════════════════╗{colorize(Color.RESET)}"
+        )
+        print(
+            f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.BOLD)}  ERROR: 'record' command not supported for CUDA                {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}"
+        )
+        print(
+            f"{colorize(Color.RED)}╠════════════════════════════════════════════════════════════════╣{colorize(Color.RESET)}"
+        )
+        print(
+            f"{colorize(Color.RED)}║{colorize(Color.RESET)}  CUPTI can only profile the calling process, not external apps.{colorize(Color.RED)}║{colorize(Color.RESET)}"
+        )
+        print(
+            f"{colorize(Color.RED)}║{colorize(Color.RESET)}                                                                 {colorize(Color.RED)}║{colorize(Color.RESET)}"
+        )
+        print(
+            f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.GREEN)}  Use system-level profiler instead:                            {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}"
+        )
+        print(
+            f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.CYAN)}    tracesmith-cli profile --nsys -- <your-command>{colorize(Color.RESET)}            {colorize(Color.RED)}║{colorize(Color.RESET)}"
+        )
+        print(
+            f"{colorize(Color.RED)}╚════════════════════════════════════════════════════════════════╝{colorize(Color.RESET)}"
+        )
         print()
         print(f"{colorize(Color.BOLD)}Example:{colorize(Color.RESET)}")
-        print(f"  tracesmith-cli profile --nsys -- python train.py")
-        print(f"  tracesmith-cli profile --nsys --perfetto -- ./my_cuda_app")
+        print("  tracesmith-cli profile --nsys -- python train.py")
+        print("  tracesmith-cli profile --nsys --perfetto -- ./my_cuda_app")
         return 1
 
     # Check for MACA platform
     try:
         from . import is_maca_available
+
         if is_maca_available():
             print()
-            print(f"{colorize(Color.RED)}╔════════════════════════════════════════════════════════════════╗{colorize(Color.RESET)}")
-            print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.BOLD)}  ERROR: 'record' command not supported for MACA                {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}")
-            print(f"{colorize(Color.RED)}╠════════════════════════════════════════════════════════════════╣{colorize(Color.RESET)}")
-            print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}  MCPTI can only profile the calling process, not external apps.{colorize(Color.RED)}║{colorize(Color.RESET)}")
-            print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}                                                                 {colorize(Color.RED)}║{colorize(Color.RESET)}")
-            print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.GREEN)}  Use system-level profiler instead:                            {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}")
-            print(f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.CYAN)}    tracesmith-cli profile --mctracer -- <your-command>{colorize(Color.RESET)}        {colorize(Color.RED)}║{colorize(Color.RESET)}")
-            print(f"{colorize(Color.RED)}╚════════════════════════════════════════════════════════════════╝{colorize(Color.RESET)}")
+            print(
+                f"{colorize(Color.RED)}╔════════════════════════════════════════════════════════════════╗{colorize(Color.RESET)}"
+            )
+            print(
+                f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.BOLD)}  ERROR: 'record' command not supported for MACA                {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}"
+            )
+            print(
+                f"{colorize(Color.RED)}╠════════════════════════════════════════════════════════════════╣{colorize(Color.RESET)}"
+            )
+            print(
+                f"{colorize(Color.RED)}║{colorize(Color.RESET)}  MCPTI can only profile the calling process, not external apps.{colorize(Color.RED)}║{colorize(Color.RESET)}"
+            )
+            print(
+                f"{colorize(Color.RED)}║{colorize(Color.RESET)}                                                                 {colorize(Color.RED)}║{colorize(Color.RESET)}"
+            )
+            print(
+                f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.GREEN)}  Use system-level profiler instead:                            {colorize(Color.RESET)}{colorize(Color.RED)}║{colorize(Color.RESET)}"
+            )
+            print(
+                f"{colorize(Color.RED)}║{colorize(Color.RESET)}{colorize(Color.CYAN)}    tracesmith-cli profile --mctracer -- <your-command>{colorize(Color.RESET)}        {colorize(Color.RED)}║{colorize(Color.RESET)}"
+            )
+            print(
+                f"{colorize(Color.RED)}╚════════════════════════════════════════════════════════════════╝{colorize(Color.RESET)}"
+            )
             print()
             print(f"{colorize(Color.BOLD)}Example:{colorize(Color.RESET)}")
-            print(f"  tracesmith-cli profile --mctracer -- ./my_maca_app")
-            print(f"  tracesmith-cli profile --mctracer --perfetto -- python train.py")
+            print("  tracesmith-cli profile --mctracer -- ./my_maca_app")
+            print("  tracesmith-cli profile --mctracer --perfetto -- python train.py")
             return 1
     except ImportError:
         pass
@@ -395,14 +459,18 @@ def cmd_record(args):
         return 1
 
     print_success("Profiler initialized")
-    
+
     # Show warning if no exec command and using CUPTI
     if not exec_command:
         print()
         print_warning("CUPTI can only capture GPU events from the SAME process.")
         print_info("To capture events, use --exec to run GPU code in this process:")
-        print(f"  {colorize(Color.CYAN)}tracesmith-cli record --exec 'python train.py'{colorize(Color.RESET)}")
-        print(f"  {colorize(Color.CYAN)}tracesmith-cli record --exec 'python -c \"import torch; ...\"'{colorize(Color.RESET)}")
+        print(
+            f"  {colorize(Color.CYAN)}tracesmith-cli record --exec 'python train.py'{colorize(Color.RESET)}"
+        )
+        print(
+            f"  {colorize(Color.CYAN)}tracesmith-cli record --exec 'python -c \"import torch; ...\"'{colorize(Color.RESET)}"
+        )
         print()
 
     # Create writer
@@ -415,7 +483,7 @@ def cmd_record(args):
     metadata = TraceMetadata()
     metadata.application_name = "tracesmith-record"
     if exec_command:
-        metadata.command_line = ' '.join(exec_command)
+        metadata.command_line = " ".join(exec_command)
     writer.write_metadata(metadata)
 
     # Event collection
@@ -436,7 +504,7 @@ def cmd_record(args):
 
     # Start capture
     profiler.start_capture()
-    
+
     # Start collection thread
     collector_thread = threading.Thread(target=collect_events, daemon=True)
     collector_thread.start()
@@ -446,33 +514,44 @@ def cmd_record(args):
 
     if exec_command:
         # Execute command in the same process
-        print(f"\n{colorize(Color.GREEN)}▶ Recording with in-process execution...{colorize(Color.RESET)}\n")
+        print(
+            f"\n{colorize(Color.GREEN)}▶ Recording with in-process execution...{colorize(Color.RESET)}\n"
+        )
         print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
-        
+
         # Check if this is a Python command
-        is_python_cmd = (exec_command[0] == 'python' or exec_command[0] == 'python3' or 
-                         exec_command[0].endswith('python') or exec_command[0].endswith('python3'))
-        
+        is_python_cmd = (
+            exec_command[0] == "python"
+            or exec_command[0] == "python3"
+            or exec_command[0].endswith("python")
+            or exec_command[0].endswith("python3")
+        )
+
         if is_python_cmd:
             # Run Python in the same process for CUPTI capture
             exit_code = _run_python_in_process(exec_command)
         else:
             # For non-Python commands, we need to warn user
-            print_warning("Non-Python commands run as subprocess - CUPTI cannot capture their GPU events")
+            print_warning(
+                "Non-Python commands run as subprocess - CUPTI cannot capture their GPU events"
+            )
             print_info("Consider using Python wrapper or tracesmith Python API")
             import subprocess
+
             try:
                 result = subprocess.run(exec_command, shell=False)
                 exit_code = result.returncode
             except Exception as e:
                 print_error(f"Failed to execute command: {e}")
                 exit_code = 1
-        
+
         print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
     else:
         # Passive recording mode - just wait
-        print(f"\n{colorize(Color.GREEN)}▶ Recording...{colorize(Color.RESET)} (Press Ctrl+C to stop)\n")
-        
+        print(
+            f"\n{colorize(Color.GREEN)}▶ Recording...{colorize(Color.RESET)} (Press Ctrl+C to stop)\n"
+        )
+
         try:
             while time.time() - start_time < duration_sec:
                 # Progress
@@ -481,7 +560,11 @@ def cmd_record(args):
                 bar_width = 40
                 filled = int(bar_width * progress)
                 bar = f"{colorize(Color.GREEN)}{'█' * filled}{colorize(Color.RESET)}{'░' * (bar_width - filled)}"
-                print(f"\r  [{bar}] {progress*100:.0f}% | Events: {total_events[0]}     ", end='', flush=True)
+                print(
+                    f"\r  [{bar}] {progress * 100:.0f}% | Events: {total_events[0]}     ",
+                    end="",
+                    flush=True,
+                )
                 time.sleep(0.1)
         except KeyboardInterrupt:
             print("\n")
@@ -526,17 +609,20 @@ def cmd_record(args):
     print(f"  Duration:     {duration_actual:.2f} seconds")
     print(f"  Total events: {colorize(Color.GREEN)}{total_events[0]}{colorize(Color.RESET)}")
     print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
-    
+
     # Analyze events if any
     if all_events:
         from collections import Counter
+
         from . import EventType
-        
+
         type_counts = Counter(e.type for e in all_events)
         kernel_count = type_counts.get(EventType.KernelLaunch, 0)
-        memcpy_count = sum(type_counts.get(t, 0) for t in 
-                          [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D])
-        
+        memcpy_count = sum(
+            type_counts.get(t, 0)
+            for t in [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D]
+        )
+
         print()
         print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
         print(f"  Kernel Launches: {kernel_count}")
@@ -545,18 +631,22 @@ def cmd_record(args):
     print()
 
     # Export to Perfetto if requested
-    if getattr(args, 'perfetto', False) and all_events:
-        perfetto_file = output_file.replace('.sbt', '.json')
+    if getattr(args, "perfetto", False) and all_events:
+        perfetto_file = output_file.replace(".sbt", ".json")
         if export_perfetto(all_events, perfetto_file):
             print_success(f"Exported Perfetto trace: {perfetto_file}")
-            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+            print(
+                f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}"
+            )
         else:
             print_warning("Failed to export Perfetto trace")
         print()
 
     print_success(f"Trace saved to {output_file}")
     print("\nNext steps:")
-    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(
+        f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}"
+    )
     print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
 
     return exit_code
@@ -568,20 +658,22 @@ def cmd_record(args):
 def _cmd_record_nsys(args, command, output_file, duration_sec, keep_nsys):
     """Record GPU events using NVIDIA Nsight Systems (nsys)."""
     import time
-    
+
     from . import (
         SBTWriter,
         TraceMetadata,
         export_perfetto,
     )
-    
+
     print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
     print(f"  Output:   {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
     print(f"  Execute:  {colorize(Color.CYAN)}{' '.join(command)}{colorize(Color.RESET)}")
     print(f"  Backend:  {colorize(Color.GREEN)}NVIDIA Nsight Systems (nsys){colorize(Color.RESET)}")
-    print(f"  Mode:     {colorize(Color.GREEN)}System-wide GPU profiling (cross-process){colorize(Color.RESET)}")
+    print(
+        f"  Mode:     {colorize(Color.GREEN)}System-wide GPU profiling (cross-process){colorize(Color.RESET)}"
+    )
     print()
-    
+
     # Show nsys version
     nsys_version = _get_nsys_version()
     if nsys_version:
@@ -589,12 +681,12 @@ def _cmd_record_nsys(args, command, output_file, duration_sec, keep_nsys):
     else:
         print_success("nsys available")
     print()
-    
+
     print(f"{colorize(Color.GREEN)}▶ Starting nsys profiling...{colorize(Color.RESET)}")
     print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
-    
+
     start_time = time.time()
-    
+
     # Run with nsys
     exit_code, nsys_rep, events = _run_with_nsys(
         command=command,
@@ -605,87 +697,96 @@ def _cmd_record_nsys(args, command, output_file, duration_sec, keep_nsys):
         nvtx=True,
         sample_cpu=False,
     )
-    
+
     print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
     print()
-    
+
     end_time = time.time()
     duration_actual = end_time - start_time
-    
+
     # Show command result
     if exit_code == 0:
         print_success("Command completed successfully")
     else:
         print_warning(f"Command exited with code: {exit_code}")
-    
+
     print_success("nsys profiling stopped")
     print()
-    
+
     # Save events to SBT format
     writer = SBTWriter(output_file)
     if writer.is_open():
         metadata = TraceMetadata()
         metadata.application_name = os.path.basename(command[0])
-        metadata.command_line = ' '.join(command)
+        metadata.command_line = " ".join(command)
         writer.write_metadata(metadata)
-        
+
         if events:
             writer.write_events(events)
-        
+
         writer.finalize()
-    
+
     # Print summary
     print_section("Recording Complete")
-    
+
     print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
-    print(f"  Backend:      NVIDIA Nsight Systems")
+    print("  Backend:      NVIDIA Nsight Systems")
     print(f"  Duration:     {duration_actual:.2f} seconds")
     print(f"  GPU Events:   {colorize(Color.GREEN)}{len(events)}{colorize(Color.RESET)}")
     print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
-    
+
     # Show nsys report location
     if nsys_rep and os.path.exists(nsys_rep):
         if keep_nsys:
             print(f"  nsys Report:  {colorize(Color.CYAN)}{nsys_rep}{colorize(Color.RESET)}")
         else:
             # Cleanup nsys files
-            base_name = output_file.replace('.sbt', '').replace('.json', '')
+            base_name = output_file.replace(".sbt", "").replace(".json", "")
             _cleanup_nsys_files(f"{base_name}_nsys")
-    
+
     # Analyze events if any
     if events:
         from collections import Counter
+
         from . import EventType
-        
+
         type_counts = Counter(e.type for e in events)
         kernel_count = type_counts.get(EventType.KernelLaunch, 0)
-        memcpy_count = sum(type_counts.get(t, 0) for t in 
-                          [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D])
-        
+        memcpy_count = sum(
+            type_counts.get(t, 0)
+            for t in [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D]
+        )
+
         print()
         print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
         print(f"  Kernel Launches: {kernel_count}")
         print(f"  Memory Copies:   {memcpy_count}")
         print(f"  Other Events:    {len(events) - kernel_count - memcpy_count}")
     print()
-    
+
     # Export to Perfetto if requested
-    if getattr(args, 'perfetto', False) and events:
-        perfetto_file = output_file.replace('.sbt', '.json')
+    if getattr(args, "perfetto", False) and events:
+        perfetto_file = output_file.replace(".sbt", ".json")
         if export_perfetto(events, perfetto_file):
             print_success(f"Exported Perfetto trace: {perfetto_file}")
-            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+            print(
+                f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}"
+            )
         else:
             print_warning("Failed to export Perfetto trace")
         print()
-    
+
     print_success(f"Trace saved to {output_file}")
     print("\nNext steps:")
-    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(
+        f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}"
+    )
     print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
     if nsys_rep and keep_nsys and os.path.exists(nsys_rep):
-        print(f"  {colorize(Color.CYAN)}nsys-ui {nsys_rep}{colorize(Color.RESET)}  # Open in Nsight Systems UI")
-    
+        print(
+            f"  {colorize(Color.CYAN)}nsys-ui {nsys_rep}{colorize(Color.RESET)}  # Open in Nsight Systems UI"
+        )
+
     return exit_code
 
 
@@ -694,17 +795,17 @@ def _cmd_record_nsys(args, command, output_file, duration_sec, keep_nsys):
 # =============================================================================
 def _is_nsys_available() -> bool:
     """Check if nsys (NVIDIA Nsight Systems) is available."""
-    return shutil.which('nsys') is not None
+    return shutil.which("nsys") is not None
 
 
 def _get_nsys_version() -> Optional[str]:
     """Get nsys version string."""
     try:
-        result = subprocess.run(['nsys', '--version'], capture_output=True, text=True)
+        result = subprocess.run(["nsys", "--version"], capture_output=True, text=True)
         if result.returncode == 0:
             # Parse version from output like "NVIDIA Nsight Systems version 2023.4.1.97-..."
-            for line in result.stdout.split('\n'):
-                if 'version' in line.lower():
+            for line in result.stdout.split("\n"):
+                if "version" in line.lower():
                     return line.strip()
         return None
     except Exception:
@@ -722,7 +823,7 @@ def _run_with_nsys(
 ) -> Tuple[int, str, List]:
     """
     Run a command with nsys profiling and return captured events.
-    
+
     Args:
         command: Command to execute
         output_file: Output file path (without extension)
@@ -731,52 +832,52 @@ def _run_with_nsys(
         cuda_api: Capture CUDA API calls
         nvtx: Capture NVTX annotations
         sample_cpu: Sample CPU activity
-    
+
     Returns:
         Tuple of (exit_code, nsys_report_path, events)
     """
-    import json
-    import tempfile
-    
+
     # Generate temp file for nsys output
-    base_name = output_file.replace('.sbt', '').replace('.json', '')
+    base_name = output_file.replace(".sbt", "").replace(".json", "")
     nsys_output = f"{base_name}_nsys"
-    
+
     # Build nsys command
     nsys_cmd = [
-        'nsys', 'profile',
-        '-o', nsys_output,
-        '--force-overwrite=true',
-        '--export=json',  # Export to JSON for parsing
+        "nsys",
+        "profile",
+        "-o",
+        nsys_output,
+        "--force-overwrite=true",
+        "--export=json",  # Export to JSON for parsing
     ]
-    
+
     # Add trace options
     trace_opts = []
     if cuda_api:
-        trace_opts.append('cuda')
+        trace_opts.append("cuda")
     if nvtx:
-        trace_opts.append('nvtx')
+        trace_opts.append("nvtx")
     if gpu_metrics:
-        trace_opts.append('cublas')
-        trace_opts.append('cudnn')
-    
+        trace_opts.append("cublas")
+        trace_opts.append("cudnn")
+
     if trace_opts:
-        nsys_cmd.extend(['--trace=' + ','.join(trace_opts)])
-    
+        nsys_cmd.extend(["--trace=" + ",".join(trace_opts)])
+
     # Add duration limit if specified
     if duration:
-        nsys_cmd.extend(['--duration', str(int(duration))])
-    
+        nsys_cmd.extend(["--duration", str(int(duration))])
+
     # Disable CPU sampling by default (faster)
     if not sample_cpu:
-        nsys_cmd.extend(['--sample=none'])
-    
+        nsys_cmd.extend(["--sample=none"])
+
     # Add the user command
-    nsys_cmd.append('--')
+    nsys_cmd.append("--")
     nsys_cmd.extend(command)
-    
+
     print_info(f"Running: {' '.join(nsys_cmd[:8])}...")
-    
+
     # Execute nsys
     try:
         result = subprocess.run(nsys_cmd, capture_output=False)
@@ -787,11 +888,11 @@ def _run_with_nsys(
     except Exception as e:
         print_error(f"nsys failed: {e}")
         return 1, "", []
-    
+
     # Find the generated files
     nsys_rep = f"{nsys_output}.nsys-rep"
     nsys_json = f"{nsys_output}.json"
-    
+
     # Parse events from JSON if available
     events = []
     if os.path.exists(nsys_json):
@@ -800,136 +901,143 @@ def _run_with_nsys(
         # Try to export JSON from nsys-rep
         try:
             export_result = subprocess.run(
-                ['nsys', 'export', '-t', 'json', '-o', nsys_json, nsys_rep],
-                capture_output=True
+                ["nsys", "export", "-t", "json", "-o", nsys_json, nsys_rep], capture_output=True
             )
             if export_result.returncode == 0 and os.path.exists(nsys_json):
                 events = _parse_nsys_json(nsys_json)
         except Exception:
             pass
-    
+
     return exit_code, nsys_rep, events
 
 
 def _parse_nsys_json(json_path: str) -> List:
     """
     Parse nsys JSON export and convert to TraceSmith TraceEvent format.
-    
+
     Args:
         json_path: Path to nsys JSON export file
-    
+
     Returns:
         List of TraceEvent objects
     """
     import json
-    
+
     from . import EventType, TraceEvent
-    
+
     events = []
-    
+
     try:
-        with open(json_path, 'r') as f:
+        with open(json_path, "r") as f:
             data = json.load(f)
     except Exception as e:
         print_warning(f"Failed to parse nsys JSON: {e}")
         return events
-    
+
     # nsys JSON format varies by version, handle common formats
     # Look for CUDA API events, kernel events, memory events
-    
+
     # Try to find events in various nsys JSON structures
     cuda_api_events = []
     kernel_events = []
     memcpy_events = []
-    
+
     # nsys export JSON structure
     if isinstance(data, dict):
         # Check for 'traceEvents' (Chrome trace format)
-        if 'traceEvents' in data:
-            cuda_api_events = data['traceEvents']
+        if "traceEvents" in data:
+            cuda_api_events = data["traceEvents"]
         # Check for 'CudaEvent' or similar
-        elif 'CudaEvent' in data:
-            cuda_api_events = data['CudaEvent']
+        elif "CudaEvent" in data:
+            cuda_api_events = data["CudaEvent"]
         # Check for nested structure
-        elif 'StringTable' in data and 'TraceProcessEvents' in data:
+        elif "StringTable" in data and "TraceProcessEvents" in data:
             # Older nsys format
             pass
     elif isinstance(data, list):
         # Direct list of events
         cuda_api_events = data
-    
+
     # Convert to TraceEvent format
     correlation_id = 0
     for raw_event in cuda_api_events:
         if not isinstance(raw_event, dict):
             continue
-        
+
         event = TraceEvent()
         event.correlation_id = correlation_id
         correlation_id += 1
-        
+
         # Get event name/type
-        name = raw_event.get('name', raw_event.get('Name', ''))
-        cat = raw_event.get('cat', raw_event.get('Category', ''))
-        
+        name = raw_event.get("name", raw_event.get("Name", ""))
+        cat = raw_event.get("cat", raw_event.get("Category", ""))
+
         # Determine event type
         name_lower = name.lower()
-        if 'kernel' in name_lower or 'launch' in name_lower:
+        if "kernel" in name_lower or "launch" in name_lower:
             event.type = EventType.KernelLaunch
-        elif 'memcpy' in name_lower:
-            if 'htod' in name_lower or 'h2d' in name_lower:
+        elif "memcpy" in name_lower:
+            if "htod" in name_lower or "h2d" in name_lower:
                 event.type = EventType.MemcpyH2D
-            elif 'dtoh' in name_lower or 'd2h' in name_lower:
+            elif "dtoh" in name_lower or "d2h" in name_lower:
                 event.type = EventType.MemcpyD2H
-            elif 'dtod' in name_lower or 'd2d' in name_lower:
+            elif "dtod" in name_lower or "d2d" in name_lower:
                 event.type = EventType.MemcpyD2D
             else:
                 event.type = EventType.MemcpyH2D
-        elif 'memset' in name_lower:
+        elif "memset" in name_lower:
             event.type = EventType.MemsetDevice
-        elif 'sync' in name_lower:
+        elif "sync" in name_lower:
             event.type = EventType.StreamSync
-        elif 'malloc' in name_lower or 'alloc' in name_lower:
+        elif "malloc" in name_lower or "alloc" in name_lower:
             event.type = EventType.MemAlloc
-        elif 'free' in name_lower:
+        elif "free" in name_lower:
             event.type = EventType.MemFree
         else:
             event.type = EventType.Marker
-        
+
         event.name = name
-        
+
         # Get timing (nsys uses microseconds or nanoseconds)
-        ts = raw_event.get('ts', raw_event.get('Timestamp', 0))
-        dur = raw_event.get('dur', raw_event.get('Duration', 0))
-        
+        ts = raw_event.get("ts", raw_event.get("Timestamp", 0))
+        dur = raw_event.get("dur", raw_event.get("Duration", 0))
+
         # nsys typically uses microseconds in Chrome format
-        if 'ts' in raw_event:
+        if "ts" in raw_event:
             event.timestamp = int(ts * 1000)  # us to ns
             event.duration = int(dur * 1000) if dur else 0
         else:
             event.timestamp = int(ts)
             event.duration = int(dur) if dur else 0
-        
+
         # Get thread/stream info
-        event.thread_id = raw_event.get('tid', raw_event.get('ThreadId', 0))
-        event.stream_id = raw_event.get('args', {}).get('stream', 0) if isinstance(raw_event.get('args'), dict) else 0
-        event.device_id = raw_event.get('args', {}).get('device', 0) if isinstance(raw_event.get('args'), dict) else 0
-        
+        event.thread_id = raw_event.get("tid", raw_event.get("ThreadId", 0))
+        event.stream_id = (
+            raw_event.get("args", {}).get("stream", 0)
+            if isinstance(raw_event.get("args"), dict)
+            else 0
+        )
+        event.device_id = (
+            raw_event.get("args", {}).get("device", 0)
+            if isinstance(raw_event.get("args"), dict)
+            else 0
+        )
+
         # Store additional args as metadata
-        args = raw_event.get('args', {})
+        args = raw_event.get("args", {})
         if isinstance(args, dict):
             for k, v in args.items():
                 if isinstance(v, (str, int, float)):
                     event.metadata[str(k)] = str(v)
-        
+
         events.append(event)
-    
+
     return events
 
 
 def _cleanup_nsys_files(base_path: str):
     """Clean up nsys temporary files."""
-    for ext in ['.nsys-rep', '.json', '.sqlite', '.qdstrm']:
+    for ext in [".nsys-rep", ".json", ".sqlite", ".qdstrm"]:
         path = f"{base_path}{ext}"
         if os.path.exists(path):
             try:
@@ -944,7 +1052,7 @@ def _cleanup_nsys_files(base_path: str):
 def _run_python_in_process(command):
     """
     Run Python code in the same process so CUPTI can capture GPU events.
-    
+
     CUPTI can only capture GPU activity in the SAME process, not child processes.
     This function handles:
       - python script.py [args]
@@ -953,51 +1061,52 @@ def _run_python_in_process(command):
     """
     import runpy
     import sys
-    
+
     # Parse Python command
     # command = ['python', ...] or ['python3', ...]
     python_args = command[1:]  # Skip 'python'
-    
+
     if not python_args:
         print_warning("No Python script or code specified")
         return 1
-    
+
     # Save original sys.argv
     original_argv = sys.argv.copy()
-    
+
     exit_code = 0
     try:
-        if python_args[0] == '-c':
+        if python_args[0] == "-c":
             # python -c "code"
             if len(python_args) < 2:
                 print_error("No code provided after -c")
                 return 1
             code = python_args[1]
-            sys.argv = ['<string>'] + python_args[2:]
-            exec(compile(code, '<string>', 'exec'), {'__name__': '__main__'})
-            
-        elif python_args[0] == '-m':
+            sys.argv = ["<string>"] + python_args[2:]
+            exec(compile(code, "<string>", "exec"), {"__name__": "__main__"})
+
+        elif python_args[0] == "-m":
             # python -m module [args]
             if len(python_args) < 2:
                 print_error("No module name provided after -m")
                 return 1
             module_name = python_args[1]
             sys.argv = python_args[1:]  # module name becomes argv[0]
-            runpy.run_module(module_name, run_name='__main__', alter_sys=True)
-            
+            runpy.run_module(module_name, run_name="__main__", alter_sys=True)
+
         else:
             # python script.py [args]
             script_path = python_args[0]
             sys.argv = python_args  # script path becomes argv[0]
-            
+
             # Check if file exists
             import os
+
             if not os.path.exists(script_path):
                 print_error(f"Script not found: {script_path}")
                 return 1
-            
-            runpy.run_path(script_path, run_name='__main__')
-            
+
+            runpy.run_path(script_path, run_name="__main__")
+
     except SystemExit as e:
         # Script called sys.exit()
         exit_code = e.code if isinstance(e.code, int) else (1 if e.code else 0)
@@ -1007,13 +1116,14 @@ def _run_python_in_process(command):
         exit_code = 130
     except Exception as e:
         import traceback
+
         print_error(f"Exception in Python code: {e}")
         traceback.print_exc()
         exit_code = 1
     finally:
         # Restore original sys.argv
         sys.argv = original_argv
-    
+
     return exit_code
 
 
@@ -1023,7 +1133,6 @@ def _run_python_in_process(command):
 def cmd_profile(args):
     """Profile a command by recording GPU events during its execution."""
     import os
-    import signal
     import subprocess
     import sys
     import threading
@@ -1042,41 +1151,41 @@ def cmd_profile(args):
 
     # Parse command - handle the '--' separator
     command = args.command
-    
+
     # Remove leading '--' if present
-    if command and command[0] == '--':
+    if command and command[0] == "--":
         command = command[1:]
-    
+
     if not command:
         print_error("No command specified")
         print()
         print(f"{colorize(Color.BOLD)}Usage:{colorize(Color.RESET)}")
-        print(f"  tracesmith-cli profile [options] -- <command>")
+        print("  tracesmith-cli profile [options] -- <command>")
         print()
         print(f"{colorize(Color.BOLD)}Examples:{colorize(Color.RESET)}")
-        print(f"  tracesmith-cli profile -- python train.py")
-        print(f"  tracesmith-cli profile -o trace.sbt -- python train.py --epochs 10")
-        print(f"  tracesmith-cli profile --perfetto -- ./my_cuda_app")
-        print(f"  tracesmith-cli profile --xctrace -- python train.py  # Use Instruments on macOS")
-        print(f"  tracesmith-cli profile -- python -c \"import torch; x=torch.randn(1000).cuda()\"")
+        print("  tracesmith-cli profile -- python train.py")
+        print("  tracesmith-cli profile -o trace.sbt -- python train.py --epochs 10")
+        print("  tracesmith-cli profile --perfetto -- ./my_cuda_app")
+        print("  tracesmith-cli profile --xctrace -- python train.py  # Use Instruments on macOS")
+        print('  tracesmith-cli profile -- python -c "import torch; x=torch.randn(1000).cuda()"')
         return 1
-    
+
     # Check if xctrace or nsys should be used
-    use_xctrace = getattr(args, 'xctrace', False)
-    use_nsys = getattr(args, 'nsys', False)
-    keep_nsys = getattr(args, 'keep_nsys', False)
-    
+    use_xctrace = getattr(args, "xctrace", False)
+    use_nsys = getattr(args, "nsys", False)
+    keep_nsys = getattr(args, "keep_nsys", False)
+
     # Output file
     if args.output:
         output_file = args.output
     else:
         # Generate output name from command
-        cmd_name = os.path.basename(command[0]).replace('.py', '').replace('.sh', '')
+        cmd_name = os.path.basename(command[0]).replace(".py", "").replace(".sh", "")
         output_file = f"{cmd_name}_trace.sbt"
-    
+
     # Detect platform first
     platform = detect_platform()
-    
+
     # Use nsys if requested
     if use_nsys:
         if not _is_nsys_available():
@@ -1084,48 +1193,53 @@ def cmd_profile(args):
             print("Install from: https://developer.nvidia.com/nsight-systems")
             return 1
         return _cmd_profile_nsys(args, command, output_file, keep_nsys)
-    
+
     # Use xctrace if requested
     if use_xctrace:
         return _cmd_profile_xctrace(args, command)
-    
+
     # Check for --mctracer option
-    use_mctracer = getattr(args, 'mctracer', False)
+    use_mctracer = getattr(args, "mctracer", False)
     if use_mctracer:
         return _cmd_profile_mctracer(args, command, output_file)
-    
+
     # For CUDA, require --nsys
     if platform == PlatformType.CUDA:
         print_error("CUDA detected. Please use --nsys for GPU profiling.")
         print()
         print(f"{colorize(Color.BOLD)}Usage:{colorize(Color.RESET)}")
-        print(f"  {colorize(Color.CYAN)}tracesmith-cli profile --nsys -- {colorize(Color.RESET)}<your-command>")
+        print(
+            f"  {colorize(Color.CYAN)}tracesmith-cli profile --nsys -- {colorize(Color.RESET)}<your-command>"
+        )
         print()
         print(f"{colorize(Color.BOLD)}Example:{colorize(Color.RESET)}")
-        print(f"  tracesmith-cli profile --nsys -- python train.py")
+        print("  tracesmith-cli profile --nsys -- python train.py")
         print()
         print("CUPTI cannot profile child processes. nsys provides system-wide profiling.")
         return 1
-    
+
     # Check for MACA platform and require --mctracer
     try:
         from . import is_maca_available
+
         if is_maca_available():
             print_error("MACA detected. Please use --mctracer for GPU profiling.")
             print()
             print(f"{colorize(Color.BOLD)}Usage:{colorize(Color.RESET)}")
-            print(f"  {colorize(Color.CYAN)}tracesmith-cli profile --mctracer -- {colorize(Color.RESET)}<your-command>")
+            print(
+                f"  {colorize(Color.CYAN)}tracesmith-cli profile --mctracer -- {colorize(Color.RESET)}<your-command>"
+            )
             print()
             print(f"{colorize(Color.BOLD)}Example:{colorize(Color.RESET)}")
-            print(f"  tracesmith-cli profile --mctracer -- ./my_maca_app")
+            print("  tracesmith-cli profile --mctracer -- ./my_maca_app")
             print()
             print("MCPTI cannot profile child processes. mcTracer provides system-wide profiling.")
             return 1
     except ImportError:
         pass
-    
+
     # On macOS with Metal, suggest xctrace if not specified
-    if sys.platform == 'darwin' and platform == PlatformType.Metal and not use_xctrace:
+    if sys.platform == "darwin" and platform == PlatformType.Metal and not use_xctrace:
         print_info("Tip: Use --xctrace for real Metal GPU events on macOS")
         print()
 
@@ -1171,7 +1285,7 @@ def cmd_profile(args):
     # Write metadata
     metadata = TraceMetadata()
     metadata.application_name = os.path.basename(command[0])
-    metadata.command_line = ' '.join(command)
+    metadata.command_line = " ".join(command)
     writer.write_metadata(metadata)
 
     # Event collection thread
@@ -1211,28 +1325,30 @@ def cmd_profile(args):
 
     # Execute command
     exit_code = 0
-    
+
     # Check if this is a Python script/command that we can run in-process
     # CUPTI can only capture GPU events in the SAME process
-    is_python_cmd = (command[0] == 'python' or command[0] == 'python3' or 
-                     command[0].endswith('python') or command[0].endswith('python3'))
-    
+    is_python_cmd = (
+        command[0] == "python"
+        or command[0] == "python3"
+        or command[0].endswith("python")
+        or command[0].endswith("python3")
+    )
+
     if is_python_cmd and profiler is not None:
         # Run Python code in the same process for CUPTI to capture events
         exit_code = _run_python_in_process(command)
     else:
         # Fallback to subprocess (won't capture GPU events from child process)
         if profiler is not None:
-            print_warning("Running as subprocess - CUPTI cannot capture GPU events from child processes")
+            print_warning(
+                "Running as subprocess - CUPTI cannot capture GPU events from child processes"
+            )
             print_info("For Python scripts, tracesmith runs them in-process automatically")
             print()
         try:
             # Run the command
-            result = subprocess.run(
-                command,
-                shell=False,
-                env=os.environ.copy()
-            )
+            result = subprocess.run(command, shell=False, env=os.environ.copy())
             exit_code = result.returncode
         except KeyboardInterrupt:
             print()
@@ -1280,7 +1396,7 @@ def cmd_profile(args):
 
     # Command result
     if exit_code == 0:
-        print_success(f"Command completed successfully")
+        print_success("Command completed successfully")
     else:
         print_warning(f"Command exited with code: {exit_code}")
 
@@ -1294,12 +1410,15 @@ def cmd_profile(args):
     # Analyze events
     if all_events:
         from collections import Counter
+
         from . import EventType
 
         type_counts = Counter(e.type for e in all_events)
         kernel_count = type_counts.get(EventType.KernelLaunch, 0)
-        memcpy_count = sum(type_counts.get(t, 0) for t in 
-                          [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D])
+        memcpy_count = sum(
+            type_counts.get(t, 0)
+            for t in [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D]
+        )
 
         print()
         print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
@@ -1311,17 +1430,21 @@ def cmd_profile(args):
 
     # Export to Perfetto if requested
     if args.perfetto:
-        perfetto_file = output_file.replace('.sbt', '.json')
+        perfetto_file = output_file.replace(".sbt", ".json")
         if export_perfetto(all_events, perfetto_file):
             print_success(f"Exported Perfetto trace: {perfetto_file}")
-            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+            print(
+                f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}"
+            )
         else:
             print_warning("Failed to export Perfetto trace")
         print()
 
     # Next steps
     print(f"{colorize(Color.BOLD)}Next steps:{colorize(Color.RESET)}")
-    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(
+        f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}"
+    )
     print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
     print(f"  {colorize(Color.CYAN)}tracesmith-cli analyze {output_file}{colorize(Color.RESET)}")
 
@@ -1331,21 +1454,21 @@ def cmd_profile(args):
 def _cmd_profile_nsys(args, command, output_file, keep_nsys):
     """Profile a command using NVIDIA Nsight Systems (nsys)."""
     import time
-    
+
     from . import (
         SBTWriter,
         TraceMetadata,
         export_perfetto,
     )
-    
+
     print_section("TraceSmith Profile (nsys)")
-    
+
     print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
     print(f"  Command:  {colorize(Color.CYAN)}{' '.join(command)}{colorize(Color.RESET)}")
     print(f"  Output:   {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
     print(f"  Backend:  {colorize(Color.GREEN)}NVIDIA Nsight Systems (nsys){colorize(Color.RESET)}")
     print()
-    
+
     # Show nsys version
     nsys_version = _get_nsys_version()
     if nsys_version:
@@ -1353,12 +1476,12 @@ def _cmd_profile_nsys(args, command, output_file, keep_nsys):
     else:
         print_success("nsys available")
     print()
-    
+
     print(f"{colorize(Color.GREEN)}▶ Starting nsys profiling...{colorize(Color.RESET)}")
     print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
-    
+
     start_time = time.time()
-    
+
     # Run with nsys
     exit_code, nsys_rep, events = _run_with_nsys(
         command=command,
@@ -1369,88 +1492,97 @@ def _cmd_profile_nsys(args, command, output_file, keep_nsys):
         nvtx=True,
         sample_cpu=False,
     )
-    
+
     print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
     print()
-    
+
     end_time = time.time()
     duration_sec = end_time - start_time
-    
+
     # Show command result
     if exit_code == 0:
         print_success("Command completed successfully")
     else:
         print_warning(f"Command exited with code: {exit_code}")
-    
+
     print_success("nsys profiling stopped")
-    
+
     # Save events to SBT format
     writer = SBTWriter(output_file)
     if writer.is_open():
         metadata = TraceMetadata()
         metadata.application_name = os.path.basename(command[0])
-        metadata.command_line = ' '.join(command)
+        metadata.command_line = " ".join(command)
         writer.write_metadata(metadata)
-        
+
         if events:
             writer.write_events(events)
-        
+
         writer.finalize()
-    
+
     # Print summary
     print_section("Profile Complete")
-    
+
     print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
     print(f"  Command:      {' '.join(command)}")
     print(f"  Duration:     {duration_sec:.2f} seconds")
     print(f"  GPU Events:   {colorize(Color.GREEN)}{len(events)}{colorize(Color.RESET)}")
     print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
-    
+
     # Show nsys report location
     if nsys_rep and os.path.exists(nsys_rep):
         if keep_nsys:
             print(f"  nsys Report:  {colorize(Color.CYAN)}{nsys_rep}{colorize(Color.RESET)}")
         else:
             # Cleanup nsys files
-            base_name = output_file.replace('.sbt', '').replace('.json', '')
+            base_name = output_file.replace(".sbt", "").replace(".json", "")
             _cleanup_nsys_files(f"{base_name}_nsys")
-    
+
     # Analyze events if any
     if events:
         from collections import Counter
+
         from . import EventType
-        
+
         type_counts = Counter(e.type for e in events)
         kernel_count = type_counts.get(EventType.KernelLaunch, 0)
-        memcpy_count = sum(type_counts.get(t, 0) for t in 
-                          [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D])
-        
+        memcpy_count = sum(
+            type_counts.get(t, 0)
+            for t in [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D]
+        )
+
         print()
         print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
         print(f"  Kernel Launches: {kernel_count}")
         print(f"  Memory Copies:   {memcpy_count}")
         print(f"  Other Events:    {len(events) - kernel_count - memcpy_count}")
-    
+
     print()
-    
+
     # Export to Perfetto if requested
-    if getattr(args, 'perfetto', False) and events:
-        perfetto_file = output_file.replace('.sbt', '.json')
+    if getattr(args, "perfetto", False) and events:
+        perfetto_file = output_file.replace(".sbt", ".json")
         if export_perfetto(events, perfetto_file):
             print_success(f"Exported Perfetto trace: {perfetto_file}")
-            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+            print(
+                f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}"
+            )
         else:
             print_warning("Failed to export Perfetto trace")
         print()
-    
+
     # Next steps
     print(f"{colorize(Color.BOLD)}Next steps:{colorize(Color.RESET)}")
-    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(
+        f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}"
+    )
     print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
     print(f"  {colorize(Color.CYAN)}tracesmith-cli analyze {output_file}{colorize(Color.RESET)}")
     if nsys_rep and keep_nsys and os.path.exists(nsys_rep):
-        print(f"  {colorize(Color.CYAN)}nsys-ui {nsys_rep}{colorize(Color.RESET)}  # Open in Nsight Systems UI")
-    
+        print(
+            f"  {colorize(Color.CYAN)}nsys-ui {nsys_rep}{colorize(Color.RESET)}  # Open in Nsight Systems UI"
+        )
+
     return exit_code
 
 
@@ -1458,58 +1590,60 @@ def _cmd_profile_mctracer(args, command, output_file):
     """Profile a command using MetaX mcTracer for MACA GPU profiling."""
     import shutil
     import time
-    
+
     from . import (
         SBTWriter,
         TraceMetadata,
         export_perfetto,
     )
-    
+
     print_section("TraceSmith Profile (mcTracer)")
-    
+
     print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
     print(f"  Command:  {colorize(Color.CYAN)}{' '.join(command)}{colorize(Color.RESET)}")
     print(f"  Output:   {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
     print(f"  Backend:  {colorize(Color.GREEN)}MetaX mcTracer (MACA){colorize(Color.RESET)}")
     print()
-    
+
     # Check if mcTracer exists
     mctracer_path = None
-    for path in ['/opt/maca-3.0.0/bin/mcTracer', '/opt/maca/bin/mcTracer']:
+    for path in ["/opt/maca-3.0.0/bin/mcTracer", "/opt/maca/bin/mcTracer"]:
         if shutil.which(path) or os.path.exists(path):
             mctracer_path = path
             break
-    
+
     if not mctracer_path:
         # Try PATH
-        mctracer_path = shutil.which('mcTracer')
-    
+        mctracer_path = shutil.which("mcTracer")
+
     if not mctracer_path:
         print_error("mcTracer not found. Please install MACA SDK.")
         print("  Expected at: /opt/maca-3.0.0/bin/mcTracer")
         return 1
-    
+
     print_success(f"mcTracer found: {mctracer_path}")
     print()
-    
+
     # Create output directory for mcTracer
     trace_dir = "mctracer_output"
     os.makedirs(trace_dir, exist_ok=True)
-    
+
     # Build mcTracer command
     mctracer_cmd = [
         mctracer_path,
         "--mctx",
-        "--odname", trace_dir,
-        "--name", "tracesmith",
-        "--"
+        "--odname",
+        trace_dir,
+        "--name",
+        "tracesmith",
+        "--",
     ] + command
-    
+
     print(f"{colorize(Color.GREEN)}▶ Starting mcTracer profiling...{colorize(Color.RESET)}")
     print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
-    
+
     start_time = time.time()
-    
+
     # Execute mcTracer
     try:
         result = subprocess.run(mctracer_cmd, capture_output=False)
@@ -1520,130 +1654,143 @@ def _cmd_profile_mctracer(args, command, output_file):
     except Exception as e:
         print_error(f"mcTracer failed: {e}")
         return 1
-    
+
     print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
     print()
-    
+
     end_time = time.time()
     duration_sec = end_time - start_time
-    
+
     # Show command result
     if exit_code == 0:
         print_success("Command completed successfully")
     else:
         print_warning(f"Command exited with code: {exit_code}")
-    
+
     print_success("mcTracer profiling stopped")
-    
+
     # Find the generated JSON file
     import glob
+
     json_files = glob.glob(os.path.join(trace_dir, "tracesmith-*.json"))
-    
+
     events = []
     if json_files:
         json_file = sorted(json_files)[-1]  # Get the most recent
         print_info(f"Found mcTracer output: {json_file}")
-        
+
         # Parse events from JSON (Chrome trace format)
         try:
             import json
-            with open(json_file, 'r') as f:
+
+            with open(json_file, "r") as f:
                 data = json.load(f)
-            
+
             from . import EventType, TraceEvent
-            
-            trace_events = data.get('traceEvents', []) if isinstance(data, dict) else data
-            
+
+            trace_events = data.get("traceEvents", []) if isinstance(data, dict) else data
+
             for raw_event in trace_events:
                 if not isinstance(raw_event, dict):
                     continue
-                
+
                 event = TraceEvent()
-                name = raw_event.get('name', '')
+                name = raw_event.get("name", "")
                 event.name = name
-                
+
                 # Determine event type
                 name_lower = name.lower()
-                if 'kernel' in name_lower or 'launch' in name_lower:
+                if "kernel" in name_lower or "launch" in name_lower:
                     event.type = EventType.KernelLaunch
-                elif 'memcpy' in name_lower:
-                    if 'htod' in name_lower or 'h2d' in name_lower:
+                elif "memcpy" in name_lower:
+                    if "htod" in name_lower or "h2d" in name_lower:
                         event.type = EventType.MemcpyH2D
-                    elif 'dtoh' in name_lower or 'd2h' in name_lower:
+                    elif "dtoh" in name_lower or "d2h" in name_lower:
                         event.type = EventType.MemcpyD2H
                     else:
                         event.type = EventType.MemcpyD2D
-                elif 'memset' in name_lower:
+                elif "memset" in name_lower:
                     event.type = EventType.MemsetDevice
                 else:
                     event.type = EventType.Marker
-                
-                ts = raw_event.get('ts', 0)
-                dur = raw_event.get('dur', 0)
+
+                ts = raw_event.get("ts", 0)
+                dur = raw_event.get("dur", 0)
                 event.timestamp = int(ts * 1000)  # us to ns
                 event.duration = int(dur * 1000) if dur else 0
-                event.thread_id = raw_event.get('tid', 0)
-                event.stream_id = raw_event.get('args', {}).get('stream', 0) if isinstance(raw_event.get('args'), dict) else 0
-                
+                event.thread_id = raw_event.get("tid", 0)
+                event.stream_id = (
+                    raw_event.get("args", {}).get("stream", 0)
+                    if isinstance(raw_event.get("args"), dict)
+                    else 0
+                )
+
                 events.append(event)
         except Exception as e:
             print_warning(f"Failed to parse mcTracer JSON: {e}")
-    
+
     # Save to SBT format
     writer = SBTWriter(output_file)
     if writer.is_open():
         metadata = TraceMetadata()
         metadata.application_name = os.path.basename(command[0])
-        metadata.command_line = ' '.join(command)
+        metadata.command_line = " ".join(command)
         writer.write_metadata(metadata)
-        
+
         if events:
             writer.write_events(events)
-        
+
         writer.finalize()
-    
+
     # Print summary
     print_section("Profile Complete")
-    
+
     print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
     print(f"  Command:      {' '.join(command)}")
     print(f"  Duration:     {duration_sec:.2f} seconds")
     print(f"  GPU Events:   {colorize(Color.GREEN)}{len(events)}{colorize(Color.RESET)}")
     print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
-    
+
     # Event breakdown
     if events:
         from collections import Counter
+
         from . import EventType
-        
+
         type_counts = Counter(e.type for e in events)
         kernel_count = type_counts.get(EventType.KernelLaunch, 0)
-        memcpy_count = sum(type_counts.get(t, 0) for t in 
-                          [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D])
-        
+        memcpy_count = sum(
+            type_counts.get(t, 0)
+            for t in [EventType.MemcpyH2D, EventType.MemcpyD2H, EventType.MemcpyD2D]
+        )
+
         print()
         print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
         print(f"  Kernel Launches: {kernel_count}")
         print(f"  Memory Copies:   {memcpy_count}")
         print(f"  Other Events:    {len(events) - kernel_count - memcpy_count}")
-    
+
     print()
-    
+
     # Export to Perfetto if requested
-    if getattr(args, 'perfetto', False) and events:
-        perfetto_file = output_file.replace('.sbt', '.json')
+    if getattr(args, "perfetto", False) and events:
+        perfetto_file = output_file.replace(".sbt", ".json")
         if export_perfetto(events, perfetto_file):
             print_success(f"Exported Perfetto trace: {perfetto_file}")
-            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+            print(
+                f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}"
+            )
         else:
             print_warning("Failed to export Perfetto trace")
         print()
-    
+
     # Next steps
     print(f"{colorize(Color.BOLD)}Next steps:{colorize(Color.RESET)}")
-    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(
+        f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}"
+    )
     print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
-    
+
     return exit_code
 
 
@@ -1652,156 +1799,162 @@ def _cmd_profile_xctrace(args, command):
     import os
     import sys
     import time
-    
+
     from . import (
         SBTWriter,
         TraceMetadata,
         export_perfetto,
     )
-    
+
     # Check platform
-    if sys.platform != 'darwin':
+    if sys.platform != "darwin":
         print_error("xctrace is only available on macOS")
         return 1
-    
+
     # Import xctrace module
     try:
-        from .xctrace import XCTraceProfiler, XCTraceConfig
+        from .xctrace import XCTraceConfig, XCTraceProfiler
     except ImportError as e:
         print_error(f"Failed to import xctrace module: {e}")
         return 1
-    
+
     # Check if xctrace is available
     if not XCTraceProfiler.is_available():
         print_error("xctrace not found. Install Xcode Command Line Tools:")
         print(f"  {colorize(Color.CYAN)}xcode-select --install{colorize(Color.RESET)}")
         return 1
-    
+
     # Output file
     if args.output:
         output_file = args.output
     else:
-        cmd_name = os.path.basename(command[0]).replace('.py', '').replace('.sh', '')
+        cmd_name = os.path.basename(command[0]).replace(".py", "").replace(".sh", "")
         output_file = f"{cmd_name}_trace.sbt"
-    
+
     print_section("TraceSmith Profile (xctrace)")
-    
+
     print(f"{colorize(Color.BOLD)}Configuration:{colorize(Color.RESET)}")
     print(f"  Command:   {colorize(Color.CYAN)}{' '.join(command)}{colorize(Color.RESET)}")
     print(f"  Output:    {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
     print(f"  Backend:   {colorize(Color.GREEN)}Apple Instruments (xctrace){colorize(Color.RESET)}")
     print(f"  Template:  {args.xctrace_template}")
     print()
-    
+
     # Create profiler
     config = XCTraceConfig(
         template=args.xctrace_template,
         duration_seconds=3600,  # 1 hour max, will stop when command exits
     )
-    
+
     profiler = XCTraceProfiler(config)
-    
+
     # Get trace output dir
     trace_dir = os.path.dirname(output_file) or "."
-    trace_file = os.path.join(
-        trace_dir,
-        os.path.basename(output_file).replace('.sbt', '.trace')
-    )
-    
+    trace_file = os.path.join(trace_dir, os.path.basename(output_file).replace(".sbt", ".trace"))
+
     print_success("xctrace profiler initialized")
     print()
-    
+
     # Record start time
     start_time = time.time()
-    
+
     # Profile the command
     print(f"{colorize(Color.GREEN)}▶ Starting xctrace profiling...{colorize(Color.RESET)}")
     print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
-    
+
     try:
         all_events = profiler.profile_command(
             command,
             duration=None,  # Run until command exits
-            output_file=trace_file if args.keep_trace else None
+            output_file=trace_file if args.keep_trace else None,
         )
     except Exception as e:
         print_error(f"Profiling failed: {e}")
         return 1
-    
+
     print(f"{colorize(Color.YELLOW)}{'─' * 60}{colorize(Color.RESET)}")
     print()
-    
+
     end_time = time.time()
     duration_sec = end_time - start_time
-    
+
     print_success("xctrace profiling stopped")
-    
+
     # Save to SBT format
     writer = SBTWriter(output_file)
     if writer.is_open():
         metadata = TraceMetadata()
         metadata.application_name = os.path.basename(command[0])
-        metadata.command_line = ' '.join(command)
+        metadata.command_line = " ".join(command)
         writer.write_metadata(metadata)
-        
+
         if all_events:
             writer.write_events(all_events)
-        
+
         writer.finalize()
-    
+
     # Print summary
     print_section("Profile Complete")
-    
+
     print(f"{colorize(Color.BOLD)}Summary:{colorize(Color.RESET)}")
     print(f"  Command:      {' '.join(command)}")
     print(f"  Duration:     {duration_sec:.2f} seconds")
     print(f"  GPU Events:   {colorize(Color.GREEN)}{len(all_events)}{colorize(Color.RESET)}")
     print(f"  Output:       {colorize(Color.CYAN)}{output_file}{colorize(Color.RESET)}")
-    
+
     # Show trace file location
     raw_trace = profiler.get_trace_file()
     if raw_trace and os.path.exists(raw_trace):
         if args.keep_trace:
             print(f"  Raw Trace:    {colorize(Color.CYAN)}{raw_trace}{colorize(Color.RESET)}")
             print()
-            print(f"  Open in Instruments: {colorize(Color.YELLOW)}open \"{raw_trace}\"{colorize(Color.RESET)}")
+            print(
+                f'  Open in Instruments: {colorize(Color.YELLOW)}open "{raw_trace}"{colorize(Color.RESET)}'
+            )
         else:
             # Cleanup temp trace
             profiler.cleanup()
-    
+
     # Analyze events
     if all_events:
         from collections import Counter
+
         from . import EventType
-        
+
         type_counts = Counter(e.type for e in all_events)
         kernel_count = type_counts.get(EventType.KernelLaunch, 0)
         complete_count = type_counts.get(EventType.KernelComplete, 0)
-        
+
         print()
         print(f"{colorize(Color.BOLD)}Event Breakdown:{colorize(Color.RESET)}")
         print(f"  GPU Commands:    {kernel_count + complete_count}")
         print(f"  Other Events:    {len(all_events) - kernel_count - complete_count}")
-    
+
     print()
-    
+
     # Export to Perfetto if requested
     if args.perfetto:
-        perfetto_file = output_file.replace('.sbt', '.json')
+        perfetto_file = output_file.replace(".sbt", ".json")
         if export_perfetto(all_events, perfetto_file):
             print_success(f"Exported Perfetto trace: {perfetto_file}")
-            print(f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}")
+            print(
+                f"  View at: {colorize(Color.CYAN)}https://ui.perfetto.dev/{colorize(Color.RESET)}"
+            )
         else:
             print_warning("Failed to export Perfetto trace")
         print()
-    
+
     # Next steps
     print(f"{colorize(Color.BOLD)}Next steps:{colorize(Color.RESET)}")
-    print(f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}")
+    print(
+        f"  {colorize(Color.CYAN)}tracesmith-cli view {output_file} --stats{colorize(Color.RESET)}"
+    )
     print(f"  {colorize(Color.CYAN)}tracesmith-cli export {output_file}{colorize(Color.RESET)}")
     if raw_trace and args.keep_trace:
-        print(f"  {colorize(Color.CYAN)}open \"{raw_trace}\"{colorize(Color.RESET)}  # Open in Instruments")
-    
+        print(
+            f'  {colorize(Color.CYAN)}open "{raw_trace}"{colorize(Color.RESET)}  # Open in Instruments'
+        )
+
     return 0
 
 
@@ -1842,7 +1995,7 @@ def cmd_view(args):
     type_durations: Dict[Any, int] = {}
     stream_counts: Dict[int, int] = {}
 
-    min_ts = float('inf')
+    min_ts = float("inf")
     max_ts = 0
 
     for e in events:
@@ -1859,13 +2012,15 @@ def cmd_view(args):
     # Events by type
     print(f"\n{colorize(Color.BOLD)}Events by Type:{colorize(Color.RESET)}")
     print(f"  {'Type':<20} {'Count':>8} {'Total Time':>12} {'Avg Time':>12}")
-    print(f"  {'-'*52}")
+    print(f"  {'-' * 52}")
 
     for event_type, count in type_counts.most_common():
         type_name = event_type_to_string(event_type)
         total_dur = type_durations.get(event_type, 0)
         avg_dur = total_dur // count if count > 0 else 0
-        print(f"  {type_name:<20} {count:>8} {format_duration(total_dur):>12} {format_duration(avg_dur):>12}")
+        print(
+            f"  {type_name:<20} {count:>8} {format_duration(total_dur):>12} {format_duration(avg_dur):>12}"
+        )
 
     if args.stats:
         # Stream breakdown
@@ -1880,7 +2035,9 @@ def cmd_view(args):
 
     for i, event in enumerate(events[:limit]):
         type_name = event_type_to_string(event.type)
-        print(f"  {colorize(Color.CYAN)}[{i:>5}]{colorize(Color.RESET)} {type_name:<16} | Stream {event.stream_id} | {format_duration(event.duration):>10} | {event.name}")
+        print(
+            f"  {colorize(Color.CYAN)}[{i:>5}]{colorize(Color.RESET)} {type_name:<16} | Stream {event.stream_id} | {format_duration(event.duration):>10} | {event.name}"
+        )
 
     if len(events) > limit:
         print(f"\n  ... and {len(events) - limit} more events")
@@ -1896,7 +2053,7 @@ def cmd_export(args):
     from . import PerfettoExporter, SBTReader
 
     input_path = Path(args.input)
-    output_path = Path(args.output) if args.output else input_path.with_suffix('.json')
+    output_path = Path(args.output) if args.output else input_path.with_suffix(".json")
 
     if not input_path.exists():
         print_error(f"Input file '{input_path}' not found")
@@ -1967,7 +2124,9 @@ def cmd_analyze(args):
 
     # GPU Utilization
     print(f"{colorize(Color.BOLD)}GPU Utilization:{colorize(Color.RESET)}")
-    print(f"  Overall:        {colorize(Color.GREEN)}{timeline.gpu_utilization * 100:.1f}%{colorize(Color.RESET)}")
+    print(
+        f"  Overall:        {colorize(Color.GREEN)}{timeline.gpu_utilization * 100:.1f}%{colorize(Color.RESET)}"
+    )
     print(f"  Max concurrent: {timeline.max_concurrent_ops} ops")
     print(f"  Total duration: {format_duration(timeline.total_duration)}")
 
@@ -1982,21 +2141,19 @@ def cmd_analyze(args):
         print(f"\n{colorize(Color.BOLD)}Top Kernels by Time:{colorize(Color.RESET)}")
 
         # Sort by total time
-        sorted_kernels = sorted(
-            kernel_stats.items(),
-            key=lambda x: sum(x[1]),
-            reverse=True
-        )
+        sorted_kernels = sorted(kernel_stats.items(), key=lambda x: sum(x[1]), reverse=True)
 
         print(f"  {'Kernel':<35} {'Count':>8} {'Total':>12} {'Average':>12}")
-        print(f"  {'-'*67}")
+        print(f"  {'-' * 67}")
 
         for name, durations in sorted_kernels[:10]:
             total = sum(durations)
             count = len(durations)
             avg = total // count if count > 0 else 0
             short_name = name[:32] + "..." if len(name) > 32 else name
-            print(f"  {short_name:<35} {count:>8} {format_duration(total):>12} {format_duration(avg):>12}")
+            print(
+                f"  {short_name:<35} {count:>8} {format_duration(total):>12} {format_duration(avg):>12}"
+            )
 
     print()
     print_success("Analysis complete")
@@ -2118,6 +2275,7 @@ def cmd_benchmark(args):
     cp = None
     try:
         import cupy as cp
+
         cupy_available = True
     except ImportError:
         pass
@@ -2127,6 +2285,7 @@ def cmd_benchmark(args):
     cupti_profiler_cls = None
     try:
         from . import CUPTIProfiler as _CUPTIProfiler
+
         cupti_profiler_cls = _CUPTIProfiler
         cupti_available = True
     except ImportError:
@@ -2197,10 +2356,19 @@ def cmd_benchmark(args):
     # =================================================================
     if use_real_gpu:
         return _run_real_gpu_benchmark(
-            cp, cupti_profiler_cls,
-            target_kernels, output_file,
-            capture_stacks, stack_capturer, host_stacks,
-            verbose, SBTWriter, TraceMetadata, TraceEvent, EventType, get_current_timestamp
+            cp,
+            cupti_profiler_cls,
+            target_kernels,
+            output_file,
+            capture_stacks,
+            stack_capturer,
+            host_stacks,
+            verbose,
+            SBTWriter,
+            TraceMetadata,
+            TraceEvent,
+            EventType,
+            get_current_timestamp,
         )
 
     # =================================================================
@@ -2318,6 +2486,7 @@ def cmd_benchmark(args):
         writer.finalize()
 
         import os
+
         file_size = os.path.getsize(output_file)
 
         print_success(f"Saved to {output_file}")
@@ -2354,7 +2523,9 @@ def cmd_benchmark(args):
     print(f"║  Results ({mode_str}):{' ' * (56 - len(mode_str))}║")
     print(f"║    • Events captured:       {len(events):<41}║")
     print(f"║    • Call stacks:           {len(host_stacks):<41}║")
-    print(f"║    • Total time:            {duration_ms:.0f} ms{' ' * (36 - len(f'{duration_ms:.0f}'))}║")
+    print(
+        f"║    • Total time:            {duration_ms:.0f} ms{' ' * (36 - len(f'{duration_ms:.0f}'))}║"
+    )
     print("║                                                                      ║")
 
     if not use_real_gpu:
@@ -2368,10 +2539,21 @@ def cmd_benchmark(args):
     return 0 if goal_achieved else 1
 
 
-def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
-                            capture_stacks, stack_capturer, host_stacks,
-                            verbose, sbt_writer_cls, trace_metadata_cls, trace_event_cls,
-                            event_type_cls, get_current_timestamp):
+def _run_real_gpu_benchmark(
+    cp,
+    cupti_profiler_cls,
+    target_kernels,
+    output_file,
+    capture_stacks,
+    stack_capturer,
+    host_stacks,
+    verbose,
+    sbt_writer_cls,
+    trace_metadata_cls,
+    trace_event_cls,
+    event_type_cls,
+    get_current_timestamp,
+):
     """Run benchmark with real GPU kernels and CUPTI profiling."""
     import time
 
@@ -2387,6 +2569,7 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
     # Setup CUPTI profiler
     profiler = cupti_profiler_cls()
     from . import ProfilerConfig
+
     prof_config = ProfilerConfig()
     prof_config.buffer_size = 64 * 1024 * 1024  # 64MB buffer
     profiler.initialize(prof_config)
@@ -2491,6 +2674,7 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
         writer.finalize()
 
         import os
+
         file_size = os.path.getsize(output_file)
 
         print_success(f"Saved to {output_file}")
@@ -2528,7 +2712,9 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
     print(f"║    • GPU events (CUPTI):       {len(gpu_events):<39}║")
     print(f"║    • Kernel launches:          {kernel_launches:<39}║")
     print(f"║    • Kernel completes:         {kernel_completes:<39}║")
-    print(f"║    • Total time:               {duration_ms:.0f} ms{' ' * (34 - len(f'{duration_ms:.0f}'))}║")
+    print(
+        f"║    • Total time:               {duration_ms:.0f} ms{' ' * (34 - len(f'{duration_ms:.0f}'))}║"
+    )
     print("║                                                                      ║")
     print("║  ✅ This is REAL GPU profiling - same as C++ CLI!                    ║")
     print("║                                                                      ║")
@@ -2545,13 +2731,13 @@ def _run_real_gpu_benchmark(cp, cupti_profiler_cls, target_kernels, output_file,
 def main():
     """Main entry point."""
     # Check for --no-color
-    if '--no-color' in sys.argv:
+    if "--no-color" in sys.argv:
         Color.disable()
-        sys.argv.remove('--no-color')
+        sys.argv.remove("--no-color")
 
     parser = argparse.ArgumentParser(
-        prog='tracesmith-cli',
-        description='TraceSmith GPU Profiling & Replay System (Python CLI)',
+        prog="tracesmith-cli",
+        description="TraceSmith GPU Profiling & Replay System (Python CLI)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 {colorize(Color.BOLD)}Examples:{colorize(Color.RESET)}
@@ -2566,62 +2752,77 @@ def main():
   tracesmith-cli devices                             # List GPUs
 
 Run '{colorize(Color.CYAN)}tracesmith-cli <command> --help{colorize(Color.RESET)}' for more information.
-"""
+""",
     )
-    parser.add_argument('--version', action='store_true', help='Show version')
-    parser.add_argument('--no-color', action='store_true', help='Disable colored output')
+    parser.add_argument("--version", action="store_true", help="Show version")
+    parser.add_argument("--no-color", action="store_true", help="Disable colored output")
 
-    subparsers = parser.add_subparsers(dest='command', help='Commands')
+    subparsers = parser.add_subparsers(dest="command", help="Commands")
 
     # info command
-    info_parser = subparsers.add_parser('info', help='Show version and system info')
+    info_parser = subparsers.add_parser("info", help="Show version and system info")
     info_parser.set_defaults(func=cmd_info)
 
     # devices command
-    devices_parser = subparsers.add_parser('devices', help='List available GPU devices')
+    devices_parser = subparsers.add_parser("devices", help="List available GPU devices")
     devices_parser.set_defaults(func=cmd_devices)
 
     # record command
     record_parser = subparsers.add_parser(
-        'record', 
-        help='Record GPU events',
-        description='''
+        "record",
+        help="Record GPU events",
+        description="""
 Record GPU events to a trace file.
 
 IMPORTANT (CUDA/MACA):
   CUPTI/MCPTI only captures events from the TraceSmith process itself.
   The 'record' command is NOT supported for CUDA/MACA platforms.
-  
+
   To profile external applications, use:
     tracesmith-cli profile --nsys -- <command>      (NVIDIA)
     tracesmith-cli profile --mctracer -- <command>  (MetaX)
 
 For Metal/ROCm platforms, record works normally:
   tracesmith-cli record -o trace.sbt -d 10
-''',
-        formatter_class=argparse.RawDescriptionHelpFormatter
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    record_parser.add_argument('-o', '--output', help='Output file (default: trace.sbt)')
-    record_parser.add_argument('-d', '--duration', type=float, default=5.0, 
-                               help='Duration in seconds (for passive mode without --exec)')
-    record_parser.add_argument('-p', '--platform', choices=['cuda', 'metal', 'rocm', 'auto'], default='auto')
-    record_parser.add_argument('--exec', dest='exec', nargs=argparse.REMAINDER,
-                               help='Execute command in same process (CUPTI capture). '
-                                    'Example: --exec python train.py')
-    record_parser.add_argument('--nsys', action='store_true',
-                               help='Use NVIDIA Nsight Systems for system-wide GPU profiling. '
-                                    'Requires --exec. Can capture GPU events from any process.')
-    record_parser.add_argument('--keep-nsys', action='store_true',
-                               help='Keep nsys report file (.nsys-rep) after profiling')
-    record_parser.add_argument('--perfetto', action='store_true',
-                               help='Also export to Perfetto JSON format')
+    record_parser.add_argument("-o", "--output", help="Output file (default: trace.sbt)")
+    record_parser.add_argument(
+        "-d",
+        "--duration",
+        type=float,
+        default=5.0,
+        help="Duration in seconds (for passive mode without --exec)",
+    )
+    record_parser.add_argument(
+        "-p", "--platform", choices=["cuda", "metal", "rocm", "auto"], default="auto"
+    )
+    record_parser.add_argument(
+        "--exec",
+        dest="exec",
+        nargs=argparse.REMAINDER,
+        help="Execute command in same process (CUPTI capture). Example: --exec python train.py",
+    )
+    record_parser.add_argument(
+        "--nsys",
+        action="store_true",
+        help="Use NVIDIA Nsight Systems for system-wide GPU profiling. "
+        "Requires --exec. Can capture GPU events from any process.",
+    )
+    record_parser.add_argument(
+        "--keep-nsys", action="store_true", help="Keep nsys report file (.nsys-rep) after profiling"
+    )
+    record_parser.add_argument(
+        "--perfetto", action="store_true", help="Also export to Perfetto JSON format"
+    )
     record_parser.set_defaults(func=cmd_record)
 
     # profile command (NEW!)
     profile_parser = subparsers.add_parser(
-        'profile', 
-        help='Profile a command (start recording, execute command, stop recording)',
-        description='''
+        "profile",
+        help="Profile a command (start recording, execute command, stop recording)",
+        description="""
 Profile a command by recording GPU events during its execution.
 
 IMPORTANT: For CUDA/MACA, you MUST use system-level profilers:
@@ -2643,70 +2844,94 @@ Examples (Recommended):
 
 NOTE: Without --nsys/--mctracer/--xctrace, child process GPU events
 cannot be captured due to CUPTI/MCPTI API limitations.
-''',
-        formatter_class=argparse.RawDescriptionHelpFormatter
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    profile_parser.add_argument('-o', '--output', 
-                                help='Output trace file (default: <command>_trace.sbt)')
-    profile_parser.add_argument('--perfetto', action='store_true',
-                                help='Also export to Perfetto JSON format')
-    profile_parser.add_argument('--buffer-size', type=int, default=1000000,
-                                help='Event buffer size (default: 1000000)')
-    profile_parser.add_argument('--nsys', action='store_true',
-                                help='Use NVIDIA Nsight Systems for system-wide GPU profiling. '
-                                     'Can capture GPU events from any process (subprocess or external).')
-    profile_parser.add_argument('--keep-nsys', action='store_true',
-                                help='Keep nsys report file (.nsys-rep) after profiling')
-    profile_parser.add_argument('--xctrace', action='store_true',
-                                help='Use Apple Instruments (xctrace) for Metal GPU profiling on macOS')
-    profile_parser.add_argument('--xctrace-template', default='Metal System Trace',
-                                help="Instruments template (default: 'Metal System Trace')")
-    profile_parser.add_argument('--mctracer', action='store_true',
-                                help='Use MetaX mcTracer for MACA GPU profiling')
-    profile_parser.add_argument('--keep-trace', action='store_true',
-                                help='Keep the raw .trace file after profiling (xctrace only)')
-    profile_parser.add_argument('command', nargs=argparse.REMAINDER,
-                                help='Command to profile (use -- before command)')
+    profile_parser.add_argument(
+        "-o", "--output", help="Output trace file (default: <command>_trace.sbt)"
+    )
+    profile_parser.add_argument(
+        "--perfetto", action="store_true", help="Also export to Perfetto JSON format"
+    )
+    profile_parser.add_argument(
+        "--buffer-size", type=int, default=1000000, help="Event buffer size (default: 1000000)"
+    )
+    profile_parser.add_argument(
+        "--nsys",
+        action="store_true",
+        help="Use NVIDIA Nsight Systems for system-wide GPU profiling. "
+        "Can capture GPU events from any process (subprocess or external).",
+    )
+    profile_parser.add_argument(
+        "--keep-nsys", action="store_true", help="Keep nsys report file (.nsys-rep) after profiling"
+    )
+    profile_parser.add_argument(
+        "--xctrace",
+        action="store_true",
+        help="Use Apple Instruments (xctrace) for Metal GPU profiling on macOS",
+    )
+    profile_parser.add_argument(
+        "--xctrace-template",
+        default="Metal System Trace",
+        help="Instruments template (default: 'Metal System Trace')",
+    )
+    profile_parser.add_argument(
+        "--mctracer", action="store_true", help="Use MetaX mcTracer for MACA GPU profiling"
+    )
+    profile_parser.add_argument(
+        "--keep-trace",
+        action="store_true",
+        help="Keep the raw .trace file after profiling (xctrace only)",
+    )
+    profile_parser.add_argument(
+        "command", nargs=argparse.REMAINDER, help="Command to profile (use -- before command)"
+    )
     profile_parser.set_defaults(func=cmd_profile)
 
     # view command
-    view_parser = subparsers.add_parser('view', help='View trace file contents')
-    view_parser.add_argument('input', help='Input trace file')
-    view_parser.add_argument('-n', '--limit', type=int, help='Maximum events to show')
-    view_parser.add_argument('--stats', action='store_true', help='Show statistics only')
+    view_parser = subparsers.add_parser("view", help="View trace file contents")
+    view_parser.add_argument("input", help="Input trace file")
+    view_parser.add_argument("-n", "--limit", type=int, help="Maximum events to show")
+    view_parser.add_argument("--stats", action="store_true", help="Show statistics only")
     view_parser.set_defaults(func=cmd_view)
 
     # export command
-    export_parser = subparsers.add_parser('export', help='Export to Perfetto format')
-    export_parser.add_argument('input', help='Input trace file')
-    export_parser.add_argument('-o', '--output', help='Output file')
-    export_parser.add_argument('--counters', action='store_true', help='Include counter tracks')
-    export_parser.add_argument('--protobuf', action='store_true', help='Use protobuf format')
+    export_parser = subparsers.add_parser("export", help="Export to Perfetto format")
+    export_parser.add_argument("input", help="Input trace file")
+    export_parser.add_argument("-o", "--output", help="Output file")
+    export_parser.add_argument("--counters", action="store_true", help="Include counter tracks")
+    export_parser.add_argument("--protobuf", action="store_true", help="Use protobuf format")
     export_parser.set_defaults(func=cmd_export)
 
     # analyze command
-    analyze_parser = subparsers.add_parser('analyze', help='Analyze trace file')
-    analyze_parser.add_argument('input', help='Input trace file')
+    analyze_parser = subparsers.add_parser("analyze", help="Analyze trace file")
+    analyze_parser.add_argument("input", help="Input trace file")
     analyze_parser.set_defaults(func=cmd_analyze)
 
     # replay command
-    replay_parser = subparsers.add_parser('replay', help='Replay a captured trace')
-    replay_parser.add_argument('input', help='Input trace file')
-    replay_parser.add_argument('--mode', choices=['dry-run', 'full', 'partial'], default='dry-run')
-    replay_parser.add_argument('--validate', action='store_true', help='Validate determinism')
+    replay_parser = subparsers.add_parser("replay", help="Replay a captured trace")
+    replay_parser.add_argument("input", help="Input trace file")
+    replay_parser.add_argument("--mode", choices=["dry-run", "full", "partial"], default="dry-run")
+    replay_parser.add_argument("--validate", action="store_true", help="Validate determinism")
     replay_parser.set_defaults(func=cmd_replay)
 
     # benchmark command
-    benchmark_parser = subparsers.add_parser('benchmark', help='Run 10K GPU call stacks benchmark')
-    benchmark_parser.add_argument('-n', '--count', type=int, default=10000,
-                                  help='Number of events to capture (default: 10000)')
-    benchmark_parser.add_argument('-o', '--output', help='Output file (default: benchmark.sbt)')
-    benchmark_parser.add_argument('--no-stacks', action='store_true',
-                                  help='Disable host call stack capture')
-    benchmark_parser.add_argument('--real-gpu', action='store_true',
-                                  help='Use real GPU profiling with CuPy + CUPTI')
-    benchmark_parser.add_argument('-v', '--verbose', action='store_true',
-                                  help='Show progress bar')
+    benchmark_parser = subparsers.add_parser("benchmark", help="Run 10K GPU call stacks benchmark")
+    benchmark_parser.add_argument(
+        "-n",
+        "--count",
+        type=int,
+        default=10000,
+        help="Number of events to capture (default: 10000)",
+    )
+    benchmark_parser.add_argument("-o", "--output", help="Output file (default: benchmark.sbt)")
+    benchmark_parser.add_argument(
+        "--no-stacks", action="store_true", help="Disable host call stack capture"
+    )
+    benchmark_parser.add_argument(
+        "--real-gpu", action="store_true", help="Use real GPU profiling with CuPy + CUPTI"
+    )
+    benchmark_parser.add_argument("-v", "--verbose", action="store_true", help="Show progress bar")
     benchmark_parser.set_defaults(func=cmd_benchmark)
 
     args = parser.parse_args()
@@ -2723,5 +2948,5 @@ cannot be captured due to CUPTI/MCPTI API limitations.
     return args.func(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

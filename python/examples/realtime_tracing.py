@@ -13,14 +13,16 @@ Requirements:
     pip install torch (optional)
 """
 
-import tracesmith as ts
-import time
 import threading
-from typing import List, Optional
+import time
 from contextlib import contextmanager
+from typing import List, Optional
+
+import tracesmith as ts
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -29,13 +31,12 @@ except ImportError:
 class RealTimeProfiler:
     """
     Real-time profiler for continuous monitoring.
-    
+
     Uses TraceSmith's TracingSession for lock-free event capture
     suitable for production environments.
     """
 
-    def __init__(self, event_buffer_size: int = 100000,
-                 counter_buffer_size: int = 10000):
+    def __init__(self, event_buffer_size: int = 100000, counter_buffer_size: int = 10000):
         self.session = ts.TracingSession(event_buffer_size, counter_buffer_size)
         self._monitoring = False
         self._monitor_thread: Optional[threading.Thread] = None
@@ -54,9 +55,9 @@ class RealTimeProfiler:
         self._events = []
         self._counters = []
 
-        print(f"Tracing session started")
+        print("Tracing session started")
         print(f"  Event buffer: {self.session.event_buffer_capacity()} events")
-        print(f"  Mode: Manual event collection")
+        print("  Mode: Manual event collection")
 
     def stop(self) -> ts.TracingStatistics:
         """Stop tracing session."""
@@ -107,6 +108,7 @@ class RealTimeProfiler:
                 # GPU utilization (if available via pynvml)
                 try:
                     import pynvml
+
                     pynvml.nvmlInit()
                     handle = pynvml.nvmlDeviceGetHandleByIndex(0)
                     util = pynvml.nvmlDeviceGetUtilizationRates(handle)
@@ -225,7 +227,7 @@ def demo_basic_tracing():
     # Stop and get stats
     stats = profiler.stop()
 
-    print(f"\nSession Statistics:")
+    print("\nSession Statistics:")
     print(f"  Events emitted: {stats.events_emitted}")
     print(f"  Events dropped: {stats.events_dropped}")
     print(f"  Counters emitted: {stats.counters_emitted}")
@@ -235,7 +237,7 @@ def demo_basic_tracing():
     events = profiler.get_events()
     counters = profiler.get_counters()
 
-    print(f"\nCaptured Data:")
+    print("\nCaptured Data:")
     print(f"  Events: {len(events)}")
     print(f"  Counters: {len(counters)}")
 
@@ -296,7 +298,7 @@ def demo_concurrent_tracing():
     # Stop and analyze
     stats = profiler.stop()
 
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  Total events emitted: {event_count}")
     print(f"  Time elapsed: {elapsed * 1000:.2f} ms")
     print(f"  Events/sec: {event_count / elapsed:,.0f}")
@@ -311,7 +313,7 @@ def demo_concurrent_tracing():
         tid = event.thread_id
         events_by_thread[tid] = events_by_thread.get(tid, 0) + 1
 
-    print(f"\nEvents by thread:")
+    print("\nEvents by thread:")
     for tid in sorted(events_by_thread.keys()):
         print(f"  Thread {tid}: {events_by_thread[tid]} events")
 
@@ -362,7 +364,7 @@ def demo_gpu_monitoring():
     # Stop monitoring
     stats = profiler.stop()
 
-    print(f"\nSession Statistics:")
+    print("\nSession Statistics:")
     print(f"  Events: {stats.events_emitted}")
     print(f"  Counters: {stats.counters_emitted}")
     print(f"  Duration: {stats.duration_ms():.2f} ms")
@@ -377,7 +379,7 @@ def demo_gpu_monitoring():
             counter_values[name] = []
         counter_values[name].append(c.value)
 
-    print(f"\nCounter Summary:")
+    print("\nCounter Summary:")
     for name, values in counter_values.items():
         if values:
             avg = sum(values) / len(values)

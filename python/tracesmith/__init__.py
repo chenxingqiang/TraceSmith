@@ -29,7 +29,6 @@ from ._tracesmith import (  # noqa: I001 - imports organized by category
     VERSION_MAJOR,
     VERSION_MINOR,
     VERSION_PATCH,
-
     # ========================================================================
     # Core Enums
     # ========================================================================
@@ -52,7 +51,6 @@ from ._tracesmith import (  # noqa: I001 - imports organized by category
     BPFEventType,
     GPUState,
     DependencyType,
-
     # ========================================================================
     # Core Classes
     # ========================================================================
@@ -63,7 +61,6 @@ from ._tracesmith import (  # noqa: I001 - imports organized by category
     FlowInfo,
     MemoryEvent,
     CounterEvent,
-
     # ========================================================================
     # Stack Capture
     # ========================================================================
@@ -71,32 +68,27 @@ from ._tracesmith import (  # noqa: I001 - imports organized by category
     CallStack,
     StackCaptureConfig,
     StackCapture,
-
     # ========================================================================
     # File I/O - SBT Binary Format
     # ========================================================================
     SBTWriter,
     SBTReader,
-
     # ========================================================================
     # Timeline Building
     # ========================================================================
     TimelineSpan,
     Timeline,
     TimelineBuilder,
-
     # ========================================================================
     # Export - Perfetto
     # ========================================================================
     PerfettoExporter,
     PerfettoProtoExporter,
-
     # ========================================================================
     # Real-time Tracing
     # ========================================================================
     TracingSession,
     TracingStatistics,
-
     # ========================================================================
     # Frame Capture (RenderDoc-inspired)
     # ========================================================================
@@ -106,7 +98,6 @@ from ._tracesmith import (  # noqa: I001 - imports organized by category
     DrawCallInfo,
     ResourceState,
     ResourceTracker,
-
     # ========================================================================
     # Memory Profiler
     # ========================================================================
@@ -116,26 +107,22 @@ from ._tracesmith import (  # noqa: I001 - imports organized by category
     MemorySnapshot,
     MemoryLeak,
     MemoryReport,
-
     # ========================================================================
     # XRay Importer
     # ========================================================================
     XRayImporter,
     XRayImporterConfig,
-
     # ========================================================================
     # BPF Tracer (Linux only)
     # ========================================================================
     BPFTracer,
     BPFEventRecord,
-
     # ========================================================================
     # Replay Engine
     # ========================================================================
     ReplayConfig,
     ReplayResult,
     ReplayEngine,
-
     # ========================================================================
     # State Module (GPU State Machine, Instruction Stream, Timeline Viewer)
     # ========================================================================
@@ -150,7 +137,6 @@ from ._tracesmith import (  # noqa: I001 - imports organized by category
     InstructionStreamStatistics,
     TimelineViewConfig,
     TimelineViewer,
-
     # ========================================================================
     # Utility Functions
     # ========================================================================
@@ -173,18 +159,21 @@ from ._tracesmith import (  # noqa: I001 - imports organized by category
 # MetaX MACA functions - may not be available on all builds
 try:
     from ._tracesmith import (
-        is_maca_available,
-        get_maca_driver_version,
         get_maca_device_count,
+        get_maca_driver_version,
+        is_maca_available,
     )
 except ImportError:
     # MACA not available in this build
     def is_maca_available():
         return False
+
     def get_maca_driver_version():
         return 0
+
     def get_maca_device_count():
         return 0
+
 
 # ============================================================================
 # Cluster Module - Multi-GPU Profiling (v0.7.0)
@@ -193,21 +182,22 @@ except ImportError:
 _CLUSTER_AVAILABLE = False
 try:
     from ._tracesmith import (
-        GPULinkType,
-        GPULink,
         GPUDeviceTopology,
-        GPUTopologyInfo,
+        GPULink,
+        GPULinkType,
         GPUTopology,
-        is_nvml_available,
-        get_nvml_version,
-        link_type_to_string,
-        get_link_bandwidth,
+        GPUTopologyInfo,
+        MultiGPUConfig,
+        MultiGPUProfiler,
+        MultiGPUStats,
         NVLinkTransfer,
         PeerAccess,
-        MultiGPUConfig,
-        MultiGPUStats,
-        MultiGPUProfiler,
+        get_link_bandwidth,
+        get_nvml_version,
+        is_nvml_available,
+        link_type_to_string,
     )
+
     _CLUSTER_AVAILABLE = True
 except ImportError:
     # Cluster module not compiled, provide stubs
@@ -233,15 +223,16 @@ except ImportError:
 _TIME_SYNC_AVAILABLE = False
 try:
     from ._tracesmith import (
-        TimeSyncMethod,
-        TimeSyncConfig,
+        ClockCorrelator,
+        DriftModel,
         SyncResult,
         TimeSync,
-        DriftModel,
-        ClockCorrelator,
-        time_sync_method_to_string,
+        TimeSyncConfig,
+        TimeSyncMethod,
         string_to_time_sync_method,
+        time_sync_method_to_string,
     )
+
     _TIME_SYNC_AVAILABLE = True
 except ImportError:
     # Time sync module not compiled
@@ -261,23 +252,24 @@ except ImportError:
 _NCCL_AVAILABLE = False
 try:
     from ._tracesmith import (
-        NCCLOpType,
-        NCCLRedOp,
+        CommAnalysis,
+        CommBottleneck,
+        CommMatrix,
+        CommPattern,
+        LoadImbalance,
         NCCLDataType,
         NCCLOperation,
-        NCCLTrackerConfig,
+        NCCLOpType,
+        NCCLRedOp,
         NCCLStatistics,
         NCCLTracker,
-        CommPattern,
-        CommMatrix,
-        CommBottleneck,
-        LoadImbalance,
-        CommAnalysis,
+        NCCLTrackerConfig,
+        nccl_data_type_size,
+        nccl_data_type_to_string,
         nccl_op_type_to_string,
         nccl_red_op_to_string,
-        nccl_data_type_to_string,
-        nccl_data_type_size,
     )
+
     _NCCL_AVAILABLE = True
 except ImportError:
     # NCCL module not compiled
@@ -313,189 +305,172 @@ def is_nccl_available() -> bool:
     """Check if NCCL tracking is available."""
     return _NCCL_AVAILABLE
 
+
 __all__ = [
     # Version
-    '__version__',
-    'VERSION_MAJOR',
-    'VERSION_MINOR',
-    'VERSION_PATCH',
-
+    "__version__",
+    "VERSION_MAJOR",
+    "VERSION_MINOR",
+    "VERSION_PATCH",
     # Core Enums
-    'EventType',
-    'PlatformType',
-    'platform_type_to_string',
-    'ReplayMode',
-    'FlowType',
-    'OverflowPolicy',
-    'PerfettoFormat',
-    'ResourceType',
-    'CaptureState',
-    'MemoryCategory',
-    'TracingState',
-    'TracingMode',
-    'XRayEntryType',
-    'XRayFileHeader',
-    'XRayFunctionRecord',
-    'XRayStatistics',
-    'BPFEventType',
-    'GPUState',
-    'DependencyType',
-
+    "EventType",
+    "PlatformType",
+    "platform_type_to_string",
+    "ReplayMode",
+    "FlowType",
+    "OverflowPolicy",
+    "PerfettoFormat",
+    "ResourceType",
+    "CaptureState",
+    "MemoryCategory",
+    "TracingState",
+    "TracingMode",
+    "XRayEntryType",
+    "XRayFileHeader",
+    "XRayFunctionRecord",
+    "XRayStatistics",
+    "BPFEventType",
+    "GPUState",
+    "DependencyType",
     # Core Classes
-    'TraceEvent',
-    'DeviceInfo',
-    'TraceMetadata',
-    'ProfilerConfig',
-    'FlowInfo',
-    'MemoryEvent',
-    'CounterEvent',
-
+    "TraceEvent",
+    "DeviceInfo",
+    "TraceMetadata",
+    "ProfilerConfig",
+    "FlowInfo",
+    "MemoryEvent",
+    "CounterEvent",
     # Stack Capture
-    'StackFrame',
-    'CallStack',
-    'StackCaptureConfig',
-    'StackCapture',
-
+    "StackFrame",
+    "CallStack",
+    "StackCaptureConfig",
+    "StackCapture",
     # File I/O
-    'SBTWriter',
-    'SBTReader',
-
+    "SBTWriter",
+    "SBTReader",
     # Timeline
-    'TimelineSpan',
-    'Timeline',
-    'TimelineBuilder',
-
+    "TimelineSpan",
+    "Timeline",
+    "TimelineBuilder",
     # Export
-    'PerfettoExporter',
-    'PerfettoProtoExporter',
-
+    "PerfettoExporter",
+    "PerfettoProtoExporter",
     # Real-time Tracing
-    'TracingSession',
-    'TracingStatistics',
-
+    "TracingSession",
+    "TracingStatistics",
     # Frame Capture
-    'FrameCapture',
-    'FrameCaptureConfig',
-    'CapturedFrame',
-    'DrawCallInfo',
-    'ResourceState',
-    'ResourceTracker',
-
+    "FrameCapture",
+    "FrameCaptureConfig",
+    "CapturedFrame",
+    "DrawCallInfo",
+    "ResourceState",
+    "ResourceTracker",
     # Memory Profiler
-    'MemoryProfiler',
-    'MemoryProfilerConfig',
-    'MemoryAllocation',
-    'MemorySnapshot',
-    'MemoryLeak',
-    'MemoryReport',
-
+    "MemoryProfiler",
+    "MemoryProfilerConfig",
+    "MemoryAllocation",
+    "MemorySnapshot",
+    "MemoryLeak",
+    "MemoryReport",
     # XRay Importer
-    'XRayImporter',
-    'XRayImporterConfig',
-
+    "XRayImporter",
+    "XRayImporterConfig",
     # BPF Tracer
-    'BPFTracer',
-    'BPFEventRecord',
-
+    "BPFTracer",
+    "BPFEventRecord",
     # Replay
-    'ReplayConfig',
-    'ReplayResult',
-    'ReplayEngine',
-
+    "ReplayConfig",
+    "ReplayResult",
+    "ReplayEngine",
     # State Module
-    'StateTransition',
-    'GPUStreamState',
-    'GPUStateMachine',
-    'GPUStateMachineStatistics',
-    'GPUStateHistory',
-    'OperationDependency',
-    'InstructionNode',
-    'InstructionStreamBuilder',
-    'InstructionStreamStatistics',
-    'TimelineViewConfig',
-    'TimelineViewer',
-
+    "StateTransition",
+    "GPUStreamState",
+    "GPUStateMachine",
+    "GPUStateMachineStatistics",
+    "GPUStateHistory",
+    "OperationDependency",
+    "InstructionNode",
+    "InstructionStreamBuilder",
+    "InstructionStreamStatistics",
+    "TimelineViewConfig",
+    "TimelineViewer",
     # Functions
-    'get_current_timestamp',
-    'event_type_to_string',
-    'resource_type_to_string',
-    'format_bytes',
-    'format_duration',
-    'bpf_event_type_to_string',
-    'bpf_event_to_trace_event',
-    'create_profiler',
-    'is_cuda_available',
-    'get_cuda_device_count',
-    'get_cuda_driver_version',
-    'is_metal_available',
-    'get_metal_device_count',
-    'is_maca_available',
-    'get_maca_driver_version',
-    'get_maca_device_count',
-    'detect_platform',
-
+    "get_current_timestamp",
+    "event_type_to_string",
+    "resource_type_to_string",
+    "format_bytes",
+    "format_duration",
+    "bpf_event_type_to_string",
+    "bpf_event_to_trace_event",
+    "create_profiler",
+    "is_cuda_available",
+    "get_cuda_device_count",
+    "get_cuda_driver_version",
+    "is_metal_available",
+    "get_metal_device_count",
+    "is_maca_available",
+    "get_maca_driver_version",
+    "get_maca_device_count",
+    "detect_platform",
     # High-level convenience functions
-    'build_timeline',
-    'export_perfetto',
-    'is_protobuf_available',
-    'replay_trace',
-    'profile_memory',
-    'is_bpf_available',
-
+    "build_timeline",
+    "export_perfetto",
+    "is_protobuf_available",
+    "replay_trace",
+    "profile_memory",
+    "is_bpf_available",
     # Availability checks
-    'is_cluster_available',
-    'is_time_sync_available',
-    'is_nccl_available',
-
+    "is_cluster_available",
+    "is_time_sync_available",
+    "is_nccl_available",
     # Cluster Module (v0.7.0) - Optional
-    'GPULinkType',
-    'GPULink',
-    'GPUDeviceTopology',
-    'GPUTopologyInfo',
-    'GPUTopology',
-    'is_nvml_available',
-    'get_nvml_version',
-    'link_type_to_string',
-    'get_link_bandwidth',
-    'NVLinkTransfer',
-    'PeerAccess',
-    'MultiGPUConfig',
-    'MultiGPUStats',
-    'MultiGPUProfiler',
-
+    "GPULinkType",
+    "GPULink",
+    "GPUDeviceTopology",
+    "GPUTopologyInfo",
+    "GPUTopology",
+    "is_nvml_available",
+    "get_nvml_version",
+    "link_type_to_string",
+    "get_link_bandwidth",
+    "NVLinkTransfer",
+    "PeerAccess",
+    "MultiGPUConfig",
+    "MultiGPUStats",
+    "MultiGPUProfiler",
     # Time Sync (v0.7.1) - Optional
-    'TimeSyncMethod',
-    'TimeSyncConfig',
-    'SyncResult',
-    'TimeSync',
-    'DriftModel',
-    'ClockCorrelator',
-    'time_sync_method_to_string',
-    'string_to_time_sync_method',
-
+    "TimeSyncMethod",
+    "TimeSyncConfig",
+    "SyncResult",
+    "TimeSync",
+    "DriftModel",
+    "ClockCorrelator",
+    "time_sync_method_to_string",
+    "string_to_time_sync_method",
     # NCCL Tracking (v0.7.1) - Optional
-    'NCCLOpType',
-    'NCCLRedOp',
-    'NCCLDataType',
-    'NCCLOperation',
-    'NCCLTrackerConfig',
-    'NCCLStatistics',
-    'NCCLTracker',
-    'CommPattern',
-    'CommMatrix',
-    'CommBottleneck',
-    'LoadImbalance',
-    'CommAnalysis',
-    'nccl_op_type_to_string',
-    'nccl_red_op_to_string',
-    'nccl_data_type_to_string',
-    'nccl_data_type_size',
+    "NCCLOpType",
+    "NCCLRedOp",
+    "NCCLDataType",
+    "NCCLOperation",
+    "NCCLTrackerConfig",
+    "NCCLStatistics",
+    "NCCLTracker",
+    "CommPattern",
+    "CommMatrix",
+    "CommBottleneck",
+    "LoadImbalance",
+    "CommAnalysis",
+    "nccl_op_type_to_string",
+    "nccl_red_op_to_string",
+    "nccl_data_type_to_string",
+    "nccl_data_type_size",
 ]
 
 
 # ============================================================================
 # High-level Convenience Functions
 # ============================================================================
+
 
 def build_timeline(events: list) -> Timeline:
     """
@@ -524,7 +499,7 @@ def export_perfetto(events: list, filename: str, use_protobuf: bool = False) -> 
     Returns:
         True if successful
     """
-    if use_protobuf or filename.endswith('.perfetto-trace') or filename.endswith('.pftrace'):
+    if use_protobuf or filename.endswith(".perfetto-trace") or filename.endswith(".pftrace"):
         exporter = PerfettoProtoExporter(PerfettoFormat.PROTOBUF)
     else:
         exporter = PerfettoExporter()
@@ -610,16 +585,20 @@ def is_xctrace_available() -> bool:
         True if xctrace is available for Metal GPU profiling
     """
     import sys
-    if sys.platform != 'darwin':
+
+    if sys.platform != "darwin":
         return False
     try:
         from .xctrace import XCTraceProfiler
+
         return XCTraceProfiler.is_available()
     except ImportError:
         return False
 
 
 # Add xctrace to __all__
-__all__.extend([
-    'is_xctrace_available',
-])
+__all__.extend(
+    [
+        "is_xctrace_available",
+    ]
+)

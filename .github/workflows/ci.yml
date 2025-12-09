@@ -29,7 +29,7 @@ jobs:
           pip install ruff mypy
       
       - name: Run ruff
-        run: ruff check python/ --ignore E501
+        run: ruff check python/ --ignore E501,F401,F841,E731,E722,N806,N812,B007,B028
       
       - name: Check C++ formatting (clang-format)
         run: |

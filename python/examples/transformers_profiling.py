@@ -13,22 +13,25 @@ Requirements:
     pip install torch transformers (optional)
 """
 
-import tracesmith as ts
 import time
-from typing import List, Dict, Optional, Tuple
-from dataclasses import dataclass, field
 from contextlib import contextmanager
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
+
+import tracesmith as ts
 
 try:
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
 
 try:
-    from transformers import AutoModel, AutoTokenizer, AutoConfig
+    from transformers import AutoConfig, AutoModel, AutoTokenizer
+
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
@@ -37,6 +40,7 @@ except ImportError:
 @dataclass
 class InferenceMetrics:
     """Metrics for model inference."""
+
     batch_size: int
     sequence_length: int
     total_tokens: int
@@ -102,13 +106,11 @@ class TransformerProfiler:
         wall_time_ms = self._wall_time * 1000
 
         # GPU time from events
-        gpu_time_ns = sum(e.duration for e in self.events 
-                        if e.type == ts.EventType.KernelLaunch)
+        gpu_time_ns = sum(e.duration for e in self.events if e.type == ts.EventType.KernelLaunch)
         gpu_time_ms = gpu_time_ns / 1e6
 
         # Kernel count
-        kernel_count = sum(1 for e in self.events 
-                          if e.type == ts.EventType.KernelLaunch)
+        kernel_count = sum(1 for e in self.events if e.type == ts.EventType.KernelLaunch)
 
         # Memory peak
         memory_peak_mb = 0
@@ -125,11 +127,11 @@ class TransformerProfiler:
                 continue
 
             name = event.name.lower()
-            if any(k in name for k in ['attention', 'softmax', 'bmm', 'addmm']):
+            if any(k in name for k in ["attention", "softmax", "bmm", "addmm"]):
                 attention_time_ns += event.duration
-            elif any(k in name for k in ['linear', 'gemm', 'matmul']):
+            elif any(k in name for k in ["linear", "gemm", "matmul"]):
                 ffn_time_ns += event.duration
-            elif any(k in name for k in ['embedding', 'gather', 'index']):
+            elif any(k in name for k in ["embedding", "gather", "index"]):
                 embedding_time_ns += event.duration
 
         return InferenceMetrics(
@@ -144,7 +146,7 @@ class TransformerProfiler:
             kernel_count=kernel_count,
             attention_time_ms=attention_time_ns / 1e6,
             ffn_time_ms=ffn_time_ns / 1e6,
-            embedding_time_ms=embedding_time_ns / 1e6
+            embedding_time_ms=embedding_time_ns / 1e6,
         )
 
     def print_metrics(self, metrics: InferenceMetrics):
@@ -167,12 +169,18 @@ class TransformerProfiler:
         print("Time Breakdown:")
         total_analyzed = metrics.attention_time_ms + metrics.ffn_time_ms + metrics.embedding_time_ms
         if total_analyzed > 0:
-            print(f"  Attention:       {metrics.attention_time_ms:.2f} ms "
-                  f"({metrics.attention_time_ms/metrics.gpu_time_ms*100:.1f}%)")
-            print(f"  FFN/Linear:      {metrics.ffn_time_ms:.2f} ms "
-                  f"({metrics.ffn_time_ms/metrics.gpu_time_ms*100:.1f}%)")
-            print(f"  Embedding:       {metrics.embedding_time_ms:.2f} ms "
-                  f"({metrics.embedding_time_ms/metrics.gpu_time_ms*100:.1f}%)")
+            print(
+                f"  Attention:       {metrics.attention_time_ms:.2f} ms "
+                f"({metrics.attention_time_ms / metrics.gpu_time_ms * 100:.1f}%)"
+            )
+            print(
+                f"  FFN/Linear:      {metrics.ffn_time_ms:.2f} ms "
+                f"({metrics.ffn_time_ms / metrics.gpu_time_ms * 100:.1f}%)"
+            )
+            print(
+                f"  Embedding:       {metrics.embedding_time_ms:.2f} ms "
+                f"({metrics.embedding_time_ms / metrics.gpu_time_ms * 100:.1f}%)"
+            )
         print("=" * 70)
 
     def analyze_attention_kernels(self) -> Dict[str, Tuple[int, float]]:
@@ -184,7 +192,7 @@ class TransformerProfiler:
                 continue
 
             name = event.name.lower()
-            if any(k in name for k in ['attention', 'softmax', 'bmm', 'scaled_dot']):
+            if any(k in name for k in ["attention", "softmax", "bmm", "scaled_dot"]):
                 if event.name not in attention_kernels:
                     attention_kernels[event.name] = (0, 0)
                 count, total = attention_kernels[event.name]
@@ -203,6 +211,7 @@ class TransformerProfiler:
 
 
 # Simple Transformer implementation for testing
+
 
 class MultiHeadAttention(nn.Module):
     """Multi-head attention implementation."""
@@ -230,10 +239,10 @@ class MultiHeadAttention(nn.Module):
         V = self.w_v(value).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
 
         # Scaled dot-product attention
-        scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.d_k ** 0.5)
+        scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.d_k**0.5)
 
         if mask is not None:
-            scores = scores.masked_fill(mask == 0, float('-inf'))
+            scores = scores.masked_fill(mask == 0, float("-inf"))
 
         attn = F.softmax(scores, dim=-1)
         attn = self.dropout(attn)
@@ -285,20 +294,25 @@ class TransformerEncoderLayer(nn.Module):
 class SimpleTransformerEncoder(nn.Module):
     """Simple transformer encoder for demonstration."""
 
-    def __init__(self, vocab_size: int = 30000, d_model: int = 768,
-                 num_heads: int = 12, num_layers: int = 12,
-                 d_ff: int = 3072, max_seq_len: int = 512,
-                 dropout: float = 0.1):
+    def __init__(
+        self,
+        vocab_size: int = 30000,
+        d_model: int = 768,
+        num_heads: int = 12,
+        num_layers: int = 12,
+        d_ff: int = 3072,
+        max_seq_len: int = 512,
+        dropout: float = 0.1,
+    ):
         super().__init__()
 
         self.d_model = d_model
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.pos_embedding = nn.Embedding(max_seq_len, d_model)
 
-        self.layers = nn.ModuleList([
-            TransformerEncoderLayer(d_model, num_heads, d_ff, dropout)
-            for _ in range(num_layers)
-        ])
+        self.layers = nn.ModuleList(
+            [TransformerEncoderLayer(d_model, num_heads, d_ff, dropout) for _ in range(num_layers)]
+        )
 
         self.norm = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
@@ -332,12 +346,7 @@ def profile_transformer_inference():
 
     # Create model (BERT-base like configuration)
     model = SimpleTransformerEncoder(
-        vocab_size=30000,
-        d_model=768,
-        num_heads=12,
-        num_layers=12,
-        d_ff=3072,
-        max_seq_len=512
+        vocab_size=30000, d_model=768, num_heads=12, num_layers=12, d_ff=3072, max_seq_len=512
     ).to(device)
     model.eval()
 
@@ -346,12 +355,12 @@ def profile_transformer_inference():
 
     # Test configurations
     configs = [
-        (1, 32),    # Single, short
-        (1, 128),   # Single, medium
-        (1, 512),   # Single, long
-        (8, 128),   # Batch, medium
+        (1, 32),  # Single, short
+        (1, 128),  # Single, medium
+        (1, 512),  # Single, long
+        (8, 128),  # Batch, medium
         (32, 128),  # Large batch
-        (8, 512),   # Batch, long
+        (8, 512),  # Batch, long
     ]
 
     profiler = TransformerProfiler()
@@ -391,9 +400,11 @@ def profile_transformer_inference():
     print("-" * 70)
 
     for m in results:
-        print(f"{m.batch_size:>6} {m.sequence_length:>8} "
-              f"{m.tokens_per_second:>12,.0f} {m.latency_per_token_ms:>10.3f} "
-              f"{m.memory_peak_mb:>10.1f}")
+        print(
+            f"{m.batch_size:>6} {m.sequence_length:>8} "
+            f"{m.tokens_per_second:>12,.0f} {m.latency_per_token_ms:>10.3f} "
+            f"{m.memory_peak_mb:>10.1f}"
+        )
 
     # Export last trace
     profiler.export("transformer_inference_trace.json")
@@ -440,8 +451,7 @@ def profile_huggingface_model():
     ]
 
     # Tokenize
-    inputs = tokenizer(texts, padding=True, truncation=True, 
-                       max_length=128, return_tensors="pt")
+    inputs = tokenizer(texts, padding=True, truncation=True, max_length=128, return_tensors="pt")
     inputs = {k: v.cuda() for k, v in inputs.items()}
 
     batch_size = len(texts)
@@ -473,8 +483,7 @@ def profile_huggingface_model():
     print("\nAttention Kernel Analysis:")
     print("-" * 50)
     attention_kernels = profiler.analyze_attention_kernels()
-    sorted_kernels = sorted(attention_kernels.items(), 
-                           key=lambda x: x[1][1], reverse=True)
+    sorted_kernels = sorted(attention_kernels.items(), key=lambda x: x[1][1], reverse=True)
     for name, (count, total_ns) in sorted_kernels[:10]:
         avg_us = (total_ns / count) / 1000 if count > 0 else 0
         print(f"  {name[:45]:<45} x{count:>4} avg={avg_us:.1f}µs")
@@ -526,7 +535,7 @@ def benchmark_attention_implementations():
     print(f"   GPU time: {timeline.total_duration / 1e6 / num_iterations:.3f} ms per iteration")
 
     # PyTorch native attention (if available)
-    if hasattr(F, 'scaled_dot_product_attention'):
+    if hasattr(F, "scaled_dot_product_attention"):
         print("\n2. PyTorch Flash Attention (scaled_dot_product_attention)")
 
         Q = torch.randn(batch_size, num_heads, seq_len, d_model // num_heads, device=device)
@@ -546,9 +555,15 @@ def benchmark_attention_implementations():
                     _ = F.scaled_dot_product_attention(Q, K, V)
 
         timeline2 = ts.build_timeline(profiler2.events)
-        print(f"   GPU time: {timeline2.total_duration / 1e6 / num_iterations:.3f} ms per iteration")
+        print(
+            f"   GPU time: {timeline2.total_duration / 1e6 / num_iterations:.3f} ms per iteration"
+        )
 
-        speedup = (timeline.total_duration / timeline2.total_duration) if timeline2.total_duration > 0 else 0
+        speedup = (
+            (timeline.total_duration / timeline2.total_duration)
+            if timeline2.total_duration > 0
+            else 0
+        )
         print(f"   Speedup: {speedup:.2f}x")
 
     print("\n" + "=" * 70)
@@ -571,6 +586,7 @@ def main():
 
     if TRANSFORMERS_AVAILABLE:
         import transformers
+
         print(f"Transformers: {transformers.__version__}")
     else:
         print("HuggingFace Transformers not available")

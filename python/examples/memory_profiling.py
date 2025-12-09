@@ -13,14 +13,16 @@ Requirements:
     pip install torch (optional, for PyTorch integration)
 """
 
-import tracesmith as ts
 import time
-from typing import List, Dict, Optional
-from dataclasses import dataclass
 from contextlib import contextmanager
+from dataclasses import dataclass
+from typing import Dict, List
+
+import tracesmith as ts
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -29,6 +31,7 @@ except ImportError:
 @dataclass
 class MemoryStats:
     """Memory statistics at a point in time."""
+
     timestamp_ms: float
     allocated_mb: float
     reserved_mb: float
@@ -39,7 +42,7 @@ class MemoryStats:
 class GPUMemoryTracker:
     """
     Track GPU memory usage during model execution.
-    
+
     Combines TraceSmith memory profiler with PyTorch's memory tracking
     for comprehensive memory analysis.
     """
@@ -73,13 +76,15 @@ class GPUMemoryTracker:
     def _record_initial_state(self):
         """Record initial memory state."""
         if TORCH_AVAILABLE and torch.cuda.is_available():
-            self.snapshots.append(MemoryStats(
-                timestamp_ms=0,
-                allocated_mb=torch.cuda.memory_allocated() / 1e6,
-                reserved_mb=torch.cuda.memory_reserved() / 1e6,
-                peak_allocated_mb=torch.cuda.max_memory_allocated() / 1e6,
-                peak_reserved_mb=torch.cuda.max_memory_reserved() / 1e6
-            ))
+            self.snapshots.append(
+                MemoryStats(
+                    timestamp_ms=0,
+                    allocated_mb=torch.cuda.memory_allocated() / 1e6,
+                    reserved_mb=torch.cuda.memory_reserved() / 1e6,
+                    peak_allocated_mb=torch.cuda.max_memory_allocated() / 1e6,
+                    peak_reserved_mb=torch.cuda.max_memory_reserved() / 1e6,
+                )
+            )
 
     def record_allocation(self, ptr: int, size: int, tag: str = ""):
         """Record a memory allocation."""
@@ -99,7 +104,7 @@ class GPUMemoryTracker:
                 allocated_mb=torch.cuda.memory_allocated() / 1e6,
                 reserved_mb=torch.cuda.memory_reserved() / 1e6,
                 peak_allocated_mb=torch.cuda.max_memory_allocated() / 1e6,
-                peak_reserved_mb=torch.cuda.max_memory_reserved() / 1e6
+                peak_reserved_mb=torch.cuda.max_memory_reserved() / 1e6,
             )
             self.snapshots.append(stats)
             return stats
@@ -131,12 +136,14 @@ class GPUMemoryTracker:
         }
 
         if TORCH_AVAILABLE and torch.cuda.is_available():
-            result.update({
-                "torch_allocated_mb": torch.cuda.memory_allocated() / 1e6,
-                "torch_reserved_mb": torch.cuda.memory_reserved() / 1e6,
-                "torch_peak_allocated_mb": torch.cuda.max_memory_allocated() / 1e6,
-                "torch_peak_reserved_mb": torch.cuda.max_memory_reserved() / 1e6,
-            })
+            result.update(
+                {
+                    "torch_allocated_mb": torch.cuda.memory_allocated() / 1e6,
+                    "torch_reserved_mb": torch.cuda.memory_reserved() / 1e6,
+                    "torch_peak_allocated_mb": torch.cuda.max_memory_allocated() / 1e6,
+                    "torch_peak_reserved_mb": torch.cuda.max_memory_reserved() / 1e6,
+                }
+            )
 
         return result
 
@@ -162,8 +169,10 @@ class GPUMemoryTracker:
         if leaks:
             print(f"\n⚠️  Potential Leaks Detected: {len(leaks)}")
             for leak in leaks[:5]:
-                print(f"    - {ts.format_bytes(leak.size)} at 0x{leak.ptr:x} "
-                      f"({leak.allocator}, age: {ts.format_duration(leak.lifetime_ns)})")
+                print(
+                    f"    - {ts.format_bytes(leak.size)} at 0x{leak.ptr:x} "
+                    f"({leak.allocator}, age: {ts.format_duration(leak.lifetime_ns)})"
+                )
         else:
             print("\n✓ No memory leaks detected")
 
@@ -215,7 +224,7 @@ def profile_memory_intensive_operation():
             t = torch.randn(25 * 1024 * 1024, device=device)  # ~100MB
             tensors.append(t)
             usage = tracker.get_current_usage()
-            print(f"  Tensor {i+1}: Allocated {usage['torch_allocated_mb']:.1f} MB")
+            print(f"  Tensor {i + 1}: Allocated {usage['torch_allocated_mb']:.1f} MB")
 
     print("\nPhase 2: Matrix operations (intermediate memory)...")
     with tracker.track("matmul"):
@@ -246,7 +255,7 @@ def profile_model_memory(model_fn, input_fn, name: str = "Model"):
 
     device = torch.device("cuda")
 
-    print(f"\n" + "-" * 60)
+    print("\n" + "-" * 60)
     print(f"Memory Profile: {name}")
     print("-" * 60)
 
@@ -271,16 +280,20 @@ def profile_model_memory(model_fn, input_fn, name: str = "Model"):
     with tracker.track("forward"):
         output = model(input_data)
     usage = tracker.get_current_usage()
-    print(f"  Memory: {usage['torch_allocated_mb']:.1f} MB "
-          f"(peak: {usage['torch_peak_allocated_mb']:.1f} MB)")
+    print(
+        f"  Memory: {usage['torch_allocated_mb']:.1f} MB "
+        f"(peak: {usage['torch_peak_allocated_mb']:.1f} MB)"
+    )
 
     print("\nStep 3: Backward pass")
     with tracker.track("backward"):
         loss = output.sum()
         loss.backward()
     usage = tracker.get_current_usage()
-    print(f"  Memory: {usage['torch_allocated_mb']:.1f} MB "
-          f"(peak: {usage['torch_peak_allocated_mb']:.1f} MB)")
+    print(
+        f"  Memory: {usage['torch_allocated_mb']:.1f} MB "
+        f"(peak: {usage['torch_peak_allocated_mb']:.1f} MB)"
+    )
 
     print("\nStep 4: Cleanup")
     with tracker.track("cleanup"):
@@ -303,10 +316,10 @@ def create_sample_memory_events() -> List[ts.MemoryEvent]:
 
     # Simulate allocation pattern
     allocations = [
-        ("weights_layer1", 4 * 1024 * 1024),    # 4MB
-        ("weights_layer2", 16 * 1024 * 1024),   # 16MB
-        ("activations", 32 * 1024 * 1024),      # 32MB
-        ("gradients", 32 * 1024 * 1024),        # 32MB
+        ("weights_layer1", 4 * 1024 * 1024),  # 4MB
+        ("weights_layer2", 16 * 1024 * 1024),  # 16MB
+        ("activations", 32 * 1024 * 1024),  # 32MB
+        ("gradients", 32 * 1024 * 1024),  # 32MB
         ("optimizer_state", 16 * 1024 * 1024),  # 16MB
     ]
 
@@ -372,7 +385,7 @@ def main():
     profiler.record_free(base_ptr, 0)
     profiler.record_free(base_ptr + 0x100000, 0)
 
-    print(f"\nAfter freeing 2 tensors:")
+    print("\nAfter freeing 2 tensors:")
     print(f"Current usage: {ts.format_bytes(profiler.get_current_usage())}")
     print(f"Live allocations: {profiler.get_live_allocation_count()}")
 
@@ -401,7 +414,7 @@ def main():
                 nn.ReLU(),
                 nn.AdaptiveAvgPool2d(1),
                 nn.Flatten(),
-                nn.Linear(128, 10)
+                nn.Linear(128, 10),
             )
 
         def sample_input():

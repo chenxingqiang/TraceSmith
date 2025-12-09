@@ -12,16 +12,17 @@ Requirements:
     pip install torch torchvision
 """
 
-import tracesmith as ts
 import time
 from contextlib import contextmanager
-from typing import List, Dict, Tuple, Optional, Callable
 from dataclasses import dataclass, field
-from collections import defaultdict
+from typing import Callable, Dict, List, Optional, Tuple
+
+import tracesmith as ts
 
 try:
     import torch
     import torch.nn as nn
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -31,6 +32,7 @@ except ImportError:
 @dataclass
 class LayerProfile:
     """Profile information for a single layer."""
+
     name: str
     module_type: str
     forward_time_ms: float = 0
@@ -49,6 +51,7 @@ class LayerProfile:
 @dataclass
 class ModelProfile:
     """Complete model profile."""
+
     model_name: str
     layer_profiles: Dict[str, LayerProfile] = field(default_factory=dict)
     total_forward_ms: float = 0
@@ -60,7 +63,7 @@ class ModelProfile:
 class PyTorchLayerProfiler:
     """
     Profiles PyTorch models at the layer level using hooks.
-    
+
     Combines PyTorch's hook mechanism with TraceSmith GPU profiling
     to provide detailed layer-by-layer performance analysis.
     """
@@ -87,7 +90,7 @@ class PyTorchLayerProfiler:
 
     def register_hooks(self, model: nn.Module, prefix: str = "", forward_only: bool = False):
         """Register forward and backward hooks on all layers.
-        
+
         Args:
             model: PyTorch model to profile
             prefix: Prefix for layer names
@@ -102,15 +105,13 @@ class PyTorchLayerProfiler:
                 # Initialize layer profile
                 param_count = sum(p.numel() for p in module.parameters())
                 self.layer_profiles[full_name] = LayerProfile(
-                    name=full_name,
-                    module_type=module.__class__.__name__,
-                    param_count=param_count
+                    name=full_name, module_type=module.__class__.__name__, param_count=param_count
                 )
 
                 # Register hooks
                 forward_hook = self._create_forward_hook(full_name)
                 self.hooks.append(module.register_forward_hook(forward_hook))
-                
+
                 # Backward hooks can interfere with autograd in training
                 if not forward_only:
                     backward_hook = self._create_backward_hook(full_name)
@@ -118,6 +119,7 @@ class PyTorchLayerProfiler:
 
     def _create_forward_hook(self, layer_name: str) -> Callable:
         """Create forward hook for a layer."""
+
         def hook(module, input, output):
             profile = self.layer_profiles[layer_name]
 
@@ -143,8 +145,10 @@ class PyTorchLayerProfiler:
 
     def _create_backward_hook(self, layer_name: str) -> Callable:
         """Create backward hook for a layer."""
+
         def hook(module, grad_input, grad_output):
             pass  # Timing handled by markers
+
         return hook
 
     def remove_hooks(self):
@@ -187,8 +191,9 @@ class PyTorchLayerProfiler:
             self.total_time_ms = (end_time - start_time) * 1000
             self.remove_hooks()
 
-    def profile_forward_pass(self, model: nn.Module, input_data: torch.Tensor,
-                            num_iterations: int = 10, warmup: int = 3) -> ModelProfile:
+    def profile_forward_pass(
+        self, model: nn.Module, input_data: torch.Tensor, num_iterations: int = 10, warmup: int = 3
+    ) -> ModelProfile:
         """Profile forward pass only."""
         device = next(model.parameters()).device
         input_data = input_data.to(device)
@@ -235,14 +240,19 @@ class PyTorchLayerProfiler:
             layer_profiles=self.layer_profiles.copy(),
             total_forward_ms=(end_time - start_time) * 1000 / num_iterations,
             gpu_events=gpu_events,
-            timeline=ts.build_timeline(gpu_events) if gpu_events else None
+            timeline=ts.build_timeline(gpu_events) if gpu_events else None,
         )
 
         return result
 
-    def profile_training_step(self, model: nn.Module, input_data: torch.Tensor,
-                             target: torch.Tensor, optimizer: torch.optim.Optimizer,
-                             criterion: nn.Module = None) -> ModelProfile:
+    def profile_training_step(
+        self,
+        model: nn.Module,
+        input_data: torch.Tensor,
+        target: torch.Tensor,
+        optimizer: torch.optim.Optimizer,
+        criterion: nn.Module = None,
+    ) -> ModelProfile:
         """Profile a complete training step (forward + backward + optimizer)."""
         device = next(model.parameters()).device
         input_data = input_data.to(device)
@@ -309,7 +319,7 @@ class PyTorchLayerProfiler:
             total_forward_ms=(forward_end - forward_start) * 1000,
             total_backward_ms=(backward_end - backward_start) * 1000,
             gpu_events=gpu_events,
-            timeline=ts.build_timeline(gpu_events) if gpu_events else None
+            timeline=ts.build_timeline(gpu_events) if gpu_events else None,
         )
 
         return result
@@ -336,15 +346,15 @@ def print_layer_profile(profile: ModelProfile):
 
     # Sort by parameter count
     sorted_layers = sorted(
-        profile.layer_profiles.values(),
-        key=lambda x: x.param_count,
-        reverse=True
+        profile.layer_profiles.values(), key=lambda x: x.param_count, reverse=True
     )
 
     for layer in sorted_layers[:20]:
         name = layer.name[:38] + ".." if len(layer.name) > 40 else layer.name
-        print(f"{name:<40} {layer.module_type:<15} {layer.param_count:>10,} "
-              f"{layer.memory_allocated_mb:>12.2f}")
+        print(
+            f"{name:<40} {layer.module_type:<15} {layer.param_count:>10,} "
+            f"{layer.memory_allocated_mb:>12.2f}"
+        )
 
     if len(sorted_layers) > 20:
         print(f"... and {len(sorted_layers) - 20} more layers")
@@ -391,9 +401,7 @@ def analyze_bottlenecks(profile: ModelProfile) -> List[str]:
         for name, time_ns in kernel_times.items():
             pct = time_ns / total_kernel_time * 100
             if pct > 20:
-                bottlenecks.append(
-                    f"Kernel '{name}' takes {pct:.1f}% of total kernel time"
-                )
+                bottlenecks.append(f"Kernel '{name}' takes {pct:.1f}% of total kernel time")
 
     # Check for memory transfer overhead
     memcpy_time = 0
@@ -419,6 +427,7 @@ def analyze_bottlenecks(profile: ModelProfile) -> List[str]:
 
 # Example models for testing
 
+
 class ResNetBlock(nn.Module):
     """ResNet-style residual block."""
 
@@ -433,7 +442,7 @@ class ResNetBlock(nn.Module):
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, 1, stride, bias=False),
-                nn.BatchNorm2d(out_channels)
+                nn.BatchNorm2d(out_channels),
             )
 
     def forward(self, x):
@@ -525,9 +534,7 @@ def main():
 
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     profiler = PyTorchLayerProfiler()
-    train_profile = profiler.profile_training_step(
-        model, input_images, target, optimizer
-    )
+    train_profile = profiler.profile_training_step(model, input_images, target, optimizer)
     print_layer_profile(train_profile)
 
     # Analyze bottlenecks

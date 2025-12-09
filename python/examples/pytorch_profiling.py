@@ -12,17 +12,19 @@ Requirements:
     pip install torch torchvision
 """
 
-import tracesmith as ts
 import time
 from contextlib import contextmanager
-from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
+from typing import Dict, List
+
+import tracesmith as ts
 
 # Try to import PyTorch
 try:
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -32,6 +34,7 @@ except ImportError:
 @dataclass
 class ProfileResult:
     """Result of a profiling session."""
+
     events: List[ts.TraceEvent]
     timeline: ts.Timeline
     duration_ms: float
@@ -58,7 +61,7 @@ class TorchProfiler:
             return False
 
         self.profiler = ts.create_profiler(self.platform)
-        
+
         config = ts.ProfilerConfig()
         config.buffer_size = self.buffer_size
         config.capture_kernels = True
@@ -93,10 +96,10 @@ class TorchProfiler:
     @contextmanager
     def profile(self, sync_device: bool = True):
         """Context manager for profiling a code block.
-        
+
         Args:
             sync_device: Whether to synchronize device before and after profiling
-        
+
         Usage:
             with profiler.profile():
                 model(input)
@@ -116,35 +119,40 @@ class TorchProfiler:
             end_time = time.perf_counter()
             self.stop()
             self._last_duration = (end_time - start_time) * 1000  # ms
-    
+
     def _sync_device(self):
         """Synchronize device (CUDA/MPS/ROCm)."""
         if not TORCH_AVAILABLE:
             return
         if torch.cuda.is_available():
             torch.cuda.synchronize()
-        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             torch.mps.synchronize()
 
     def analyze(self) -> ProfileResult:
         """Analyze captured events."""
         timeline = ts.build_timeline(self.events)
-        
-        kernel_count = sum(1 for e in self.events 
-                          if e.type == ts.EventType.KernelLaunch)
-        memory_events = sum(1 for e in self.events 
-                           if e.type in [ts.EventType.MemcpyH2D, 
-                                         ts.EventType.MemcpyD2H,
-                                         ts.EventType.MemcpyD2D,
-                                         ts.EventType.MemAlloc,
-                                         ts.EventType.MemFree])
+
+        kernel_count = sum(1 for e in self.events if e.type == ts.EventType.KernelLaunch)
+        memory_events = sum(
+            1
+            for e in self.events
+            if e.type
+            in [
+                ts.EventType.MemcpyH2D,
+                ts.EventType.MemcpyD2H,
+                ts.EventType.MemcpyD2D,
+                ts.EventType.MemAlloc,
+                ts.EventType.MemFree,
+            ]
+        )
 
         return ProfileResult(
             events=self.events,
             timeline=timeline,
-            duration_ms=getattr(self, '_last_duration', 0),
+            duration_ms=getattr(self, "_last_duration", 0),
             kernel_count=kernel_count,
-            memory_events=memory_events
+            memory_events=memory_events,
         )
 
     def print_summary(self):
@@ -179,12 +187,10 @@ class TorchProfiler:
             print(f"{'Kernel Name':<45} {'Count':>8} {'Total(ms)':>12}")
             print("-" * 70)
 
-            sorted_kernels = sorted(kernel_times.items(), 
-                                   key=lambda x: x[1], reverse=True)
+            sorted_kernels = sorted(kernel_times.items(), key=lambda x: x[1], reverse=True)
             for name, total_ns in sorted_kernels[:10]:
                 display_name = name[:43] + ".." if len(name) > 45 else name
-                print(f"{display_name:<45} {kernel_counts[name]:>8} "
-                      f"{total_ns / 1e6:>12.3f}")
+                print(f"{display_name:<45} {kernel_counts[name]:>8} {total_ns / 1e6:>12.3f}")
 
     def export_perfetto(self, filename: str) -> bool:
         """Export trace to Perfetto format."""
@@ -192,6 +198,7 @@ class TorchProfiler:
 
 
 # Example neural network models
+
 
 class SimpleCNN(nn.Module):
     """Simple CNN for demonstration."""
@@ -225,11 +232,7 @@ class TransformerBlock(nn.Module):
         self.self_attn = nn.MultiheadAttention(d_model, nhead, batch_first=True)
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
-        self.ff = nn.Sequential(
-            nn.Linear(d_model, dim_ff),
-            nn.GELU(),
-            nn.Linear(dim_ff, d_model)
-        )
+        self.ff = nn.Sequential(nn.Linear(d_model, dim_ff), nn.GELU(), nn.Linear(dim_ff, d_model))
 
     def forward(self, x):
         # Self-attention
@@ -244,20 +247,24 @@ class TransformerBlock(nn.Module):
 class SimpleTransformer(nn.Module):
     """Simple Transformer model for demonstration."""
 
-    def __init__(self, vocab_size: int = 30000, d_model: int = 512, 
-                 nhead: int = 8, num_layers: int = 6, num_classes: int = 10):
+    def __init__(
+        self,
+        vocab_size: int = 30000,
+        d_model: int = 512,
+        nhead: int = 8,
+        num_layers: int = 6,
+        num_classes: int = 10,
+    ):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.pos_embedding = nn.Parameter(torch.randn(1, 512, d_model))
-        self.layers = nn.ModuleList([
-            TransformerBlock(d_model, nhead) for _ in range(num_layers)
-        ])
+        self.layers = nn.ModuleList([TransformerBlock(d_model, nhead) for _ in range(num_layers)])
         self.classifier = nn.Linear(d_model, num_classes)
 
     def forward(self, x):
         # x: (batch, seq_len)
         x = self.embedding(x)
-        x = x + self.pos_embedding[:, :x.size(1)]
+        x = x + self.pos_embedding[:, : x.size(1)]
         for layer in self.layers:
             x = layer(x)
         # Take [CLS] token (first position)
@@ -265,21 +272,22 @@ class SimpleTransformer(nn.Module):
         return self.classifier(x)
 
 
-def profile_inference(model: nn.Module, input_data: torch.Tensor, 
-                     num_iterations: int = 10, warmup: int = 3) -> TorchProfiler:
+def profile_inference(
+    model: nn.Module, input_data: torch.Tensor, num_iterations: int = 10, warmup: int = 3
+) -> TorchProfiler:
     """Profile model inference.
-    
+
     Args:
         model: PyTorch model
         input_data: Input tensor
         num_iterations: Number of inference iterations to profile
         warmup: Number of warmup iterations
-    
+
     Returns:
         TorchProfiler with captured events
     """
     profiler = TorchProfiler()
-    
+
     if not profiler.initialize():
         print("Could not initialize profiler")
         return profiler
@@ -305,23 +313,27 @@ def profile_inference(model: nn.Module, input_data: torch.Tensor,
     return profiler
 
 
-def profile_training_step(model: nn.Module, input_data: torch.Tensor,
-                         target: torch.Tensor, optimizer: torch.optim.Optimizer,
-                         criterion: nn.Module = None) -> TorchProfiler:
+def profile_training_step(
+    model: nn.Module,
+    input_data: torch.Tensor,
+    target: torch.Tensor,
+    optimizer: torch.optim.Optimizer,
+    criterion: nn.Module = None,
+) -> TorchProfiler:
     """Profile a single training step.
-    
+
     Args:
         model: PyTorch model
         input_data: Input tensor
         target: Target tensor
         optimizer: PyTorch optimizer
         criterion: Loss function (default: CrossEntropyLoss)
-    
+
     Returns:
         TorchProfiler with captured events
     """
     profiler = TorchProfiler()
-    
+
     if not profiler.initialize():
         print("Could not initialize profiler")
         return profiler
@@ -370,16 +382,23 @@ def main(device_preference: str = None):
     # Import device utilities if available
     try:
         from device_utils import DeviceManager
+
         dm = DeviceManager(prefer_device=device_preference)
         device = dm.torch_device
         print(f"Device: {dm.get_device_name()}")
     except ImportError:
         dm = None
         # Fallback device detection
-        if device_preference == "mps" and hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        if (
+            device_preference == "mps"
+            and hasattr(torch.backends, "mps")
+            and torch.backends.mps.is_available()
+        ):
             device = torch.device("mps")
-            print(f"Device: Apple Silicon GPU (MPS)")
-        elif device_preference == "cuda" or (device_preference is None and torch.cuda.is_available()):
+            print("Device: Apple Silicon GPU (MPS)")
+        elif device_preference == "cuda" or (
+            device_preference is None and torch.cuda.is_available()
+        ):
             device = torch.device("cuda")
             print(f"Device: {torch.cuda.get_device_name(0)}")
         else:
@@ -432,11 +451,7 @@ def main(device_preference: str = None):
 
     # Create Transformer model
     transformer = SimpleTransformer(
-        vocab_size=30000,
-        d_model=512,
-        nhead=8,
-        num_layers=6,
-        num_classes=10
+        vocab_size=30000, d_model=512, nhead=8, num_layers=6, num_classes=10
     ).to(device)
     transformer.eval()
 
@@ -466,12 +481,14 @@ def main(device_preference: str = None):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="PyTorch Model Profiling Example")
     parser.add_argument(
-        "--device", "-d",
+        "--device",
+        "-d",
         choices=["cuda", "mps", "rocm", "cpu"],
         default=None,
-        help="Preferred device (default: auto-detect)"
+        help="Preferred device (default: auto-detect)",
     )
     args = parser.parse_args()
     main(device_preference=args.device)

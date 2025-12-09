@@ -13,15 +13,16 @@ Requirements:
     pip install torch (optional, for PyTorch integration)
 """
 
-import tracesmith as ts
 import time
-from typing import List, Dict, Optional
-from dataclasses import dataclass
+from typing import Dict, List
+
+import tracesmith as ts
 
 try:
     import torch
-    import torch.nn as nn
     import torch.distributed as dist
+    import torch.nn as nn
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -60,8 +61,9 @@ def discover_gpu_topology():
     print("\nLinks:")
     for link in info.links:
         link_type = ts.link_type_to_string(link.type)
-        print(f"  GPU {link.gpu_a} <-> GPU {link.gpu_b}: "
-              f"{link_type} ({link.bandwidth_gbps:.1f} GB/s)")
+        print(
+            f"  GPU {link.gpu_a} <-> GPU {link.gpu_b}: {link_type} ({link.bandwidth_gbps:.1f} GB/s)"
+        )
 
     # ASCII visualization
     print("\nTopology Diagram:")
@@ -120,7 +122,7 @@ def profile_multi_gpu():
 
     # Get statistics
     stats = profiler.get_statistics()
-    print(f"\nCapture Statistics:")
+    print("\nCapture Statistics:")
     print(f"  Total Events: {stats.total_events}")
     print(f"  Total Dropped: {stats.total_dropped}")
     print(f"  NVLink Transfers: {stats.nvlink_transfers}")
@@ -239,7 +241,7 @@ def profile_data_parallel_training():
     events = profiler.get_events()
     wall_time = (end_time - start_time) * 1000
 
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  Wall time: {wall_time:.2f} ms for 10 iterations")
     print(f"  Per iteration: {wall_time / 10:.2f} ms")
     print(f"  Throughput: {batch_size * 10 / (wall_time / 1000):.0f} samples/sec")
@@ -253,16 +255,18 @@ def profile_data_parallel_training():
             events_by_device[device_id] = []
         events_by_device[device_id].append(event)
 
-    print(f"\nEvents by GPU:")
+    print("\nEvents by GPU:")
     for device_id, device_events in sorted(events_by_device.items()):
-        kernel_count = sum(1 for e in device_events 
-                          if e.type == ts.EventType.KernelLaunch)
-        memcpy_count = sum(1 for e in device_events 
-                          if e.type in [ts.EventType.MemcpyH2D, 
-                                        ts.EventType.MemcpyD2H,
-                                        ts.EventType.MemcpyD2D])
-        print(f"  GPU {device_id}: {len(device_events)} events "
-              f"({kernel_count} kernels, {memcpy_count} memcpy)")
+        kernel_count = sum(1 for e in device_events if e.type == ts.EventType.KernelLaunch)
+        memcpy_count = sum(
+            1
+            for e in device_events
+            if e.type in [ts.EventType.MemcpyH2D, ts.EventType.MemcpyD2H, ts.EventType.MemcpyD2D]
+        )
+        print(
+            f"  GPU {device_id}: {len(device_events)} events "
+            f"({kernel_count} kernels, {memcpy_count} memcpy)"
+        )
 
     # Export
     if events:
@@ -289,7 +293,7 @@ def analyze_multi_gpu_trace(events: List[ts.TraceEvent]):
                 "kernel_time_ns": 0,
                 "memcpy_count": 0,
                 "memcpy_time_ns": 0,
-                "sync_count": 0
+                "sync_count": 0,
             }
 
         stats = gpu_stats[gpu_id]
@@ -297,8 +301,7 @@ def analyze_multi_gpu_trace(events: List[ts.TraceEvent]):
         if event.type == ts.EventType.KernelLaunch:
             stats["kernel_count"] += 1
             stats["kernel_time_ns"] += event.duration
-        elif event.type in [ts.EventType.MemcpyH2D, ts.EventType.MemcpyD2H, 
-                            ts.EventType.MemcpyD2D]:
+        elif event.type in [ts.EventType.MemcpyH2D, ts.EventType.MemcpyD2H, ts.EventType.MemcpyD2D]:
             stats["memcpy_count"] += 1
             stats["memcpy_time_ns"] += event.duration
         elif event.type in [ts.EventType.StreamSync, ts.EventType.DeviceSync]:
@@ -309,21 +312,24 @@ def analyze_multi_gpu_trace(events: List[ts.TraceEvent]):
         return
 
     # Print table
-    print(f"{'GPU':>4} {'Kernels':>10} {'Kernel(ms)':>12} "
-          f"{'Memcpy':>8} {'Memcpy(ms)':>12} {'Syncs':>8}")
+    print(
+        f"{'GPU':>4} {'Kernels':>10} {'Kernel(ms)':>12} "
+        f"{'Memcpy':>8} {'Memcpy(ms)':>12} {'Syncs':>8}"
+    )
     print("-" * 60)
 
     total_kernel_time = sum(s["kernel_time_ns"] for s in gpu_stats.values())
 
     for gpu_id in sorted(gpu_stats.keys()):
         stats = gpu_stats[gpu_id]
-        pct = (stats["kernel_time_ns"] / total_kernel_time * 100 
-               if total_kernel_time > 0 else 0)
-        print(f"{gpu_id:>4} {stats['kernel_count']:>10} "
-              f"{stats['kernel_time_ns']/1e6:>10.2f}ms "
-              f"{stats['memcpy_count']:>8} "
-              f"{stats['memcpy_time_ns']/1e6:>10.2f}ms "
-              f"{stats['sync_count']:>8}")
+        pct = stats["kernel_time_ns"] / total_kernel_time * 100 if total_kernel_time > 0 else 0
+        print(
+            f"{gpu_id:>4} {stats['kernel_count']:>10} "
+            f"{stats['kernel_time_ns'] / 1e6:>10.2f}ms "
+            f"{stats['memcpy_count']:>8} "
+            f"{stats['memcpy_time_ns'] / 1e6:>10.2f}ms "
+            f"{stats['sync_count']:>8}"
+        )
 
     # Check load balance
     if len(gpu_stats) > 1:
@@ -334,7 +340,7 @@ def analyze_multi_gpu_trace(events: List[ts.TraceEvent]):
 
         imbalance = (max_time - min_time) / avg_time * 100 if avg_time > 0 else 0
 
-        print(f"\nLoad Balance:")
+        print("\nLoad Balance:")
         print(f"  Average kernel time: {avg_time / 1e6:.2f} ms")
         print(f"  Max imbalance: {imbalance:.1f}%")
 

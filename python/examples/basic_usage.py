@@ -12,11 +12,13 @@ Supports: CUDA, ROCm, Metal (MPS), CPU fallback
 """
 
 import argparse
+
 import tracesmith as ts
 
 # Import device utilities for cross-platform support
 try:
     from device_utils import DeviceManager, get_device_manager, print_device_info
+
     DEVICE_UTILS_AVAILABLE = True
 except ImportError:
     DEVICE_UTILS_AVAILABLE = False
@@ -31,14 +33,14 @@ def main(device: str = None):
 
     # 1. Detect GPU platform with device preference
     print("1. Detecting GPU platform...")
-    
+
     if DEVICE_UTILS_AVAILABLE:
         dm = DeviceManager(prefer_device=device)
         platform = dm.get_tracesmith_platform() or ts.detect_platform()
         print(f"   Device: {dm.get_device_name()}")
     else:
         platform = ts.detect_platform()
-    
+
     print(f"   Platform: {ts.platform_type_to_string(platform)}")
 
     if platform == ts.PlatformType.Unknown:
@@ -78,6 +80,7 @@ def main(device: str = None):
                 run_gpu_workload(dm)
             else:
                 import time
+
                 time.sleep(0.1)  # Brief capture window
 
             profiler.stop_capture()
@@ -131,6 +134,7 @@ def main(device: str = None):
     writer.write_events(events)
     writer.finalize()
     import os
+
     file_size = os.path.getsize("python_trace.sbt") if os.path.exists("python_trace.sbt") else 0
     print(f"   ✓ Saved: python_trace.sbt ({file_size} bytes)")
 
@@ -155,8 +159,13 @@ def create_sample_events():
     events = []
     base_time = ts.get_current_timestamp()
 
-    kernel_names = ["matmul_kernel", "conv2d_forward", "relu_activation",
-                    "batch_norm", "softmax_kernel"]
+    kernel_names = [
+        "matmul_kernel",
+        "conv2d_forward",
+        "relu_activation",
+        "batch_norm",
+        "softmax_kernel",
+    ]
 
     for i in range(20):
         event = ts.TraceEvent()
@@ -176,19 +185,20 @@ def run_gpu_workload(dm):
     """Run a simple GPU workload to generate events."""
     try:
         import torch
-        
+
         # Matrix multiplication workload
         size = 1000
         a = dm.randn(size, size)
         b = dm.randn(size, size)
-        
+
         for _ in range(10):
             c = torch.mm(a, b)
             a = c
-        
+
         dm.synchronize()
     except ImportError:
         import time
+
         time.sleep(0.1)
     except Exception as e:
         print(f"   Warning: GPU workload failed: {e}")
@@ -197,11 +207,12 @@ def run_gpu_workload(dm):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="TraceSmith Basic Usage Example")
     parser.add_argument(
-        "--device", "-d",
+        "--device",
+        "-d",
         choices=["cuda", "mps", "rocm", "cpu"],
         default=None,
-        help="Preferred device (default: auto-detect)"
+        help="Preferred device (default: auto-detect)",
     )
     args = parser.parse_args()
-    
+
     main(device=args.device)
