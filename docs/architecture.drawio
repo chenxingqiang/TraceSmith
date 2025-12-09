@@ -4,7 +4,7 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title" value="TraceSmith Architecture v0.7.1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
+        <mxCell id="title" value="TraceSmith Architecture v0.8.3" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
           <mxGeometry x="550" y="20" width="500" height="40" as="geometry" />
         </mxCell>
         <mxCell id="subtitle" value="GPU Profiling &amp; Replay System" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#666666;" parent="1" vertex="1">
@@ -49,7 +49,7 @@
         <mxCell id="cluster-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
           <mxGeometry x="120" y="320" width="340" height="180" as="geometry" />
         </mxCell>
-        <mxCell id="cluster-title" value="Cluster Module (v0.7.x)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1;fontColor=#d79b00;" parent="1" vertex="1">
+        <mxCell id="cluster-title" value="Cluster Module (v0.8.x)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1;fontColor=#d79b00;" parent="1" vertex="1">
           <mxGeometry x="120" y="325" width="340" height="20" as="geometry" />
         </mxCell>
         <mxCell id="gpu-topology" value="GPUTopology&#xa;(NVLink, PCIe, NVML)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
@@ -79,16 +79,16 @@
         <mxCell id="cupti" value="CUPTIProfiler&#xa;(NVIDIA CUDA)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#76b947;strokeColor=#82b366;fontColor=#ffffff;" parent="1" vertex="1">
           <mxGeometry x="495" y="355" width="150" height="45" as="geometry" />
         </mxCell>
-        <mxCell id="metal" value="MetalProfiler&#xa;(Apple Metal)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a8a8a8;strokeColor=#666666;fontColor=#ffffff;" parent="1" vertex="1">
+        <mxCell id="maca" value="MCPTIProfiler&#xa;(MetaX MACA)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00bfff;strokeColor=#0080ff;fontColor=#ffffff;" parent="1" vertex="1">
           <mxGeometry x="655" y="355" width="150" height="45" as="geometry" />
         </mxCell>
-        <mxCell id="bpf" value="BPFTracer&#xa;(Linux eBPF)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+        <mxCell id="metal" value="MetalProfiler&#xa;(Apple Metal)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a8a8a8;strokeColor=#666666;fontColor=#ffffff;" parent="1" vertex="1">
           <mxGeometry x="495" y="410" width="150" height="45" as="geometry" />
         </mxCell>
         <mxCell id="memory" value="MemoryProfiler&#xa;(GPU Memory)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="655" y="410" width="150" height="45" as="geometry" />
         </mxCell>
-        <mxCell id="profiler-factory" value="createProfiler() - Factory Pattern" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+        <mxCell id="profiler-factory" value="createProfiler() + Nsight/mcTracer/xctrace Integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
           <mxGeometry x="495" y="460" width="310" height="30" as="geometry" />
         </mxCell>
         <mxCell id="state-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
@@ -205,23 +205,26 @@
         <mxCell id="metal-backend" value="Apple Metal&#xa;(Metal API)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a8a8a8;strokeColor=#888888;fontColor=#ffffff;fontStyle=1;" parent="1" vertex="1">
           <mxGeometry x="380" y="730" width="150" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="rocm" value="AMD ROCm&#xa;(Coming Soon)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ed1c24;strokeColor=#cc1820;fontColor=#ffffff;fontStyle=1;" parent="1" vertex="1">
+        <mxCell id="maca-backend" value="MetaX MACA&#xa;(MCPTI SDK)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00bfff;strokeColor=#0080ff;fontColor=#ffffff;fontStyle=1;" parent="1" vertex="1">
           <mxGeometry x="560" y="730" width="150" height="40" as="geometry" />
         </mxCell>
         <mxCell id="nccl" value="NCCL&#xa;(Distributed)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff9900;strokeColor=#cc7a00;fontColor=#ffffff;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="740" y="730" width="150" height="40" as="geometry" />
+          <mxGeometry x="740" y="730" width="120" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="nvml" value="NVML&#xa;(Management)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#76b947;strokeColor=#5a9a32;fontColor=#ffffff;" parent="1" vertex="1">
-          <mxGeometry x="920" y="730" width="120" height="40" as="geometry" />
+        <mxCell id="nsys" value="Nsight Systems&#xa;(NVIDIA)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#76b947;strokeColor=#5a9a32;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="880" y="730" width="120" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="libunwind" value="libunwind&#xa;(Stack Unwinding)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#5577a7;fontColor=#ffffff;" parent="1" vertex="1">
-          <mxGeometry x="1060" y="730" width="140" height="40" as="geometry" />
+        <mxCell id="mctracer" value="mcTracer&#xa;(MetaX)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00bfff;strokeColor=#0080ff;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="1020" y="730" width="100" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="ebpf" value="eBPF&#xa;(Linux Kernel)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#333333;" parent="1" vertex="1">
-          <mxGeometry x="1220" y="730" width="120" height="40" as="geometry" />
+        <mxCell id="xctrace" value="xctrace&#xa;(Apple)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a8a8a8;strokeColor=#666666;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="1140" y="730" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="libunwind" value="libunwind" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#5577a7;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="1240" y="730" width="80" height="40" as="geometry" />
         </mxCell>
         <mxCell id="perfetto-sdk" value="Perfetto SDK" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#333333;" parent="1" vertex="1">
-          <mxGeometry x="1360" y="730" width="120" height="40" as="geometry" />
+          <mxGeometry x="1340" y="730" width="100" height="40" as="geometry" />
         </mxCell>
         <mxCell id="output-layer" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f2ff;strokeColor=#6c8ebf;dashed=1;" parent="1" vertex="1">
           <mxGeometry x="110" y="800" width="1380" height="70" as="geometry" />
@@ -313,8 +316,14 @@
         <mxCell id="leg6" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
           <mxGeometry x="120" y="950" width="20" height="15" as="geometry" />
         </mxCell>
-        <mxCell id="leg6-text" value="Cluster (v0.7.x)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+        <mxCell id="leg6-text" value="Cluster (v0.8.x)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="145" y="948" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg9" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00bfff;strokeColor=#0080ff;" parent="1" vertex="1">
+          <mxGeometry x="400" y="950" width="20" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="leg9-text" value="MetaX MACA" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="425" y="948" width="80" height="20" as="geometry" />
         </mxCell>
         <mxCell id="leg7" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
           <mxGeometry x="240" y="950" width="20" height="15" as="geometry" />
@@ -328,7 +337,7 @@
         <mxCell id="leg8-text" value="C++" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="345" y="948" width="40" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="version-info" value="TraceSmith v0.7.1 | C++17 | pybind11 | Cross-Platform (Linux/macOS/Windows)" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
+        <mxCell id="version-info" value="TraceSmith v0.8.3 | C++17 | pybind11 | CUDA/MACA/Metal | Nsight/mcTracer/xctrace | Cross-Platform" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
           <mxGeometry x="720" y="960" width="780" height="20" as="geometry" />
         </mxCell>
       </root>
