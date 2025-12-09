@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(TraceSmith 
-    VERSION 0.8.0
+    VERSION 0.8.1
     DESCRIPTION "Cross-platform GPU Profiling & Replay System"
     LANGUAGES CXX
 )

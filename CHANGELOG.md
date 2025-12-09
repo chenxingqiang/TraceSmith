@@ -5,6 +5,34 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2025-12-09
+
+### Added
+- **MetaX mcTracer Integration**: System-wide MACA GPU profiling
+  - CLI option: `--mctracer` for profile command
+  - Integrates with `/opt/maca-3.0.0/bin/mcTracer`
+  - Outputs Perfetto-compatible JSON format
+  - Captures all MACA API calls, memory operations, and GPU kernels
+  - CPU-GPU launch flow visualization
+
+- **Enhanced MACA CLI Support**:
+  - `devices` command now detects MetaX GPUs
+  - Shows device name, compute capability, memory, SMs, and clock rate
+  - Auto-detection of MACA SDK path
+
+- **MACA Cluster Module Support**:
+  - GPU topology discovery for MetaX GPUs
+  - Time synchronization with MACA method
+  - Multi-GPU profiler support for MetaX devices
+
+### Changed
+- Updated README with mcTracer usage documentation
+- Improved MACA benchmark results (608 GB/s D2D, <2% overhead)
+
+### Fixed
+- CMake PUBLIC include directories for MACA headers propagation
+- MACA device detection in cluster module
+
 ## [0.8.0] - 2025-12-07
 
 ### Added
