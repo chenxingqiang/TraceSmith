@@ -33,6 +33,8 @@
 - **GPU Memory Profiler**: Allocation tracking, leak detection, peak usage monitoring
 - **CLI Tools**: Easy-to-use command-line interface for recording and viewing traces
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/chenxingqiang/TraceSmith)
+
 ## Architecture
 
 ![TraceSmith Architecture](docs/architecture.svg)
