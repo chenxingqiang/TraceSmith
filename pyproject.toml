@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 name = "tracesmith"
 version = "0.8.3"
 authors = [
-    {name = "TraceSmith Authors", email = "tracesmith@example.com"}
+    {name = "chenxingqiang", email = "joy6677@qq.com"}
 ]
 description = "Cross-platform GPU profiling and replay system"
 readme = "README.md"
