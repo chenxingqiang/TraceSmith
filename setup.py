@@ -69,6 +69,19 @@ def detect_metal():
     return sys.platform == 'darwin'
 
 
+def detect_ascend():
+    """Detect Huawei Ascend/CANN installation."""
+    # Check for ASCEND_HOME
+    ascend_home = os.environ.get('ASCEND_HOME') or os.environ.get('ASCEND_TOOLKIT_HOME')
+    if ascend_home and os.path.exists(ascend_home):
+        return True
+    # Check common paths
+    for path in ['/usr/local/Ascend/ascend-toolkit/latest', '/usr/local/Ascend']:
+        if os.path.exists(os.path.join(path, 'include', 'acl', 'acl.h')):
+            return True
+    return False
+
+
 def detect_perfetto_sdk():
     """Check if Perfetto SDK files exist."""
     perfetto_dir = Path(__file__).parent / 'third_party' / 'perfetto'
@@ -117,10 +130,11 @@ class CMakeBuild(build_ext):
         enable_cuda = os.environ.get('TRACESMITH_CUDA', '').lower() in ('1', 'true', 'on', 'yes')
         enable_rocm = os.environ.get('TRACESMITH_ROCM', '').lower() in ('1', 'true', 'on', 'yes')
         enable_metal = os.environ.get('TRACESMITH_METAL', '').lower() in ('1', 'true', 'on', 'yes')
+        enable_ascend = os.environ.get('TRACESMITH_ASCEND', '').lower() in ('1', 'true', 'on', 'yes')
         auto_detect = os.environ.get('TRACESMITH_AUTO', '1').lower() in ('1', 'true', 'on', 'yes')
 
         # Auto-detect if no platform explicitly specified
-        if not (enable_cuda or enable_rocm or enable_metal) and auto_detect:
+        if not (enable_cuda or enable_rocm or enable_metal or enable_ascend) and auto_detect:
             if detect_cuda():
                 enable_cuda = True
                 print("TraceSmith: Auto-detected CUDA")
@@ -130,6 +144,9 @@ class CMakeBuild(build_ext):
             elif detect_metal():
                 enable_metal = True
                 print("TraceSmith: Auto-detected Metal")
+            elif detect_ascend():
+                enable_ascend = True
+                print("TraceSmith: Auto-detected Huawei Ascend/CANN")
             else:
                 print("TraceSmith: No GPU platform detected, building base package")
 
@@ -157,6 +174,20 @@ class CMakeBuild(build_ext):
             print("TraceSmith: Building with Metal support")
         else:
             cmake_args.append('-DTRACESMITH_ENABLE_METAL=OFF')
+
+        if enable_ascend:
+            cmake_args.append('-DTRACESMITH_ENABLE_ASCEND=ON')
+            ascend_home = os.environ.get('ASCEND_HOME') or os.environ.get('ASCEND_TOOLKIT_HOME')
+            if not ascend_home:
+                for path in ['/usr/local/Ascend/ascend-toolkit/latest', '/usr/local/Ascend']:
+                    if os.path.exists(os.path.join(path, 'include', 'acl', 'acl.h')):
+                        ascend_home = path
+                        break
+            if ascend_home:
+                cmake_args.append(f'-DASCEND_HOME={ascend_home}')
+            print("TraceSmith: Building with Huawei Ascend/CANN support")
+        else:
+            cmake_args.append('-DTRACESMITH_ENABLE_ASCEND=OFF')
 
         # Perfetto SDK support (only enable if SDK files exist)
         perfetto_sdk_exists = detect_perfetto_sdk()
@@ -219,7 +250,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='tracesmith',
-    version='0.8.3',
+    version='0.9.0',
     author='chenxingqiang',
     author_email='joy6677@qq.com',
     description='Cross-platform GPU Profiling & Replay System',

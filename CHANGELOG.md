@@ -5,6 +5,23 @@ All notable changes to TraceSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2025-12-09
+
+### Added
+- **Huawei Ascend NPU Support**: Full integration with CANN toolkit
+  - `AscendProfiler` class for profiling Ascend NPUs (910A/B, 310, etc.)
+  - ACL Profiling API integration (aclprofInit, aclprofStart, aclprofStop)
+  - CLI option: `--msprof` for profile command using Huawei msprof tool
+  - Python bindings: `is_ascend_available()`, `get_ascend_cann_version()`, `get_ascend_device_count()`
+  - `tracesmith devices` command now shows Ascend NPU information
+  - CMake option: `TRACESMITH_ENABLE_ASCEND` for enabling Ascend support
+  - Support for AI Core metrics, HCCL trace, task memory profiling
+
+### Changed
+- Updated `PlatformType` enum to include `Ascend`
+- Enhanced documentation with Huawei Ascend installation instructions
+- Updated backend support table in README
+
 ## [0.8.3] - 2025-12-09
 
 ### Fixed

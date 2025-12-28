@@ -36,17 +36,19 @@ enum class PlatformType {
     CUDA,
     ROCm,
     Metal,
-    MACA    // MetaX MACA (C500, C550, etc.)
+    MACA,    // MetaX MACA (C500, C550, etc.)
+    Ascend   // Huawei Ascend NPU (910A/B, 310, etc.)
 };
 
 /// Convert PlatformType to string
 inline const char* platformTypeToString(PlatformType type) {
     switch (type) {
-        case PlatformType::CUDA:  return "CUDA";
-        case PlatformType::ROCm:  return "ROCm";
-        case PlatformType::Metal: return "Metal";
-        case PlatformType::MACA:  return "MACA";
-        default:                  return "Unknown";
+        case PlatformType::CUDA:   return "CUDA";
+        case PlatformType::ROCm:   return "ROCm";
+        case PlatformType::Metal:  return "Metal";
+        case PlatformType::MACA:   return "MACA";
+        case PlatformType::Ascend: return "Ascend";
+        default:                   return "Unknown";
     }
 }
 
@@ -120,5 +122,9 @@ int getMetalDeviceCount();
 bool isMACAAvailable();
 int getMACADriverVersion();
 int getMACADeviceCount();
+
+bool isAscendAvailable();
+std::string getAscendCANNVersion();
+int getAscendDeviceCount();
 
 } // namespace tracesmith

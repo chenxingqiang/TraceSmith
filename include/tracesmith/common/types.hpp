@@ -11,8 +11,8 @@ namespace tracesmith {
 
 /// Version information
 constexpr uint32_t VERSION_MAJOR = 0;
-constexpr uint32_t VERSION_MINOR = 8;
-constexpr uint32_t VERSION_PATCH = 3;
+constexpr uint32_t VERSION_MINOR = 9;
+constexpr uint32_t VERSION_PATCH = 0;
 
 /// Event types that can be captured
 enum class EventType : uint8_t {

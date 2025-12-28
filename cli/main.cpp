@@ -262,6 +262,9 @@ void printProfileUsage(const char* program) {
 #ifdef TRACESMITH_ENABLE_MACA
     std::cout << "    --mctracer               " << C(Green) << "[MetaX]" << C(Reset) << " Use mcTracer for MACA GPU profiling\n";
 #endif
+#ifdef TRACESMITH_ENABLE_ASCEND
+    std::cout << "    --msprof                 " << C(Green) << "[Huawei]" << C(Reset) << " Use msprof for Ascend NPU profiling\n";
+#endif
     std::cout << "    --keep-trace             Keep the raw trace output directory\n";
     std::cout << "    -v, --verbose            Verbose output\n";
     std::cout << "    -h, --help               Show this help message\n\n";
@@ -274,6 +277,11 @@ void printProfileUsage(const char* program) {
     std::cout << C(Green) << "  MetaX MACA:" << C(Reset) << "\n";
     std::cout << "    " << program << " profile --mctracer -- ./my_maca_app\n";
     std::cout << "    " << program << " profile --mctracer --perfetto -- python train.py\n\n";
+#endif
+#ifdef TRACESMITH_ENABLE_ASCEND
+    std::cout << C(Green) << "  Huawei Ascend:" << C(Reset) << "\n";
+    std::cout << "    " << program << " profile --msprof -- ./my_ascend_app\n";
+    std::cout << "    " << program << " profile --msprof --perfetto -- python train.py\n\n";
 #endif
 #ifdef __APPLE__
     std::cout << C(Green) << "  Apple Metal:" << C(Reset) << "\n";
@@ -448,6 +456,19 @@ int cmdDevices([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
                 profiler->finalize();
             }
         }
+    } else {
+        std::cout << "  " << C(Yellow) << "Not available" << C(Reset) << "\n";
+    }
+    
+    // Check Huawei Ascend
+    std::cout << "\n" << C(Bold) << "Huawei Ascend:" << C(Reset) << "\n";
+    if (isAscendAvailable()) {
+        int count = getAscendDeviceCount();
+        std::string version = getAscendCANNVersion();
+        printSuccess("Ascend/CANN available");
+        std::cout << "  Devices: " << count << "\n";
+        std::cout << "  CANN:    " << version << "\n";
+        found_any = true;
     } else {
         std::cout << "  " << C(Yellow) << "Not available" << C(Reset) << "\n";
     }
@@ -909,6 +930,155 @@ int cmdProfileMCTracer(
 #endif
 
 // =============================================================================
+// Command: profile with msprof (Huawei Ascend)
+// =============================================================================
+#ifdef TRACESMITH_ENABLE_ASCEND
+int cmdProfileMsprof(
+    const std::vector<std::string>& command,
+    std::string output_file,
+    bool keep_trace,
+    bool export_perfetto_flag
+) {
+    // Build command string for display
+    std::string cmd_str;
+    for (size_t i = 0; i < command.size(); ++i) {
+        if (i > 0) cmd_str += " ";
+        if (command[i].find(' ') != std::string::npos) {
+            cmd_str += "\"" + command[i] + "\"";
+        } else {
+            cmd_str += command[i];
+        }
+    }
+    
+    // Generate output filename if not provided
+    if (output_file.empty()) {
+        std::string cmd_name = command[0];
+        size_t slash_pos = cmd_name.rfind('/');
+        if (slash_pos != std::string::npos) {
+            cmd_name = cmd_name.substr(slash_pos + 1);
+        }
+        size_t dot_pos = cmd_name.rfind('.');
+        if (dot_pos != std::string::npos) {
+            cmd_name = cmd_name.substr(0, dot_pos);
+        }
+        output_file = cmd_name + "_trace.sbt";
+    }
+    
+    printSection("TraceSmith Profile (msprof)");
+    
+    std::cout << C(Bold) << "Configuration:" << C(Reset) << "\n";
+    std::cout << "  Command:   " << C(Cyan) << cmd_str << C(Reset) << "\n";
+    std::cout << "  Output:    " << C(Cyan) << output_file << C(Reset) << "\n";
+    std::cout << "  Backend:   " << C(Green) << "Huawei msprof (CANN)" << C(Reset) << "\n\n";
+    
+    // Check if msprof exists
+    std::string msprof_path = "/usr/local/Ascend/ascend-toolkit/latest/tools/profiler/bin/msprof";
+    if (access(msprof_path.c_str(), X_OK) != 0) {
+        // Try alternate paths
+        const char* ascend_home = getenv("ASCEND_HOME");
+        if (ascend_home) {
+            msprof_path = std::string(ascend_home) + "/tools/profiler/bin/msprof";
+        }
+        if (access(msprof_path.c_str(), X_OK) != 0) {
+            msprof_path = "/usr/local/Ascend/ascend-toolkit/8.0.0/tools/profiler/bin/msprof";
+            if (access(msprof_path.c_str(), X_OK) != 0) {
+                printError("msprof not found. Please install CANN toolkit.");
+                std::cout << "  Expected at: /usr/local/Ascend/ascend-toolkit/latest/tools/profiler/bin/msprof\n";
+                std::cout << "  Make sure to source: /usr/local/Ascend/ascend-toolkit/set_env.sh\n";
+                return 1;
+            }
+        }
+    }
+    
+    // Create output directory for msprof
+    std::string trace_dir = "msprof_output";
+    std::string mkdir_cmd = "mkdir -p " + trace_dir;
+    (void)system(mkdir_cmd.c_str());
+    
+    // Build msprof command
+    // msprof --output=./output --application="<command>"
+    std::string full_cmd = msprof_path;
+    full_cmd += " --output=" + trace_dir;
+    full_cmd += " --application=\"";
+    for (size_t i = 0; i < command.size(); ++i) {
+        if (i > 0) full_cmd += " ";
+        full_cmd += command[i];
+    }
+    full_cmd += "\"";
+    
+    std::cout << C(Green) << "▶ Starting msprof..." << C(Reset) << "\n";
+    std::cout << "  " << C(Yellow) << full_cmd << C(Reset) << "\n\n";
+    
+    auto start_time = std::chrono::high_resolution_clock::now();
+    int exit_code = system(full_cmd.c_str());
+    auto end_time = std::chrono::high_resolution_clock::now();
+    
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    
+    std::cout << "\n";
+    if (exit_code == 0) {
+        printSuccess("Profiling completed");
+        std::cout << "  Duration: " << (duration.count() / 1000.0) << " seconds\n";
+        std::cout << "  Output:   " << trace_dir << "/\n";
+    } else {
+        printWarning("Command exited with code " + std::to_string(WEXITSTATUS(exit_code)));
+    }
+    
+    // Look for profiling output
+    std::cout << "\n" << C(Green) << "▶ Looking for profiling data..." << C(Reset) << "\n";
+    
+    std::string find_cmd = "find " + trace_dir + " -name '*.summary' -o -name '*.json' 2>/dev/null | head -5";
+    FILE* pipe = popen(find_cmd.c_str(), "r");
+    if (pipe) {
+        char buffer[256];
+        while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+            std::string file = buffer;
+            if (!file.empty() && file.back() == '\n') file.pop_back();
+            std::cout << "  Found: " << C(Cyan) << file << C(Reset) << "\n";
+        }
+        pclose(pipe);
+    }
+    
+    // Export to Perfetto format if requested
+    if (export_perfetto_flag) {
+        std::cout << "\n" << C(Green) << "▶ Looking for timeline data..." << C(Reset) << "\n";
+        
+        std::string find_json = "find " + trace_dir + " -name '*.json' 2>/dev/null | head -1";
+        pipe = popen(find_json.c_str(), "r");
+        if (pipe) {
+            char buffer[256];
+            if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                std::string json_file = buffer;
+                if (!json_file.empty() && json_file.back() == '\n') json_file.pop_back();
+                
+                std::string perfetto_output = output_file;
+                size_t dot_pos = perfetto_output.rfind('.');
+                if (dot_pos != std::string::npos) {
+                    perfetto_output = perfetto_output.substr(0, dot_pos) + ".json";
+                } else {
+                    perfetto_output += ".json";
+                }
+                
+                std::string cp_cmd = "cp \"" + json_file + "\" \"" + perfetto_output + "\"";
+                if (system(cp_cmd.c_str()) == 0) {
+                    printSuccess("Exported to: " + perfetto_output);
+                }
+            }
+            pclose(pipe);
+        }
+    }
+    
+    // Cleanup trace directory if not keeping
+    if (!keep_trace && !trace_dir.empty()) {
+        std::cout << "\n" << C(Yellow) << "Note:" << C(Reset) 
+                  << " Use --keep-trace to keep the msprof output directory\n";
+    }
+    
+    return exit_code == 0 ? 0 : 1;
+}
+#endif
+
+// =============================================================================
 // Command: profile - Profile a Command (Record + Execute)
 // =============================================================================
 int cmdProfile(int argc, char* argv[]) {
@@ -925,6 +1095,10 @@ int cmdProfile(int argc, char* argv[]) {
 
 #ifdef TRACESMITH_ENABLE_MACA
     bool use_mctracer = false;
+#endif
+
+#ifdef TRACESMITH_ENABLE_ASCEND
+    bool use_msprof = false;
 #endif
 
     bool use_nsys = false;
@@ -954,6 +1128,10 @@ int cmdProfile(int argc, char* argv[]) {
 #ifdef TRACESMITH_ENABLE_MACA
         } else if (arg == "--mctracer") {
             use_mctracer = true;
+#endif
+#ifdef TRACESMITH_ENABLE_ASCEND
+        } else if (arg == "--msprof") {
+            use_msprof = true;
 #endif
         } else if (arg == "--nsys") {
             use_nsys = true;
@@ -990,6 +1168,9 @@ int cmdProfile(int argc, char* argv[]) {
 #ifdef TRACESMITH_ENABLE_MACA
         std::cout << "    " << argv[0] << " profile --mctracer -- ./my_maca_app\n";
 #endif
+#ifdef TRACESMITH_ENABLE_ASCEND
+        std::cout << "    " << argv[0] << " profile --msprof -- ./my_ascend_app\n";
+#endif
         return 1;
     }
     
@@ -1010,6 +1191,13 @@ int cmdProfile(int argc, char* argv[]) {
     // Use mcTracer if requested
     if (use_mctracer) {
         return cmdProfileMCTracer(command, output_file, keep_trace, export_perfetto);
+    }
+#endif
+
+#ifdef TRACESMITH_ENABLE_ASCEND
+    // Use msprof if requested
+    if (use_msprof) {
+        return cmdProfileMsprof(command, output_file, keep_trace, export_perfetto);
     }
 #endif
 
@@ -1345,7 +1533,7 @@ int cmdRecord(int argc, char* argv[]) {
     // Check platform
     if (platform == PlatformType::Unknown) {
         printError("No supported GPU platform detected.");
-        std::cout << "Supported: CUDA (NVIDIA), ROCm (AMD), Metal (Apple), MACA (MetaX)\n";
+        std::cout << "Supported: CUDA (NVIDIA), ROCm (AMD), Metal (Apple), MACA (MetaX), Ascend (Huawei)\n";
         return 1;
     }
     

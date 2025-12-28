@@ -20,7 +20,7 @@
 - **High-Performance Event Capture**: Collect 10,000+ GPU instruction-level call stacks without interrupting execution
 - **Lock-Free Ring Buffer**: Minimal overhead event collection using SPSC (Single Producer Single Consumer) design
 - **SBT Binary Trace Format**: Compact, efficient binary format with string interning and delta timestamp encoding
-- **Multi-Platform Support**: NVIDIA CUDA (via CUPTI/nsys), AMD ROCm, Apple Metal + Instruments (xctrace), MetaX MACA (via MCPTI)
+- **Multi-Platform Support**: NVIDIA CUDA (via CUPTI/nsys), AMD ROCm, Apple Metal + Instruments (xctrace), MetaX MACA (via MCPTI), Huawei Ascend (via CANN/msprof)
 - **Multi-GPU & Multi-Stream**: Full support for complex GPU topologies and async execution
 - **Multi-GPU Cluster Profiling** (v0.7.x): GPUTopology discovery, TimeSync (NTP/PTP/CUDA), NCCLTracker for distributed training
 - **Perfetto SDK Integration**: Native protobuf export (85% smaller files) + JSON fallback
@@ -58,6 +58,8 @@
 | Apple | Metal API | ✅ Production |
 | Apple | Instruments (xctrace) | ✅ Production |
 | MetaX | MCPTI SDK | ✅ Production |
+| Huawei | Ascend CANN | ✅ Production |
+| Huawei | msprof | ✅ Production |
 | AMD | ROCm | 🔜 Coming Soon |
 | Linux | eBPF | ✅ Available |
 
@@ -122,6 +124,23 @@ export MACA_ROOT=/opt/maca-3.0.0
 
 # Install mcTracer (required for `tracesmith profile --mctracer`)
 # mcTracer is included in MACA SDK
+```
+
+### Linux with Huawei Ascend
+
+```bash
+# Install CANN Toolkit (8.0+ recommended)
+# Download from: https://www.hiascend.com/software/cann
+
+# Set environment variables
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# Verify installation
+cat /usr/local/Ascend/ascend-toolkit/latest/version.cfg
+
+# For NPU profiling with msprof
+# msprof is included in CANN toolkit
+/usr/local/Ascend/ascend-toolkit/latest/tools/profiler/bin/msprof --help
 ```
 
 ### macOS
@@ -223,6 +242,7 @@ cmake --build . -j$(nproc)
 | `TRACESMITH_ENABLE_ROCM` | OFF | Enable AMD ROCm support |
 | `TRACESMITH_ENABLE_METAL` | OFF | Enable Apple Metal support |
 | `TRACESMITH_ENABLE_MACA` | OFF | Enable MetaX MACA/MCPTI support |
+| `TRACESMITH_ENABLE_ASCEND` | OFF | Enable Huawei Ascend/CANN support |
 | `TRACESMITH_BUILD_PYTHON` | OFF | Build Python bindings (pybind11) |
 | `TRACESMITH_BUILD_TESTS` | ON | Build unit tests (Google Test) |
 | `TRACESMITH_BUILD_EXAMPLES` | ON | Build example programs |
@@ -435,6 +455,10 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
 ./bin/tracesmith profile --mctracer -- ./my_maca_app
 ./bin/tracesmith profile --mctracer --perfetto -- python train.py
 
+# Huawei Ascend - Use --msprof (REQUIRED for NPU profiling)
+./bin/tracesmith profile --msprof -- ./my_ascend_app
+./bin/tracesmith profile --msprof --perfetto -- python train.py
+
 # Apple Metal - Use --xctrace for real Metal GPU events
 ./bin/tracesmith profile --xctrace -- python train.py
 ./bin/tracesmith profile --xctrace --keep-trace -- python mps_benchmark.py
@@ -473,6 +497,10 @@ tracesmith-cli profile --nsys -o model.sbt -- python train.py --epochs 10
 # MetaX MACA - Use --mctracer (REQUIRED for GPU profiling)
 tracesmith-cli profile --mctracer -- ./my_maca_app
 tracesmith-cli profile --mctracer --perfetto -- python train.py
+
+# Huawei Ascend - Use --msprof (REQUIRED for NPU profiling)
+tracesmith-cli profile --msprof -- ./my_ascend_app
+tracesmith-cli profile --msprof --perfetto -- python train.py
 
 # Apple Metal - Use --xctrace for real Metal GPU events
 tracesmith-cli profile --xctrace -- python train.py

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(TraceSmith 
-    VERSION 0.8.3
+    VERSION 0.9.0
     DESCRIPTION "Cross-platform GPU Profiling & Replay System"
     LANGUAGES CXX
 )
@@ -27,6 +27,7 @@ option(TRACESMITH_ENABLE_CUDA "Enable CUDA/CUPTI support" OFF)
 option(TRACESMITH_ENABLE_ROCM "Enable ROCm support" OFF)
 option(TRACESMITH_ENABLE_METAL "Enable Metal support" OFF)
 option(TRACESMITH_ENABLE_MACA "Enable MetaX MACA/MCPTI support" OFF)
+option(TRACESMITH_ENABLE_ASCEND "Enable Huawei Ascend/CANN support" OFF)
 option(TRACESMITH_USE_LIBUNWIND "Use libunwind for call stack capture" ON)
 option(TRACESMITH_USE_PERFETTO_SDK "Use Perfetto SDK for protobuf export" OFF)
 
@@ -81,6 +82,41 @@ if(TRACESMITH_ENABLE_MACA)
     else()
         message(WARNING "MACA SDK not found, MetaX support disabled. Set MACA_ROOT to the correct path.")
         set(TRACESMITH_ENABLE_MACA OFF)
+    endif()
+endif()
+
+# Huawei Ascend/CANN Support
+if(TRACESMITH_ENABLE_ASCEND)
+    if(NOT ASCEND_HOME)
+        # Try to find Ascend SDK in common locations
+        foreach(ASCEND_PATH "/usr/local/Ascend/ascend-toolkit/latest" "/usr/local/Ascend" "$ENV{ASCEND_HOME}")
+            if(EXISTS "${ASCEND_PATH}/include/acl/acl.h")
+                set(ASCEND_HOME "${ASCEND_PATH}" CACHE PATH "Path to Ascend CANN SDK")
+                break()
+            endif()
+        endforeach()
+    endif()
+    
+    if(ASCEND_HOME AND EXISTS "${ASCEND_HOME}/include/acl/acl.h")
+        message(STATUS "Ascend CANN SDK found at: ${ASCEND_HOME}")
+        
+        # Find ACL library
+        find_library(ACL_LIBRARY ascendcl
+            PATHS ${ASCEND_HOME}/lib64 ${ASCEND_HOME}/aarch64-linux/lib64
+            NO_DEFAULT_PATH)
+        
+        if(ACL_LIBRARY)
+            message(STATUS "  ACL Library: ${ACL_LIBRARY}")
+            add_definitions(-DTRACESMITH_ENABLE_ASCEND)
+            set(ASCEND_INCLUDE_DIRS ${ASCEND_HOME}/include)
+            set(ASCEND_LIBRARIES ${ACL_LIBRARY})
+        else()
+            message(WARNING "Ascend ACL library not found, Ascend support disabled")
+            set(TRACESMITH_ENABLE_ASCEND OFF)
+        endif()
+    else()
+        message(WARNING "Ascend CANN SDK not found, Ascend support disabled. Set ASCEND_HOME to the correct path.")
+        set(TRACESMITH_ENABLE_ASCEND OFF)
     endif()
 endif()
 
@@ -217,6 +253,7 @@ endif()
 message(STATUS "  ROCm support:   ${TRACESMITH_ENABLE_ROCM}")
 message(STATUS "  Metal support:  ${TRACESMITH_ENABLE_METAL}")
 message(STATUS "  MACA support:   ${TRACESMITH_ENABLE_MACA}")
+message(STATUS "  Ascend support: ${TRACESMITH_ENABLE_ASCEND}")
 message(STATUS "  Perfetto SDK:   ${TRACESMITH_USE_PERFETTO_SDK}")
 message(STATUS "  libunwind:      ${TRACESMITH_USE_LIBUNWIND}")
 message(STATUS "")

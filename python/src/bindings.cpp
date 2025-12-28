@@ -57,7 +57,7 @@ PYBIND11_MODULE(_tracesmith, m) {
     m.doc() = "TraceSmith GPU Profiling & Replay System";
     
     // Version info
-    m.attr("__version__") = "0.8.3";
+    m.attr("__version__") = "0.9.0";
     m.attr("VERSION_MAJOR") = VERSION_MAJOR;
     m.attr("VERSION_MINOR") = VERSION_MINOR;
     m.attr("VERSION_PATCH") = VERSION_PATCH;
@@ -275,6 +275,7 @@ PYBIND11_MODULE(_tracesmith, m) {
         .value("ROCm", PlatformType::ROCm)
         .value("Metal", PlatformType::Metal)
         .value("MACA", PlatformType::MACA)
+        .value("Ascend", PlatformType::Ascend)
         .export_values();
     
     // Platform type to string helper
@@ -963,6 +964,16 @@ PYBIND11_MODULE(_tracesmith, m) {
 
     m.def("get_maca_device_count", &getMACADeviceCount,
           "Get number of MetaX GPU devices");
+    
+    // Huawei Ascend functions
+    m.def("is_ascend_available", &isAscendAvailable,
+          "Check if Huawei Ascend/CANN is available on this system");
+
+    m.def("get_ascend_cann_version", &getAscendCANNVersion,
+          "Get Huawei CANN version string");
+
+    m.def("get_ascend_device_count", &getAscendDeviceCount,
+          "Get number of Huawei Ascend NPU devices");
     
     m.def("detect_platform", &detectPlatform,
           "Auto-detect the best available GPU platform");

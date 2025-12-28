@@ -18,6 +18,9 @@
 #ifdef TRACESMITH_ENABLE_MACA
 #include "tracesmith/capture/mcpti_profiler.hpp"
 #endif
+#ifdef TRACESMITH_ENABLE_ASCEND
+#include "tracesmith/capture/ascend_profiler.hpp"
+#endif
 
 namespace tracesmith {
 
@@ -43,6 +46,18 @@ int getMetalDeviceCount() { return 0; }
 bool isMACAAvailable() { return false; }
 int getMACADriverVersion() { return 0; }
 int getMACADeviceCount() { return 0; }
+#endif
+
+#ifdef TRACESMITH_ENABLE_ASCEND
+// Real implementations from ascend_profiler.cpp
+bool isAscendAvailable() { return is_ascend_available(); }
+std::string getAscendCANNVersion() { return get_cann_version(); }
+int getAscendDeviceCount() { return static_cast<int>(get_ascend_device_count()); }
+#else
+// Stub implementations when Ascend is not enabled
+bool isAscendAvailable() { return false; }
+std::string getAscendCANNVersion() { return ""; }
+int getAscendDeviceCount() { return 0; }
 #endif
 
 // ============================================================================
@@ -92,6 +107,17 @@ std::unique_ptr<IPlatformProfiler> createProfiler(PlatformType type) {
 #endif
             return nullptr;  // MACA not available
         
+        case PlatformType::Ascend:
+#ifdef TRACESMITH_ENABLE_ASCEND
+            {
+                auto profiler = std::make_unique<AscendProfiler>();
+                if (profiler->isAvailable()) {
+                    return profiler;
+                }
+            }
+#endif
+            return nullptr;  // Ascend not available
+        
         default:
             return nullptr;  // No supported GPU platform
     }
@@ -113,6 +139,12 @@ PlatformType detectPlatform() {
 #ifdef TRACESMITH_ENABLE_METAL
     if (isMetalAvailable()) {
         return PlatformType::Metal;
+    }
+#endif
+
+#ifdef TRACESMITH_ENABLE_ASCEND
+    if (isAscendAvailable()) {
+        return PlatformType::Ascend;
     }
 #endif
     

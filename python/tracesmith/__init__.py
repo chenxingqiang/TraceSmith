@@ -4,7 +4,7 @@ TraceSmith - GPU Profiling & Replay System
 A cross-platform GPU profiling and replay system for AI compilers,
 deep learning frameworks, and GPU driver engineers.
 
-Version: 0.8.3
+Version: 0.9.0
 
 Features:
 - Cross-platform GPU profiling (CUDA via CUPTI, ROCm, Metal)
@@ -172,6 +172,25 @@ except ImportError:
         return 0
 
     def get_maca_device_count():
+        return 0
+
+
+# Try to import Huawei Ascend functions
+try:
+    from ._tracesmith import (
+        get_ascend_cann_version,
+        get_ascend_device_count,
+        is_ascend_available,
+    )
+except ImportError:
+    # Ascend not available in this build
+    def is_ascend_available():
+        return False
+
+    def get_ascend_cann_version():
+        return ""
+
+    def get_ascend_device_count():
         return 0
 
 
@@ -411,6 +430,9 @@ __all__ = [
     "is_maca_available",
     "get_maca_driver_version",
     "get_maca_device_count",
+    "is_ascend_available",
+    "get_ascend_cann_version",
+    "get_ascend_device_count",
     "detect_platform",
     # High-level convenience functions
     "build_timeline",

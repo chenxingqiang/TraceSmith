@@ -89,3 +89,78 @@ if(TRACESMITH_ENABLE_METAL)
         COMPILE_FLAGS "-fobjc-arc"  # Enable ARC
     )
 endif()
+
+if(TRACESMITH_ENABLE_ASCEND)
+    message(STATUS "Building Ascend profiler for Huawei NPUs")
+    target_sources(tracesmith-capture PRIVATE ascend_profiler.cpp)
+    
+    # Find Ascend SDK
+    if(NOT ASCEND_HOME)
+        foreach(ASCEND_PATH "/usr/local/Ascend/ascend-toolkit/latest" "/usr/local/Ascend")
+            if(EXISTS "${ASCEND_PATH}/include/acl/acl.h")
+                set(ASCEND_HOME "${ASCEND_PATH}" CACHE PATH "Path to Ascend CANN SDK")
+                break()
+            endif()
+        endforeach()
+    endif()
+    
+    if(ASCEND_HOME AND EXISTS "${ASCEND_HOME}/include/acl/acl.h")
+        message(STATUS "  Ascend SDK found at: ${ASCEND_HOME}")
+        
+        # Include directories
+        target_include_directories(tracesmith-capture PUBLIC 
+            ${ASCEND_HOME}/include
+        )
+        
+        # Determine library path based on architecture
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+            set(ASCEND_LIB_PATH ${ASCEND_HOME}/aarch64-linux/lib64)
+        else()
+            set(ASCEND_LIB_PATH ${ASCEND_HOME}/lib64)
+        endif()
+        
+        # Find ACL library
+        find_library(ACL_LIBRARY ascendcl 
+            PATHS ${ASCEND_LIB_PATH} ${ASCEND_HOME}/lib64
+            NO_DEFAULT_PATH)
+        
+        # Find profiler library
+        find_library(MSPROFILER_LIBRARY msprofiler
+            PATHS ${ASCEND_LIB_PATH} ${ASCEND_HOME}/lib64
+            NO_DEFAULT_PATH)
+        
+        if(ACL_LIBRARY)
+            message(STATUS "  ACL library: ${ACL_LIBRARY}")
+            
+            # Find driver library path
+            set(ASCEND_DRIVER_LIB_PATH "/usr/local/Ascend/driver/lib64/driver")
+            
+            # Add link directories for runtime library search (including driver)
+            target_link_directories(tracesmith-capture PUBLIC 
+                ${ASCEND_LIB_PATH}
+                ${ASCEND_HOME}/lib64
+                ${ASCEND_DRIVER_LIB_PATH}
+            )
+            
+            target_link_libraries(tracesmith-capture PUBLIC ${ACL_LIBRARY})
+            if(MSPROFILER_LIBRARY)
+                message(STATUS "  msprofiler library: ${MSPROFILER_LIBRARY}")
+                target_link_libraries(tracesmith-capture PUBLIC ${MSPROFILER_LIBRARY})
+            endif()
+            
+            # Add rpath for runtime (including driver path)
+            set_target_properties(tracesmith-capture PROPERTIES
+                BUILD_RPATH "${ASCEND_LIB_PATH};${ASCEND_HOME}/lib64;${ASCEND_DRIVER_LIB_PATH}"
+                INSTALL_RPATH "${ASCEND_LIB_PATH};${ASCEND_HOME}/lib64;${ASCEND_DRIVER_LIB_PATH}"
+            )
+            
+            target_compile_definitions(tracesmith-capture PUBLIC TRACESMITH_ENABLE_ASCEND)
+        else()
+            message(WARNING "Ascend ACL library not found")
+            set(TRACESMITH_ENABLE_ASCEND OFF PARENT_SCOPE)
+        endif()
+    else()
+        message(WARNING "Ascend SDK not found. Set ASCEND_HOME to the correct path.")
+        set(TRACESMITH_ENABLE_ASCEND OFF PARENT_SCOPE)
+    endif()
+endif()
