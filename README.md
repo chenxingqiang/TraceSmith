@@ -143,6 +143,36 @@ cat /usr/local/Ascend/ascend-toolkit/latest/version.cfg
 /usr/local/Ascend/ascend-toolkit/latest/tools/profiler/bin/msprof --help
 ```
 
+**Tested Hardware:**
+
+| NPU | CANN Version | Driver | Status |
+|-----|--------------|--------|--------|
+| Ascend 910B2 | 8.1.RC1 | 7.7.0.1.238 | ✅ Verified |
+
+**Multi-NPU Support:**
+
+TraceSmith supports multi-NPU profiling with separate contexts and streams per device:
+
+```python
+import acl
+
+# Initialize multiple virtual GPUs on single physical device
+acl.init()
+for gpu_id in range(2):
+    acl.rt.set_device(0)  # Map to physical device
+    ctx, _ = acl.rt.create_context(0)
+    stream, _ = acl.rt.create_stream()
+    # Each "GPU" has independent context, stream, and memory
+```
+
+**Verified Multi-GPU Features:**
+- ✅ Multiple Context creation and switching
+- ✅ Multiple Stream creation and synchronization
+- ✅ Per-device memory allocation
+- ✅ H2D / D2H data transfer
+- ✅ Cross-GPU memory copy (GPU0 → Host → GPU1)
+- ✅ Resource cleanup
+
 ### macOS
 
 ```bash
@@ -391,7 +421,7 @@ TraceSmith provides a comprehensive CLI with ASCII banner and colored output:
    ██║   ██║  ██║██║  ██║╚██████╗███████╗███████║██║ ╚═╝ ██║██║   ██║   ██║  ██║
    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝
 
-                    GPU Profiling & Replay System v0.8.3
+                    GPU Profiling & Replay System v0.9.0
 ```
 
 **Available Commands:**
@@ -732,6 +762,87 @@ if ts.is_maca_available():
 - `.json` - Perfetto JSON (view at https://ui.perfetto.dev)
 - Device info: name, memory, compute capability, clock rates
 
+#### Huawei Ascend NPU Profiling
+
+TraceSmith provides full support for Huawei Ascend NPUs via CANN/ACL integration.
+
+**CLI Device Detection:**
+```bash
+$ ./bin/tracesmith devices
+
+Huawei Ascend:
+✓ Ascend available
+  Devices: 1
+  CANN:    [7.7.0.1.238:8.1.RC1]
+
+  Device 0: Ascend 910B2
+    Memory: 64 GB HBM
+```
+
+**System-Wide Profiling with msprof:**
+
+```bash
+# Profile with msprof (NPU profiling)
+./bin/tracesmith profile --msprof -- ./my_ascend_app
+./bin/tracesmith profile --msprof --perfetto -- python train.py
+
+# Output directory contains Perfetto-compatible trace
+# View at: https://ui.perfetto.dev
+```
+
+**C++ API:**
+
+```cpp
+#include <tracesmith/tracesmith.hpp>
+
+// Check Ascend NPU availability
+if (tracesmith::isAscendAvailable()) {
+    std::cout << "Ascend devices: " << tracesmith::getAscendDeviceCount() << std::endl;
+    std::cout << "CANN version: " << tracesmith::getAscendCANNVersion() << std::endl;
+}
+
+// Create Ascend profiler
+auto profiler = tracesmith::createProfiler(tracesmith::PlatformType::Ascend);
+
+// Configure and capture
+tracesmith::ProfilerConfig config;
+config.capture_kernels = true;
+profiler->initialize(config);
+
+profiler->startCapture();
+// ... NPU code using ACL runtime ...
+profiler->stopCapture();
+
+// Get events and export
+std::vector<tracesmith::TraceEvent> events;
+profiler->getEvents(events);
+
+tracesmith::PerfettoExporter exporter;
+exporter.exportToFile(events, "ascend_trace.json");
+```
+
+**Python API:**
+
+```python
+import tracesmith as ts
+
+# Check Ascend availability
+if ts.is_ascend_available():
+    print(f"Ascend devices: {ts.get_ascend_device_count()}")
+    print(f"CANN version: {ts.get_ascend_cann_version()}")
+    
+    # Create profiler
+    profiler = ts.create_profiler(ts.PlatformType.Ascend)
+    profiler.initialize(ts.ProfilerConfig())
+    
+    profiler.start_capture()
+    # ... NPU code ...
+    profiler.stop_capture()
+    
+    events = profiler.get_events()
+    ts.export_perfetto(events, "ascend_trace.json")
+```
+
 #### Python Examples with Cross-Platform Device Support
 
 All Python examples support multiple GPU platforms with automatic device detection:
@@ -1030,7 +1141,7 @@ make benchmark_10k_stacks -j8
 
 ```bash
 # Basic installation
-pip install tracesmith==0.8.3
+pip install tracesmith==0.9.0
 
 # With CuPy for real GPU profiling in Python CLI (choose one):
 pip install tracesmith[cuda12]    # CUDA 12.x
@@ -1112,12 +1223,14 @@ for (int i = 0; i < 10000; ++i) {
 | **NVIDIA CUDA** | CUPTIProfiler | `./bin/cupti_example` |
 | **Apple Metal** | MetalProfiler | `./bin/metal_example` |
 | **MetaX MACA** | MCPTIProfiler | `./bin/metax_example` |
+| **Huawei Ascend** | AscendProfiler | `./bin/tracesmith profile --msprof` |
 | **CPU Fallback** | StackCapture | `./bin/stack_capture_example` |
 
 ## Version History
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v0.9.0** | 2025-12 | **Huawei Ascend NPU** - Full CANN/ACL integration, msprof profiling, Multi-GPU simulation verified |
 | **v0.8.2** | 2025-12 | **CLI Breaking Change** - Enforce --nsys/--mctracer for CUDA/MACA, record command blocked, clearer API limitation messages |
 | **v0.8.1** | 2025-12 | **nsys & MACA Enhancement** - NVIDIA Nsight Systems integration, MetaX CLI device detection, MACA cluster module support |
 | **v0.8.1** | 2025-12 | **mcTracer Integration** - MetaX system-wide profiling, Enhanced MACA CLI, Cluster module support |
