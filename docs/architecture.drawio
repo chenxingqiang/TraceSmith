@@ -4,7 +4,7 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title" value="TraceSmith Architecture v0.9.0" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
+        <mxCell id="title" value="TraceSmith Architecture v0.10.0" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
           <mxGeometry x="550" y="20" width="500" height="40" as="geometry" />
         </mxCell>
         <mxCell id="subtitle" value="GPU Profiling &amp; Replay System" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#666666;" parent="1" vertex="1">
@@ -326,7 +326,13 @@
           <mxGeometry x="400" y="950" width="20" height="15" as="geometry" />
         </mxCell>
         <mxCell id="leg9-text" value="MetaX MACA" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
-          <mxGeometry x="425" y="948" width="80" height="20" as="geometry" />
+          <mxGeometry x="425" y="948" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg11" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff6b6b;strokeColor=#c92a2a;" parent="1" vertex="1">
+          <mxGeometry x="630" y="920" width="20" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="leg11-text" value="Huawei Ascend" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="655" y="918" width="80" height="20" as="geometry" />
         </mxCell>
         <mxCell id="leg7" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
           <mxGeometry x="240" y="950" width="20" height="15" as="geometry" />
@@ -340,8 +346,32 @@
         <mxCell id="leg8-text" value="C++" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="345" y="948" width="40" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="version-info" value="TraceSmith v0.8.3 | C++17 | pybind11 | CUDA/MACA/Metal | Nsight/mcTracer/xctrace | Cross-Platform" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
-          <mxGeometry x="720" y="960" width="780" height="20" as="geometry" />
+        <mxCell id="gdb-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcce6;strokeColor=#cc3399;" parent="1" vertex="1">
+          <mxGeometry x="720" y="890" width="380" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="gdb-title" value="GDB Module (v0.10.0)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1;fontColor=#cc3399;" parent="1" vertex="1">
+          <mxGeometry x="720" y="895" width="380" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="rsp-handler" value="RSPHandler&#xa;(GDB Protocol)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6f2;strokeColor=#cc3399;" parent="1" vertex="1">
+          <mxGeometry x="735" y="920" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="process-ctrl" value="ProcessController&#xa;(ptrace/Mach)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6f2;strokeColor=#cc3399;" parent="1" vertex="1">
+          <mxGeometry x="855" y="920" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="gpu-debug" value="GPUDebugEngine&#xa;(Breakpoints, Replay)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6f2;strokeColor=#cc3399;" parent="1" vertex="1">
+          <mxGeometry x="975" y="920" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="gdbserver" value="tracesmith-gdbserver" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6f2;strokeColor=#cc3399;" parent="1" vertex="1">
+          <mxGeometry x="735" y="965" width="350" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg10" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcce6;strokeColor=#cc3399;" parent="1" vertex="1">
+          <mxGeometry x="510" y="950" width="20" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="leg10-text" value="GDB (v0.10.0)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="535" y="948" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="version-info" value="TraceSmith v0.10.0 | C++17 | pybind11 | CUDA/MACA/Metal/Ascend | Nsight/mcTracer/xctrace/msprof | GDB RSP | Cross-Platform" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="720" y="995" width="780" height="20" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
