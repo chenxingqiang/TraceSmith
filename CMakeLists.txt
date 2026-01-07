@@ -188,6 +188,12 @@ add_subdirectory(src/state)
 add_subdirectory(src/replay)
 add_subdirectory(src/cluster)
 
+# GDB RSP backend (Linux only for now)
+option(TRACESMITH_BUILD_GDB "Build GDB RSP backend" ON)
+if(TRACESMITH_BUILD_GDB AND UNIX)
+    add_subdirectory(src/gdb)
+endif()
+
 # CLI tools
 if(TRACESMITH_BUILD_CLI)
     add_subdirectory(cli)
