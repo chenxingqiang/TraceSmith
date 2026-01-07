@@ -32,6 +32,7 @@
 - **RenderDoc-style Frame Capture**: F12-trigger capture with resource state snapshots
 - **GPU Memory Profiler**: Allocation tracking, leak detection, peak usage monitoring
 - **CLI Tools**: Easy-to-use command-line interface for recording and viewing traces
+- **GDB Integration** (v0.10.0): GPU-aware debugging via GDB Remote Serial Protocol (RSP)
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/chenxingqiang/TraceSmith)
 
@@ -49,6 +50,7 @@
 | **State** | GPU state machine, timeline builder, Perfetto exporters |
 | **Replay** | Trace replay engine, stream scheduler, determinism checker |
 | **Cluster** | Multi-GPU profiling, time sync, NCCL tracking (v0.7.x) |
+| **GDB** | GDB RSP backend, GPU breakpoints, trace replay debugging (v0.10.0) |
 
 **Supported Backends:**
 
@@ -843,6 +845,109 @@ if ts.is_ascend_available():
     ts.export_perfetto(events, "ascend_trace.json")
 ```
 
+#### GDB Integration (v0.10.0)
+
+TraceSmith provides a GDB Remote Serial Protocol (RSP) backend for GPU-aware debugging, enabling developers to debug GPU applications with full visibility into GPU state.
+
+**Features:**
+- Automatic GPU state capture at CPU breakpoints
+- GPU kernel call history tracking
+- GPU memory monitoring
+- Trace capture and replay debugging
+- GPU-specific breakpoints (kernel launch, memcpy, memset)
+- Custom GDB `monitor` commands
+
+**Quick Start:**
+
+```bash
+# Start TraceSmith GDB Server
+./bin/tracesmith-gdbserver --port 1234 -- ./my_cuda_app
+
+# Or attach to running process
+./bin/tracesmith-gdbserver --port 1234 --attach <pid>
+
+# Connect from GDB
+(gdb) target remote :1234
+```
+
+**TraceSmith GDB Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `monitor ts help` | Show all TraceSmith commands |
+| `monitor ts status` | Show GPU state summary |
+| `monitor ts kernels` | List kernel call history |
+| `monitor ts memory` | Show GPU memory usage |
+| `monitor ts break kernel <pattern>` | Set GPU kernel breakpoint |
+| `monitor ts trace start` | Start GPU event capture |
+| `monitor ts trace stop` | Stop capture |
+| `monitor ts trace save <file>` | Save trace to SBT file |
+| `monitor ts trace load <file>` | Load trace for replay |
+| `monitor ts replay start` | Start trace replay |
+| `monitor ts replay step` | Step to next event |
+| `monitor ts replay seek <n>` | Seek to event N |
+
+**Example Debugging Session:**
+
+```bash
+# Terminal 1: Start GDB server with your CUDA application
+./bin/tracesmith-gdbserver --port 1234 -- ./my_cuda_app
+
+# Terminal 2: Connect with GDB
+gdb ./my_cuda_app
+(gdb) target remote :1234
+(gdb) break main
+(gdb) continue
+
+# At breakpoint, check GPU state
+(gdb) monitor ts status
+GPU State: Idle
+Devices: 1 (NVIDIA GeForce RTX 4090)
+Streams: 2 active
+Memory: 1.2 GB / 24 GB
+
+# Set kernel breakpoint
+(gdb) monitor ts break kernel matmul*
+GPU breakpoint 1: kernel launch matching "matmul*"
+
+# Start trace capture
+(gdb) monitor ts trace start
+GPU trace capture started
+
+# Continue execution
+(gdb) continue
+
+# When kernel breakpoint hits
+(gdb) monitor ts kernels
+Kernel History (last 10):
+  [0] matmul_f32 - 256x256x1, 1024 threads, 0.42ms
+  [1] relu_f32 - 1024x1x1, 256 threads, 0.01ms
+
+# Save trace
+(gdb) monitor ts trace stop
+(gdb) monitor ts trace save debug_trace.sbt
+
+# Load and replay trace
+(gdb) monitor ts trace load debug_trace.sbt
+(gdb) monitor ts replay start
+(gdb) monitor ts replay step
+Event 0: KernelLaunch "matmul_f32"
+```
+
+**Platform Support:**
+
+| Platform | Process Control | GPU Profiling |
+|----------|-----------------|---------------|
+| Linux | ✅ Full (ptrace) | ✅ CUPTI/MCPTI |
+| macOS | ✅ Basic (Mach API) | ✅ Metal |
+
+**Build with GDB Support:**
+
+```bash
+cmake .. -DTRACESMITH_BUILD_GDB=ON
+make tracesmith-gdbserver
+```
+
 #### Python Examples with Cross-Platform Device Support
 
 All Python examples support multiple GPU platforms with automatic device detection:
@@ -1230,6 +1335,7 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v0.10.0** | 2025-12 | **GDB Integration** - GPU-aware debugging via RSP, kernel breakpoints, trace replay debugging, 85 unit tests |
 | **v0.9.0** | 2025-12 | **Huawei Ascend NPU** - Full CANN/ACL integration, msprof profiling, Multi-GPU simulation verified |
 | **v0.8.2** | 2025-12 | **CLI Breaking Change** - Enforce --nsys/--mctracer for CUDA/MACA, record command blocked, clearer API limitation messages |
 | **v0.8.1** | 2025-12 | **nsys & MACA Enhancement** - NVIDIA Nsight Systems integration, MetaX CLI device detection, MACA cluster module support |
