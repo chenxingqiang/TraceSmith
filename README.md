@@ -38,7 +38,7 @@
 
 ## Architecture
 
-![TraceSmith Architecture](docs/architecture.svg)
+![TraceSmith Architecture](docs/architecture_v2.svg)
 
 **Core Modules:**
 
