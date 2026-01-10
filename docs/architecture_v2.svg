@@ -283,22 +283,22 @@
   <text x="60" y="985" fill="#1971c2" font-size="13" font-weight="600">Output Formats</text>
   
   <rect x="200" y="970" width="150" height="38" rx="6" fill="#fa5252" filter="url(#lightShadow)"/>
-  <text x="275" y="994" text-anchor="middle" fill="white" font-size="11" font-weight="500">=Á .sbt (Binary)</text>
+  <text x="275" y="994" text-anchor="middle" fill="white" font-size="11" font-weight="500">.sbt (Binary)</text>
   
   <rect x="370" y="970" width="150" height="38" rx="6" fill="#4dabf7" filter="url(#lightShadow)"/>
-  <text x="445" y="994" text-anchor="middle" fill="white" font-size="11" font-weight="500">=Á .json (Perfetto)</text>
+  <text x="445" y="994" text-anchor="middle" fill="white" font-size="11" font-weight="500">.json (Perfetto)</text>
   
   <rect x="540" y="970" width="150" height="38" rx="6" fill="#e599f7" filter="url(#lightShadow)"/>
-  <text x="615" y="994" text-anchor="middle" fill="white" font-size="11" font-weight="500">=Á .perfetto (Proto)</text>
+  <text x="615" y="994" text-anchor="middle" fill="white" font-size="11" font-weight="500">.perfetto (Proto)</text>
   
   <rect x="710" y="970" width="130" height="38" rx="6" fill="#51cf66" filter="url(#lightShadow)"/>
-  <text x="775" y="994" text-anchor="middle" fill="white" font-size="11" font-weight="500">=Á .dot (Graph)</text>
+  <text x="775" y="994" text-anchor="middle" fill="white" font-size="11" font-weight="500">.dot (Graph)</text>
   
   <rect x="860" y="970" width="150" height="38" rx="6" fill="#868e96" filter="url(#lightShadow)"/>
-  <text x="935" y="994" text-anchor="middle" fill="white" font-size="11" font-weight="500">=ú ASCII Timeline</text>
+  <text x="935" y="994" text-anchor="middle" fill="white" font-size="11" font-weight="500">ASCII Timeline</text>
   
   <rect x="1030" y="970" width="150" height="38" rx="6" fill="#ffd43b" filter="url(#lightShadow)"/>
-  <text x="1105" y="994" text-anchor="middle" fill="#495057" font-size="11" font-weight="500">=Ê Comm Matrix</text>
+  <text x="1105" y="994" text-anchor="middle" fill="#495057" font-size="11" font-weight="500">Comm Matrix</text>
 
   <!-- Data Flow Arrows -->
   <defs>
