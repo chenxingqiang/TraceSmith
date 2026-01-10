@@ -38,9 +38,9 @@
 
 ## Architecture
 
-![TraceSmith Architecture](docs/architecture.svg)
+![TraceSmith Architecture](docs/architecture_v2.svg)
 
-> 📐 See also: [Modern architecture diagram (SVG)](docs/architecture_v2.svg) | [Editable diagram (draw.io)](docs/architecture.drawio)
+> 📐 See also: [Editable diagram (draw.io)](docs/architecture.drawio)
 
 **Core Modules:**
 
