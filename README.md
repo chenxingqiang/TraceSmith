@@ -65,7 +65,7 @@
 | MetaX | MCPTI SDK | ✅ Production |
 | Huawei | Ascend CANN | ✅ Production |
 | Huawei | msprof | ✅ Production |
-| AMD | ROCm | 🔜 Coming Soon |
+| AMD | ROCm (roctracer) | ✅ Production |
 | Linux | eBPF | ✅ Available |
 
 **Output Formats:**
@@ -855,6 +855,139 @@ if ts.is_ascend_available():
     ts.export_perfetto(events, "ascend_trace.json")
 ```
 
+#### AMD ROCm GPU Profiling
+
+TraceSmith provides native support for AMD GPUs via ROCm's roctracer API, enabling comprehensive profiling of HIP applications.
+
+**Supported Hardware:**
+
+| GPU Series | Architecture | Status |
+|------------|--------------|--------|
+| AMD Instinct MI300 | CDNA 3 (gfx942) | ✅ Verified |
+| AMD Instinct MI200 | CDNA 2 (gfx90a) | ✅ Verified |
+| AMD Instinct MI100 | CDNA (gfx908) | ✅ Verified |
+| AMD Radeon Pro W7900 | RDNA 3 (gfx1100) | ✅ Verified |
+| AMD Radeon RX 7900 | RDNA 3 (gfx1100) | ✅ Verified |
+| AMD Radeon RX 6000 | RDNA 2 (gfx1030) | ✅ Verified |
+
+**Prerequisites:**
+
+```bash
+# Install ROCm SDK (6.0+ recommended)
+# Download from: https://rocm.docs.amd.com/en/latest/deploy/linux/index.html
+
+# Ubuntu/Debian
+sudo apt install rocm-dev roctracer-dev roctx-dev
+
+# Set environment variables (add to ~/.bashrc)
+export ROCM_PATH=/opt/rocm
+export PATH=$ROCM_PATH/bin:$PATH
+export LD_LIBRARY_PATH=$ROCM_PATH/lib:$LD_LIBRARY_PATH
+
+# Verify installation
+hipcc --version
+rocm-smi
+```
+
+**CLI Device Detection:**
+
+```bash
+$ ./bin/tracesmith devices
+
+AMD ROCm:
+✓ ROCm available
+  Devices: 2
+  Driver:  60000
+
+  Device 0: AMD Instinct MI100
+    Vendor:     AMD
+    Arch:       gfx908
+    Memory:     32.00 GB HBM2
+    CUs:        120
+
+  Device 1: AMD Instinct MI100
+    Vendor:     AMD
+    Arch:       gfx908
+    Memory:     32.00 GB HBM2
+    CUs:        120
+```
+
+**C++ API:**
+
+```cpp
+#include <tracesmith/tracesmith.hpp>
+
+// Check ROCm availability
+if (tracesmith::isROCmAvailable()) {
+    std::cout << "ROCm devices: " << tracesmith::getROCmDeviceCount() << std::endl;
+    std::cout << "GPU arch: " << tracesmith::getROCmGpuArch(0) << std::endl;
+}
+
+// Create ROCm profiler
+auto profiler = tracesmith::createProfiler(tracesmith::PlatformType::ROCm);
+
+// Configure
+tracesmith::ProfilerConfig config;
+config.capture_kernels = true;
+config.capture_memcpy = true;
+profiler->initialize(config);
+
+// Capture events
+profiler->startCapture();
+// ... HIP GPU code ...
+profiler->stopCapture();
+
+// Get events
+std::vector<tracesmith::TraceEvent> events;
+profiler->getEvents(events);
+
+// Export to Perfetto
+tracesmith::PerfettoExporter exporter;
+exporter.exportToFile(events, "rocm_trace.json");
+```
+
+**Python API:**
+
+```python
+import tracesmith as ts
+
+# Check ROCm availability
+if ts.is_rocm_available():
+    print(f"ROCm devices: {ts.get_rocm_device_count()}")
+    
+    # Create profiler
+    profiler = ts.create_profiler(ts.PlatformType.ROCm)
+    profiler.initialize(ts.ProfilerConfig())
+    
+    profiler.start_capture()
+    # ... HIP GPU code ...
+    profiler.stop_capture()
+    
+    events = profiler.get_events()
+    ts.export_perfetto(events, "rocm_trace.json")
+```
+
+**Captured Events:**
+
+| Event Type | Description |
+|------------|-------------|
+| KernelLaunch/Complete | HIP kernel execution with grid/block dimensions |
+| MemcpyH2D/D2H/D2D | Memory transfers with bandwidth metrics |
+| MemsetDevice | Memory initialization operations |
+| StreamSync/DeviceSync | Synchronization events with duration |
+
+**Build with ROCm support:**
+
+```bash
+# On ROCm system (auto-detected at /opt/rocm)
+cmake -DTRACESMITH_ENABLE_ROCM=ON ..
+make -j$(nproc)
+
+# Run examples
+./bin/rocm_example          # Basic profiling demo
+./bin/rocm_benchmark        # Memory bandwidth test
+```
+
 #### Tracy Profiler Integration (v0.11.0)
 
 TraceSmith provides bidirectional integration with [Tracy Profiler](https://github.com/wolfpld/tracy), enabling real-time visualization of GPU profiling data alongside Tracy's existing CPU profiling capabilities.
@@ -1482,6 +1615,7 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v0.11.1** | 2026-01 | **Native ROCm Support** - Full AMD GPU profiling via roctracer API, HIP kernel/memory tracing |
 | **v0.11.0** | 2026-01 | **Tracy Integration** - Bidirectional Tracy profiler integration, **full GPU timeline for Ascend/MetaX/ROCm**, real-time visualization, unified profiling macros, 45+ unit tests |
 | **v0.10.0** | 2025-12 | **GDB Integration** - GPU-aware debugging via RSP, kernel breakpoints, trace replay debugging, 85 unit tests |
 | **v0.9.0** | 2025-12 | **Huawei Ascend NPU** - Full CANN/ACL integration, msprof profiling, Multi-GPU simulation verified |

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(TraceSmith 
-    VERSION 0.9.0
+    VERSION 0.11.1
     DESCRIPTION "Cross-platform GPU Profiling & Replay System"
     LANGUAGES CXX
 )
@@ -62,6 +62,47 @@ if(TRACESMITH_ENABLE_CUDA)
     else()
         message(WARNING "CUPTI not found, CUDA support disabled")
         set(TRACESMITH_ENABLE_CUDA OFF)
+    endif()
+endif()
+
+# AMD ROCm Support
+if(TRACESMITH_ENABLE_ROCM)
+    if(NOT ROCM_PATH)
+        # Try to find ROCm SDK in common locations
+        foreach(ROCM_DIR "/opt/rocm" "/opt/rocm-6.0.0" "/opt/rocm-5.7.0" "$ENV{ROCM_PATH}")
+            if(EXISTS "${ROCM_DIR}/include/hip/hip_runtime.h")
+                set(ROCM_PATH "${ROCM_DIR}" CACHE PATH "Path to ROCm SDK")
+                break()
+            endif()
+        endforeach()
+    endif()
+    
+    if(ROCM_PATH AND EXISTS "${ROCM_PATH}/include/hip/hip_runtime.h")
+        message(STATUS "ROCm SDK found at: ${ROCM_PATH}")
+        
+        # Find HIP runtime library
+        find_library(HIP_LIBRARY amdhip64
+            PATHS ${ROCM_PATH}/lib ${ROCM_PATH}/lib64
+            NO_DEFAULT_PATH)
+        
+        # Find roctracer library
+        find_library(ROCTRACER_LIBRARY roctracer64
+            PATHS ${ROCM_PATH}/lib ${ROCM_PATH}/lib64
+            NO_DEFAULT_PATH)
+        
+        if(HIP_LIBRARY AND ROCTRACER_LIBRARY)
+            message(STATUS "  HIP Library: ${HIP_LIBRARY}")
+            message(STATUS "  roctracer Library: ${ROCTRACER_LIBRARY}")
+            add_definitions(-DTRACESMITH_ENABLE_ROCM)
+            set(ROCM_INCLUDE_DIRS ${ROCM_PATH}/include)
+            set(ROCM_LIBRARIES ${HIP_LIBRARY} ${ROCTRACER_LIBRARY})
+        else()
+            message(WARNING "ROCm libraries not found, ROCm support disabled")
+            set(TRACESMITH_ENABLE_ROCM OFF)
+        endif()
+    else()
+        message(WARNING "ROCm SDK not found, ROCm support disabled. Set ROCM_PATH to the correct path.")
+        set(TRACESMITH_ENABLE_ROCM OFF)
     endif()
 endif()
 
