@@ -33,6 +33,7 @@
 - **GPU Memory Profiler**: Allocation tracking, leak detection, peak usage monitoring
 - **CLI Tools**: Easy-to-use command-line interface for recording and viewing traces
 - **GDB Integration** (v0.10.0): GPU-aware debugging via GDB Remote Serial Protocol (RSP)
+- **Tracy Profiler Integration** (v0.11.0): Real-time visualization with full GPU timeline support for Ascend/MetaX/ROCm
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/chenxingqiang/TraceSmith)
 
@@ -72,7 +73,14 @@
 - `.json` - Perfetto JSON (chrome://tracing)
 - `.perfetto` - Perfetto Protobuf (85% smaller)
 - `.dot` - Graphviz dependency graph
+- `.tracy` - Tracy profiler format (via import)
 - ASCII Timeline - Terminal visualization
+
+**Integrations:**
+- [Tracy Profiler](https://github.com/wolfpld/tracy) - Real-time visualization (v0.11.0+)
+- [Perfetto SDK](https://perfetto.dev/) - Native protobuf export
+- [LLVM XRay](https://llvm.org/docs/XRay.html) - Compiler-instrumented traces
+- [PyTorch Kineto](https://github.com/pytorch/kineto) - Compatible schema
 
 ## Prerequisites & Dependencies
 
@@ -847,6 +855,143 @@ if ts.is_ascend_available():
     ts.export_perfetto(events, "ascend_trace.json")
 ```
 
+#### Tracy Profiler Integration (v0.11.0)
+
+TraceSmith provides bidirectional integration with [Tracy Profiler](https://github.com/wolfpld/tracy), enabling real-time visualization of GPU profiling data alongside Tracy's existing CPU profiling capabilities.
+
+**Features:**
+- **Full GPU Timeline** for Ascend, MetaX, ROCm (not just messages!)
+- Export TraceSmith events to Tracy for real-time visualization
+- Import Tracy captures (`.tracy` files) into TraceSmith format
+- Unified profiling macros that work with both profilers
+- GPU zone emission for kernel timing visualization
+- Memory allocation tracking in Tracy
+- Counter/plot data for metrics visualization
+- Frame marking for game/real-time applications
+
+**GPU Timeline Support:**
+
+| GPU Platform | Tracy Native | TraceSmith Integration |
+|--------------|--------------|------------------------|
+| NVIDIA CUDA | ✅ Native | ✅ Full Timeline |
+| Vulkan | ✅ Native | ✅ Full Timeline |
+| Metal | ✅ Native | ✅ Full Timeline |
+| **Huawei Ascend** | ❌ None | ✅ **Full Timeline** |
+| **MetaX MACA** | ❌ None | ✅ **Full Timeline** |
+| **AMD ROCm** | ❌ None | ✅ **Full Timeline** |
+
+TraceSmith enables **full GPU timeline visualization** in Tracy for platforms that Tracy doesn't natively support, including Ascend NPUs and MetaX GPUs.
+
+**Quick Start:**
+
+```bash
+# Build with Tracy integration
+cmake .. -DTRACESMITH_ENABLE_TRACY=ON
+make -j$(nproc)
+
+# Run example (connect Tracy server for visualization)
+./bin/tracy_integration_example
+```
+
+**Full GPU Timeline API (Ascend/MetaX/ROCm):**
+
+```cpp
+#include <tracesmith/tracy/tracy_gpu_context.hpp>
+
+using namespace tracesmith;
+
+// Create GPU context for Ascend NPU
+auto& ascend_ctx = tracy::getOrCreateGpuContext(
+    "Ascend 910B NPU", tracy::GpuContextType::Ascend, 0);
+
+// Create GPU context for MetaX GPU
+auto& metax_ctx = tracy::getOrCreateGpuContext(
+    "MetaX C500 GPU", tracy::GpuContextType::MACA, 0);
+
+// Method 1: Emit GPU zone directly (creates timeline bar in Tracy)
+ascend_ctx.emitGpuZone("AscendMatMul",
+    cpu_start, cpu_end,   // CPU timestamps
+    gpu_start, gpu_end,   // GPU timestamps
+    thread_id, color);
+
+// Method 2: Use RAII macro
+{
+    TracySmithGpuZone(metax_ctx, "MetaXGEMM");
+    // ... kernel execution ...
+} // Zone emitted on scope exit
+
+// Method 3: Convert TraceSmith events to GPU timeline
+std::vector<TraceEvent> events;
+profiler->getEvents(events);
+ascend_ctx.emitGpuZones(events);  // Batch convert to timeline
+```
+
+**Tracy Visualization Result:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ CPU Timeline                                             │
+│ ████ submit ████████████████████ submit ████            │
+├─────────────────────────────────────────────────────────┤
+│ Ascend 910B NPU                                          │
+│     ▓▓▓▓▓▓▓▓ AscendMatMul    ▓▓▓▓▓▓ AscendConv2D       │
+├─────────────────────────────────────────────────────────┤
+│ MetaX C500 GPU                                           │
+│   ▓▓▓▓ MetaXGEMM     ▓▓▓▓▓▓▓▓▓▓▓▓ MetaXReduce         │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Basic C++ API:**
+
+```cpp
+#include <tracesmith/tracy/tracy_client.hpp>
+#include <tracesmith/tracy/tracy_exporter.hpp>
+
+using namespace tracesmith;
+
+// Use unified profiling macros
+TracySmithZoneScopedC("MyKernel", tracy::colors::KernelLaunch);
+
+// Create Tracy exporter
+tracy::TracyExporter exporter;
+exporter.initialize();
+
+// Export TraceSmith events to Tracy
+TraceEvent event;
+event.type = EventType::KernelLaunch;
+event.name = "matmul_f32";
+event.duration = 1500000;  // 1.5ms
+exporter.emitEvent(event);
+
+// Frame marking
+tracy::markFrame("RenderFrame");
+
+// Plot metrics
+exporter.emitPlotValue("GPU Utilization %", 85.0);
+```
+
+**Import Tracy Captures:**
+
+```cpp
+#include <tracesmith/tracy/tracy_importer.hpp>
+
+tracy::TracyImporter importer;
+auto result = importer.importFile("profile.tracy");
+
+if (result.success()) {
+    // Access TraceSmith events
+    for (const auto& event : result.record.events()) {
+        std::cout << event.name << ": " << event.duration << " ns\n";
+    }
+}
+```
+
+**CMake Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `TRACESMITH_ENABLE_TRACY` | ON | Enable Tracy profiler integration |
+
 #### GDB Integration (v0.10.0)
 
 TraceSmith provides a GDB Remote Serial Protocol (RSP) backend for GPU-aware debugging, enabling developers to debug GPU applications with full visibility into GPU state.
@@ -1337,6 +1482,7 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v0.11.0** | 2026-01 | **Tracy Integration** - Bidirectional Tracy profiler integration, **full GPU timeline for Ascend/MetaX/ROCm**, real-time visualization, unified profiling macros, 45+ unit tests |
 | **v0.10.0** | 2025-12 | **GDB Integration** - GPU-aware debugging via RSP, kernel breakpoints, trace replay debugging, 85 unit tests |
 | **v0.9.0** | 2025-12 | **Huawei Ascend NPU** - Full CANN/ACL integration, msprof profiling, Multi-GPU simulation verified |
 | **v0.8.2** | 2025-12 | **CLI Breaking Change** - Enforce --nsys/--mctracer for CUDA/MACA, record command blocked, clearer API limitation messages |
@@ -1364,6 +1510,7 @@ TraceSmith draws inspiration from:
 - [NVIDIA CUPTI](https://docs.nvidia.com/cupti/)
 - [ROCm ROCProfiler](https://github.com/ROCm/rocprofiler)
 - [Google Perfetto](https://perfetto.dev/)
+- [Tracy Profiler](https://github.com/wolfpld/tracy)
 - [LLVM XRay](https://llvm.org/docs/XRay.html)
 - [RenderDoc](https://renderdoc.org/)
 - [PyTorch Kineto](https://github.com/pytorch/kineto)
