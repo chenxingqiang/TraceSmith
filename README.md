@@ -33,6 +33,7 @@
 - **GPU Memory Profiler**: Allocation tracking, leak detection, peak usage monitoring
 - **CLI Tools**: Easy-to-use command-line interface for recording and viewing traces
 - **GDB Integration** (v0.10.0): GPU-aware debugging via GDB Remote Serial Protocol (RSP)
+- **Tracy Profiler Integration** (v0.11.0): Real-time visualization with full GPU timeline support for Ascend/MetaX/ROCm
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/chenxingqiang/TraceSmith)
 
@@ -859,6 +860,7 @@ if ts.is_ascend_available():
 TraceSmith provides bidirectional integration with [Tracy Profiler](https://github.com/wolfpld/tracy), enabling real-time visualization of GPU profiling data alongside Tracy's existing CPU profiling capabilities.
 
 **Features:**
+- **Full GPU Timeline** for Ascend, MetaX, ROCm (not just messages!)
 - Export TraceSmith events to Tracy for real-time visualization
 - Import Tracy captures (`.tracy` files) into TraceSmith format
 - Unified profiling macros that work with both profilers
@@ -866,6 +868,19 @@ TraceSmith provides bidirectional integration with [Tracy Profiler](https://gith
 - Memory allocation tracking in Tracy
 - Counter/plot data for metrics visualization
 - Frame marking for game/real-time applications
+
+**GPU Timeline Support:**
+
+| GPU Platform | Tracy Native | TraceSmith Integration |
+|--------------|--------------|------------------------|
+| NVIDIA CUDA | ✅ Native | ✅ Full Timeline |
+| Vulkan | ✅ Native | ✅ Full Timeline |
+| Metal | ✅ Native | ✅ Full Timeline |
+| **Huawei Ascend** | ❌ None | ✅ **Full Timeline** |
+| **MetaX MACA** | ❌ None | ✅ **Full Timeline** |
+| **AMD ROCm** | ❌ None | ✅ **Full Timeline** |
+
+TraceSmith enables **full GPU timeline visualization** in Tracy for platforms that Tracy doesn't natively support, including Ascend NPUs and MetaX GPUs.
 
 **Quick Start:**
 
@@ -878,7 +893,55 @@ make -j$(nproc)
 ./bin/tracy_integration_example
 ```
 
-**C++ API:**
+**Full GPU Timeline API (Ascend/MetaX/ROCm):**
+
+```cpp
+#include <tracesmith/tracy/tracy_gpu_context.hpp>
+
+using namespace tracesmith;
+
+// Create GPU context for Ascend NPU
+auto& ascend_ctx = tracy::getOrCreateGpuContext(
+    "Ascend 910B NPU", tracy::GpuContextType::Ascend, 0);
+
+// Create GPU context for MetaX GPU
+auto& metax_ctx = tracy::getOrCreateGpuContext(
+    "MetaX C500 GPU", tracy::GpuContextType::MACA, 0);
+
+// Method 1: Emit GPU zone directly (creates timeline bar in Tracy)
+ascend_ctx.emitGpuZone("AscendMatMul",
+    cpu_start, cpu_end,   // CPU timestamps
+    gpu_start, gpu_end,   // GPU timestamps
+    thread_id, color);
+
+// Method 2: Use RAII macro
+{
+    TracySmithGpuZone(metax_ctx, "MetaXGEMM");
+    // ... kernel execution ...
+} // Zone emitted on scope exit
+
+// Method 3: Convert TraceSmith events to GPU timeline
+std::vector<TraceEvent> events;
+profiler->getEvents(events);
+ascend_ctx.emitGpuZones(events);  // Batch convert to timeline
+```
+
+**Tracy Visualization Result:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ CPU Timeline                                             │
+│ ████ submit ████████████████████ submit ████            │
+├─────────────────────────────────────────────────────────┤
+│ Ascend 910B NPU                                          │
+│     ▓▓▓▓▓▓▓▓ AscendMatMul    ▓▓▓▓▓▓ AscendConv2D       │
+├─────────────────────────────────────────────────────────┤
+│ MetaX C500 GPU                                           │
+│   ▓▓▓▓ MetaXGEMM     ▓▓▓▓▓▓▓▓▓▓▓▓ MetaXReduce         │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Basic C++ API:**
 
 ```cpp
 #include <tracesmith/tracy/tracy_client.hpp>
@@ -899,13 +962,6 @@ event.type = EventType::KernelLaunch;
 event.name = "matmul_f32";
 event.duration = 1500000;  // 1.5ms
 exporter.emitEvent(event);
-
-// Create GPU context for visualization
-uint8_t gpu_ctx = exporter.createGpuContext(0, "CUDA GPU");
-
-// Emit GPU zones
-exporter.emitGpuZone(gpu_ctx, "kernel_name", 
-                     cpu_start, cpu_end, gpu_start, gpu_end);
 
 // Frame marking
 tracy::markFrame("RenderFrame");
@@ -1426,7 +1482,7 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| **v0.11.0** | 2026-01 | **Tracy Integration** - Bidirectional Tracy profiler integration, real-time visualization, unified profiling macros, 45 new unit tests |
+| **v0.11.0** | 2026-01 | **Tracy Integration** - Bidirectional Tracy profiler integration, **full GPU timeline for Ascend/MetaX/ROCm**, real-time visualization, unified profiling macros, 45+ unit tests |
 | **v0.10.0** | 2025-12 | **GDB Integration** - GPU-aware debugging via RSP, kernel breakpoints, trace replay debugging, 85 unit tests |
 | **v0.9.0** | 2025-12 | **Huawei Ascend NPU** - Full CANN/ACL integration, msprof profiling, Multi-GPU simulation verified |
 | **v0.8.2** | 2025-12 | **CLI Breaking Change** - Enforce --nsys/--mctracer for CUDA/MACA, record command blocked, clearer API limitation messages |
