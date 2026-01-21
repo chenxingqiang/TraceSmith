@@ -12,6 +12,9 @@
 #ifdef TRACESMITH_ENABLE_CUDA
 #include "tracesmith/capture/cupti_profiler.hpp"
 #endif
+#ifdef TRACESMITH_ENABLE_ROCM
+#include "tracesmith/capture/rocm_profiler.hpp"
+#endif
 #ifdef TRACESMITH_ENABLE_METAL
 #include "tracesmith/capture/metal_profiler.hpp"
 #endif
@@ -48,6 +51,14 @@ int getMACADriverVersion() { return 0; }
 int getMACADeviceCount() { return 0; }
 #endif
 
+#ifndef TRACESMITH_ENABLE_ROCM
+// Stub implementations when ROCm is not enabled
+bool isROCmAvailable() { return false; }
+int getROCmDriverVersion() { return 0; }
+int getROCmDeviceCount() { return 0; }
+std::string getROCmGpuArch(int device_id) { (void)device_id; return ""; }
+#endif
+
 #ifdef TRACESMITH_ENABLE_ASCEND
 // Real implementations from ascend_profiler.cpp
 bool isAscendAvailable() { return is_ascend_available(); }
@@ -82,8 +93,15 @@ std::unique_ptr<IPlatformProfiler> createProfiler(PlatformType type) {
             return nullptr;  // CUDA not available
         
         case PlatformType::ROCm:
-            // TODO: Implement ROCmProfiler
-            return nullptr;
+#ifdef TRACESMITH_ENABLE_ROCM
+            {
+                auto profiler = std::make_unique<ROCmProfiler>();
+                if (profiler->isAvailable()) {
+                    return profiler;
+                }
+            }
+#endif
+            return nullptr;  // ROCm not available
         
         case PlatformType::Metal:
 #ifdef TRACESMITH_ENABLE_METAL
@@ -147,9 +165,12 @@ PlatformType detectPlatform() {
         return PlatformType::Ascend;
     }
 #endif
-    
-    // TODO: Check for ROCm
-    // if (isROCmAvailable()) return PlatformType::ROCm;
+
+#ifdef TRACESMITH_ENABLE_ROCM
+    if (isROCmAvailable()) {
+        return PlatformType::ROCm;
+    }
+#endif
     
     return PlatformType::Unknown;
 }

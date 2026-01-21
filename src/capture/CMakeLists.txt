@@ -28,7 +28,70 @@ if(TRACESMITH_ENABLE_CUDA AND CUPTI_FOUND)
 endif()
 
 if(TRACESMITH_ENABLE_ROCM)
-    # TODO: Add ROCm profiler
+    message(STATUS "Building ROCm profiler for AMD GPUs")
+    target_sources(tracesmith-capture PRIVATE rocm_profiler.cpp)
+    
+    # Find ROCm SDK
+    if(NOT ROCM_PATH)
+        # Try common locations
+        foreach(ROCM_DIR "/opt/rocm" "/opt/rocm-6.0.0" "/opt/rocm-5.7.0")
+            if(EXISTS "${ROCM_DIR}/include/hip/hip_runtime.h")
+                set(ROCM_PATH "${ROCM_DIR}" CACHE PATH "Path to ROCm SDK")
+                break()
+            endif()
+        endforeach()
+    endif()
+    
+    if(ROCM_PATH AND EXISTS "${ROCM_PATH}/include/hip/hip_runtime.h")
+        message(STATUS "  ROCm SDK found at: ${ROCM_PATH}")
+        
+        # Include directories
+        target_include_directories(tracesmith-capture PUBLIC 
+            ${ROCM_PATH}/include
+            ${ROCM_PATH}/include/hip
+            ${ROCM_PATH}/include/roctracer
+        )
+        
+        # Find ROCm libraries
+        find_library(HIP_LIBRARY amdhip64 
+            PATHS ${ROCM_PATH}/lib ${ROCM_PATH}/lib64
+            NO_DEFAULT_PATH)
+        find_library(ROCTRACER_LIBRARY roctracer64
+            PATHS ${ROCM_PATH}/lib ${ROCM_PATH}/lib64
+            NO_DEFAULT_PATH)
+        find_library(ROCTX_LIBRARY roctx64
+            PATHS ${ROCM_PATH}/lib ${ROCM_PATH}/lib64
+            NO_DEFAULT_PATH)
+        
+        if(HIP_LIBRARY AND ROCTRACER_LIBRARY)
+            message(STATUS "  HIP library: ${HIP_LIBRARY}")
+            message(STATUS "  roctracer library: ${ROCTRACER_LIBRARY}")
+            
+            target_link_libraries(tracesmith-capture PUBLIC 
+                ${HIP_LIBRARY} 
+                ${ROCTRACER_LIBRARY}
+            )
+            
+            if(ROCTX_LIBRARY)
+                message(STATUS "  roctx library: ${ROCTX_LIBRARY}")
+                target_link_libraries(tracesmith-capture PUBLIC ${ROCTX_LIBRARY})
+            endif()
+            
+            # Add rpath for runtime
+            set_target_properties(tracesmith-capture PROPERTIES
+                BUILD_RPATH "${ROCM_PATH}/lib;${ROCM_PATH}/lib64"
+                INSTALL_RPATH "${ROCM_PATH}/lib;${ROCM_PATH}/lib64"
+            )
+            
+            target_compile_definitions(tracesmith-capture PUBLIC TRACESMITH_ENABLE_ROCM)
+        else()
+            message(WARNING "ROCm libraries not found")
+            set(TRACESMITH_ENABLE_ROCM OFF PARENT_SCOPE)
+        endif()
+    else()
+        message(WARNING "ROCm SDK not found. Set ROCM_PATH to the correct path.")
+        set(TRACESMITH_ENABLE_ROCM OFF PARENT_SCOPE)
+    endif()
 endif()
 
 if(TRACESMITH_ENABLE_MACA)

@@ -127,4 +127,9 @@ bool isAscendAvailable();
 std::string getAscendCANNVersion();
 int getAscendDeviceCount();
 
+bool isROCmAvailable();
+int getROCmDriverVersion();
+int getROCmDeviceCount();
+std::string getROCmGpuArch(int device_id);
+
 } // namespace tracesmith
