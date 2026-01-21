@@ -72,7 +72,14 @@
 - `.json` - Perfetto JSON (chrome://tracing)
 - `.perfetto` - Perfetto Protobuf (85% smaller)
 - `.dot` - Graphviz dependency graph
+- `.tracy` - Tracy profiler format (via import)
 - ASCII Timeline - Terminal visualization
+
+**Integrations:**
+- [Tracy Profiler](https://github.com/wolfpld/tracy) - Real-time visualization (v0.11.0+)
+- [Perfetto SDK](https://perfetto.dev/) - Native protobuf export
+- [LLVM XRay](https://llvm.org/docs/XRay.html) - Compiler-instrumented traces
+- [PyTorch Kineto](https://github.com/pytorch/kineto) - Compatible schema
 
 ## Prerequisites & Dependencies
 
@@ -847,6 +854,88 @@ if ts.is_ascend_available():
     ts.export_perfetto(events, "ascend_trace.json")
 ```
 
+#### Tracy Profiler Integration (v0.11.0)
+
+TraceSmith provides bidirectional integration with [Tracy Profiler](https://github.com/wolfpld/tracy), enabling real-time visualization of GPU profiling data alongside Tracy's existing CPU profiling capabilities.
+
+**Features:**
+- Export TraceSmith events to Tracy for real-time visualization
+- Import Tracy captures (`.tracy` files) into TraceSmith format
+- Unified profiling macros that work with both profilers
+- GPU zone emission for kernel timing visualization
+- Memory allocation tracking in Tracy
+- Counter/plot data for metrics visualization
+- Frame marking for game/real-time applications
+
+**Quick Start:**
+
+```bash
+# Build with Tracy integration
+cmake .. -DTRACESMITH_ENABLE_TRACY=ON
+make -j$(nproc)
+
+# Run example (connect Tracy server for visualization)
+./bin/tracy_integration_example
+```
+
+**C++ API:**
+
+```cpp
+#include <tracesmith/tracy/tracy_client.hpp>
+#include <tracesmith/tracy/tracy_exporter.hpp>
+
+using namespace tracesmith;
+
+// Use unified profiling macros
+TracySmithZoneScopedC("MyKernel", tracy::colors::KernelLaunch);
+
+// Create Tracy exporter
+tracy::TracyExporter exporter;
+exporter.initialize();
+
+// Export TraceSmith events to Tracy
+TraceEvent event;
+event.type = EventType::KernelLaunch;
+event.name = "matmul_f32";
+event.duration = 1500000;  // 1.5ms
+exporter.emitEvent(event);
+
+// Create GPU context for visualization
+uint8_t gpu_ctx = exporter.createGpuContext(0, "CUDA GPU");
+
+// Emit GPU zones
+exporter.emitGpuZone(gpu_ctx, "kernel_name", 
+                     cpu_start, cpu_end, gpu_start, gpu_end);
+
+// Frame marking
+tracy::markFrame("RenderFrame");
+
+// Plot metrics
+exporter.emitPlotValue("GPU Utilization %", 85.0);
+```
+
+**Import Tracy Captures:**
+
+```cpp
+#include <tracesmith/tracy/tracy_importer.hpp>
+
+tracy::TracyImporter importer;
+auto result = importer.importFile("profile.tracy");
+
+if (result.success()) {
+    // Access TraceSmith events
+    for (const auto& event : result.record.events()) {
+        std::cout << event.name << ": " << event.duration << " ns\n";
+    }
+}
+```
+
+**CMake Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `TRACESMITH_ENABLE_TRACY` | ON | Enable Tracy profiler integration |
+
 #### GDB Integration (v0.10.0)
 
 TraceSmith provides a GDB Remote Serial Protocol (RSP) backend for GPU-aware debugging, enabling developers to debug GPU applications with full visibility into GPU state.
@@ -1337,6 +1426,7 @@ for (int i = 0; i < 10000; ++i) {
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v0.11.0** | 2026-01 | **Tracy Integration** - Bidirectional Tracy profiler integration, real-time visualization, unified profiling macros, 45 new unit tests |
 | **v0.10.0** | 2025-12 | **GDB Integration** - GPU-aware debugging via RSP, kernel breakpoints, trace replay debugging, 85 unit tests |
 | **v0.9.0** | 2025-12 | **Huawei Ascend NPU** - Full CANN/ACL integration, msprof profiling, Multi-GPU simulation verified |
 | **v0.8.2** | 2025-12 | **CLI Breaking Change** - Enforce --nsys/--mctracer for CUDA/MACA, record command blocked, clearer API limitation messages |
@@ -1364,6 +1454,7 @@ TraceSmith draws inspiration from:
 - [NVIDIA CUPTI](https://docs.nvidia.com/cupti/)
 - [ROCm ROCProfiler](https://github.com/ROCm/rocprofiler)
 - [Google Perfetto](https://perfetto.dev/)
+- [Tracy Profiler](https://github.com/wolfpld/tracy)
 - [LLVM XRay](https://llvm.org/docs/XRay.html)
 - [RenderDoc](https://renderdoc.org/)
 - [PyTorch Kineto](https://github.com/pytorch/kineto)

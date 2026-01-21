@@ -41,3 +41,18 @@ if(TRACESMITH_BUILD_GDB AND UNIX)
     
     gtest_discover_tests(tracesmith_gdb_tests)
 endif()
+
+# Tracy integration tests
+if(TRACESMITH_ENABLE_TRACY)
+    add_executable(tracesmith_tracy_tests
+        test_tracy_integration.cpp
+    )
+    
+    target_link_libraries(tracesmith_tracy_tests PRIVATE
+        tracesmith-common
+        tracesmith-tracy
+        GTest::gtest_main
+    )
+    
+    gtest_discover_tests(tracesmith_tracy_tests)
+endif()

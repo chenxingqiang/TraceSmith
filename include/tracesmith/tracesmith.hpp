@@ -89,6 +89,15 @@
 #include "tracesmith/cluster/time_sync.hpp"
 #include "tracesmith/cluster/nccl_tracker.hpp"
 
+// =============================================================================
+// Tracy Integration (v0.11.0+)
+// =============================================================================
+#ifdef TRACESMITH_ENABLE_TRACY
+#include "tracesmith/tracy/tracy_client.hpp"
+#include "tracesmith/tracy/tracy_exporter.hpp"
+#include "tracesmith/tracy/tracy_importer.hpp"
+#endif
+
 namespace tracesmith {
 
 /// Get version string

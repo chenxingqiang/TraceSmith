@@ -357,6 +357,24 @@ target_link_libraries(goal_validation_example PRIVATE
 )
 
 # ----------------------------------------------------------------------------
+# Tracy Integration Example - Bidirectional Tracy profiler integration
+# ----------------------------------------------------------------------------
+if(TRACESMITH_ENABLE_TRACY)
+    add_executable(tracy_integration_example
+        tracy_integration_example.cpp
+    )
+
+    target_link_libraries(tracy_integration_example PRIVATE
+        tracesmith-common
+        tracesmith-tracy
+    )
+    
+    # Add threading support
+    find_package(Threads REQUIRED)
+    target_link_libraries(tracy_integration_example PRIVATE Threads::Threads)
+endif()
+
+# ----------------------------------------------------------------------------
 # Benchmark: 10K Call Stacks - Validates core goal
 # "Capture 10K+ instruction-level GPU call stacks without interrupting business"
 # Uses REAL CUDA kernels + CUPTI profiling
@@ -458,6 +476,10 @@ if(TRACESMITH_ENABLE_MACA)
     message(STATUS "    - metax_example (MetaX MCPTI profiling)")
     message(STATUS "    - metax_benchmark (MetaX memory bandwidth test)")
     message(STATUS "    - metax_cluster_example (MetaX multi-GPU cluster profiling)")
+endif()
+if(TRACESMITH_ENABLE_TRACY)
+    message(STATUS "  Tracy integration examples:")
+    message(STATUS "    - tracy_integration_example (Tracy profiler integration)")
 endif()
 message(STATUS "  Python examples:")
 message(STATUS "    - python_example.py (Python API demonstration)")
