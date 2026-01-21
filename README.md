@@ -65,7 +65,7 @@
 | MetaX | MCPTI SDK | ✅ Production |
 | Huawei | Ascend CANN | ✅ Production |
 | Huawei | msprof | ✅ Production |
-| AMD | ROCm | 🔜 Coming Soon |
+| AMD | ROCm | ✅ Available (via Tracy) |
 | Linux | eBPF | ✅ Available |
 
 **Output Formats:**
