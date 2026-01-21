@@ -4,6 +4,7 @@
 set(TRACY_SOURCES
     tracy_exporter.cpp
     tracy_importer.cpp
+    tracy_gpu_context.cpp
 )
 
 # Create Tracy integration library

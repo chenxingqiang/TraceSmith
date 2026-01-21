@@ -96,6 +96,7 @@
 #include "tracesmith/tracy/tracy_client.hpp"
 #include "tracesmith/tracy/tracy_exporter.hpp"
 #include "tracesmith/tracy/tracy_importer.hpp"
+#include "tracesmith/tracy/tracy_gpu_context.hpp"
 #endif
 
 namespace tracesmith {

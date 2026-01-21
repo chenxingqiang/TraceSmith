@@ -23,6 +23,7 @@
 #include <tracesmith/tracesmith.hpp>
 #include <tracesmith/tracy/tracy_client.hpp>
 #include <tracesmith/tracy/tracy_exporter.hpp>
+#include <tracesmith/tracy/tracy_gpu_context.hpp>
 
 #include <iostream>
 #include <vector>
@@ -395,6 +396,148 @@ void exampleGlobalExporter() {
 }
 
 // =============================================================================
+// Example: Full GPU Timeline (NEW - fixes message-based limitation)
+// =============================================================================
+
+void exampleFullGpuTimeline() {
+    std::cout << "\n=== Example 7: Full GPU Timeline (Ascend/MetaX) ===\n";
+    
+    TracySmithZoneScopedC("exampleFullGpuTimeline", ts_tracy::colors::Default);
+    
+    // Create GPU contexts for different platforms
+    // These create REAL GPU timelines in Tracy (not message-based)
+    auto& ascend_ctx = ts_tracy::getOrCreateGpuContext(
+        "Ascend 910B NPU", ts_tracy::GpuContextType::Ascend, 0);
+    
+    auto& metax_ctx = ts_tracy::getOrCreateGpuContext(
+        "MetaX C500 GPU", ts_tracy::GpuContextType::MACA, 0);
+    
+    std::cout << "Created GPU contexts:\n";
+    std::cout << "  - " << ascend_ctx.name() << " (ID: " << (int)ascend_ctx.contextId() << ")\n";
+    std::cout << "  - " << metax_ctx.name() << " (ID: " << (int)metax_ctx.contextId() << ")\n";
+    
+    // Simulate kernel executions on Ascend NPU
+    std::cout << "\nSimulating Ascend NPU kernels...\n";
+    {
+        std::vector<std::string> ascend_kernels = {
+            "AscendMatMul", "AscendConv2D", "AscendBatchNorm", "AscendSoftmax"
+        };
+        
+        for (const auto& kernel : ascend_kernels) {
+            auto cpu_start = static_cast<int64_t>(getCurrentTimestamp());
+            
+            // Simulate kernel work
+            volatile double result = 0;
+            for (int i = 0; i < 50000; ++i) {
+                result += std::sin(static_cast<double>(i));
+            }
+            std::this_thread::sleep_for(std::chrono::microseconds(500));
+            
+            auto cpu_end = static_cast<int64_t>(getCurrentTimestamp());
+            
+            // GPU timestamps (simulated - in real code these come from the profiler)
+            auto gpu_start = cpu_start + 1000;  // 1μs launch latency
+            auto gpu_end = cpu_end - 500;
+            
+            // Emit to full GPU timeline
+            ascend_ctx.emitGpuZone(kernel.c_str(), cpu_start, cpu_end, 
+                                   gpu_start, gpu_end, 0, 0xFF6600);
+        }
+    }
+    
+    // Simulate kernel executions on MetaX GPU
+    std::cout << "Simulating MetaX GPU kernels...\n";
+    {
+        std::vector<std::string> metax_kernels = {
+            "MetaXGEMM", "MetaXReduce", "MetaXElementwise", "MetaXTranspose"
+        };
+        
+        for (const auto& kernel : metax_kernels) {
+            auto cpu_start = static_cast<int64_t>(getCurrentTimestamp());
+            
+            // Simulate kernel work
+            volatile double result = 0;
+            for (int i = 0; i < 30000; ++i) {
+                result += std::cos(static_cast<double>(i));
+            }
+            std::this_thread::sleep_for(std::chrono::microseconds(300));
+            
+            auto cpu_end = static_cast<int64_t>(getCurrentTimestamp());
+            
+            auto gpu_start = cpu_start + 800;
+            auto gpu_end = cpu_end - 300;
+            
+            // Emit to full GPU timeline
+            metax_ctx.emitGpuZone(kernel.c_str(), cpu_start, cpu_end,
+                                  gpu_start, gpu_end, 0, 0x00FF66);
+        }
+    }
+    
+    // Also demonstrate using TracySmithGpuZone macro (RAII)
+    std::cout << "Using RAII GPU zone...\n";
+    {
+        TracySmithGpuZone(ascend_ctx, "AscendTrainingStep");
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    
+    std::cout << "\nGPU zones emitted:\n";
+    std::cout << "  - Ascend: " << ascend_ctx.zonesEmitted() << " zones\n";
+    std::cout << "  - MetaX: " << metax_ctx.zonesEmitted() << " zones\n";
+    std::cout << "\nThese appear as FULL GPU timelines in Tracy (not messages)!\n";
+}
+
+// =============================================================================
+// Example: TraceSmith Events to Full GPU Timeline
+// =============================================================================
+
+void exampleTracesmithToGpuTimeline() {
+    std::cout << "\n=== Example 8: TraceSmith Events → Full GPU Timeline ===\n";
+    
+    TracySmithZoneScopedC("exampleTracesmithToGpuTimeline", ts_tracy::colors::Default);
+    
+    // Create GPU context using PlatformType
+    auto& gpu_ctx = ts_tracy::getOrCreateGpuContext(PlatformType::MACA, 0);
+    
+    // Create TraceSmith events (simulating what a profiler would capture)
+    std::vector<TraceEvent> events;
+    
+    auto base_time = getCurrentTimestamp();
+    
+    // Kernel launch events
+    for (int i = 0; i < 5; ++i) {
+        TraceEvent event;
+        event.type = EventType::KernelLaunch;
+        event.name = "compute_kernel_" + std::to_string(i);
+        event.timestamp = base_time + i * 2000000;  // 2ms apart
+        event.duration = 1500000;  // 1.5ms each
+        event.device_id = 0;
+        event.stream_id = i % 2;
+        events.push_back(event);
+    }
+    
+    // Memory copy events
+    TraceEvent h2d;
+    h2d.type = EventType::MemcpyH2D;
+    h2d.name = "data_upload";
+    h2d.timestamp = base_time + 10000000;
+    h2d.duration = 500000;
+    events.push_back(h2d);
+    
+    TraceEvent d2h;
+    d2h.type = EventType::MemcpyD2H;
+    d2h.name = "result_download";
+    d2h.timestamp = base_time + 12000000;
+    d2h.duration = 300000;
+    events.push_back(d2h);
+    
+    // Emit all events to full GPU timeline
+    gpu_ctx.emitGpuZones(events);
+    
+    std::cout << "Converted " << events.size() << " TraceSmith events to GPU timeline\n";
+    std::cout << "GPU zones emitted: " << gpu_ctx.zonesEmitted() << "\n";
+}
+
+// =============================================================================
 // Main
 // =============================================================================
 
@@ -425,6 +568,8 @@ int main() {
     exampleMemoryProfiling();
     exampleGpuZoneProfiling();
     exampleGlobalExporter();
+    exampleFullGpuTimeline();          // NEW: Full GPU timeline
+    exampleTracesmithToGpuTimeline();  // NEW: TraceSmith → GPU timeline
     
     std::cout << "\n════════════════════════════════════════════════════════\n";
     std::cout << "All examples completed successfully!\n";
@@ -433,6 +578,7 @@ int main() {
     std::cout << "  - Memory allocation graphs\n";
     std::cout << "  - Frame time plots\n";
     std::cout << "  - GPU zone visualizations\n";
+    std::cout << "  - FULL GPU timelines for Ascend/MetaX (not message-based!)\n";
     std::cout << "════════════════════════════════════════════════════════\n";
     
     return 0;
