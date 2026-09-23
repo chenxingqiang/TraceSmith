@@ -199,13 +199,13 @@ bool ProcessController::spawn(const std::vector<std::string>& args) {
     // Parent process
     int status;
     if (waitpid(pid, &status, 0) < 0) {
-        kill(pid, SIGKILL);
+        ::kill(pid, SIGKILL);
         waitpid(pid, nullptr, 0);
         return false;
     }
     
     if (!WIFSTOPPED(status) || WSTOPSIG(status) != SIGTRAP) {
-        kill(pid, SIGKILL);
+        ::kill(pid, SIGKILL);
         waitpid(pid, nullptr, 0);
         return false;
     }
