@@ -99,3 +99,12 @@ coverage.xml
 *.perfetto-trace
 *.pftrace
 build_test/
+
+# Cloud Agent local build/venv
+/build/
+/.venv/
+
+# Cloud Agent environment config (keep tracked despite *.json rule above)
+!.cursor/
+!.cursor/environment.json
+!.cursor/install.sh
