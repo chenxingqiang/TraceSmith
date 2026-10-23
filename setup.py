@@ -17,6 +17,9 @@ Platform-specific installation:
     # Metal (Apple)
     TRACESMITH_METAL=1 pip install .
 
+    # MetaX MACA
+    TRACESMITH_MACA=1 pip install .
+
 With CuPy for real GPU profiling (Python CLI):
     pip install .[cuda12]    # CUDA 12.x
     pip install .[cuda11]    # CUDA 11.x
@@ -82,6 +85,19 @@ def detect_ascend():
     return False
 
 
+def detect_maca():
+    """Detect MetaX MACA SDK installation."""
+    # Check for MACA_ROOT
+    maca_root = os.environ.get('MACA_ROOT')
+    if maca_root and os.path.exists(os.path.join(maca_root, 'include', 'mcpti', 'mcpti.h')):
+        return True
+    # Check common paths
+    for path in ['/opt/maca-3.0.0', '/opt/maca', '/usr/local/maca']:
+        if os.path.exists(os.path.join(path, 'include', 'mcpti', 'mcpti.h')):
+            return True
+    return False
+
+
 def detect_perfetto_sdk():
     """Check if Perfetto SDK files exist."""
     perfetto_dir = Path(__file__).parent / 'third_party' / 'perfetto'
@@ -131,10 +147,11 @@ class CMakeBuild(build_ext):
         enable_rocm = os.environ.get('TRACESMITH_ROCM', '').lower() in ('1', 'true', 'on', 'yes')
         enable_metal = os.environ.get('TRACESMITH_METAL', '').lower() in ('1', 'true', 'on', 'yes')
         enable_ascend = os.environ.get('TRACESMITH_ASCEND', '').lower() in ('1', 'true', 'on', 'yes')
+        enable_maca = os.environ.get('TRACESMITH_MACA', '').lower() in ('1', 'true', 'on', 'yes')
         auto_detect = os.environ.get('TRACESMITH_AUTO', '1').lower() in ('1', 'true', 'on', 'yes')
 
         # Auto-detect if no platform explicitly specified
-        if not (enable_cuda or enable_rocm or enable_metal or enable_ascend) and auto_detect:
+        if not (enable_cuda or enable_rocm or enable_metal or enable_ascend or enable_maca) and auto_detect:
             if detect_cuda():
                 enable_cuda = True
                 print("TraceSmith: Auto-detected CUDA")
@@ -147,6 +164,9 @@ class CMakeBuild(build_ext):
             elif detect_ascend():
                 enable_ascend = True
                 print("TraceSmith: Auto-detected Huawei Ascend/CANN")
+            elif detect_maca():
+                enable_maca = True
+                print("TraceSmith: Auto-detected MetaX MACA")
             else:
                 print("TraceSmith: No GPU platform detected, building base package")
 
@@ -188,6 +208,20 @@ class CMakeBuild(build_ext):
             print("TraceSmith: Building with Huawei Ascend/CANN support")
         else:
             cmake_args.append('-DTRACESMITH_ENABLE_ASCEND=OFF')
+
+        if enable_maca:
+            cmake_args.append('-DTRACESMITH_ENABLE_MACA=ON')
+            maca_root = os.environ.get('MACA_ROOT')
+            if not maca_root:
+                for path in ['/opt/maca-3.0.0', '/opt/maca', '/usr/local/maca']:
+                    if os.path.exists(os.path.join(path, 'include', 'mcpti', 'mcpti.h')):
+                        maca_root = path
+                        break
+            if maca_root:
+                cmake_args.append(f'-DMACA_ROOT={maca_root}')
+            print("TraceSmith: Building with MetaX MACA/MCPTI support")
+        else:
+            cmake_args.append('-DTRACESMITH_ENABLE_MACA=OFF')
 
         # Perfetto SDK support (only enable if SDK files exist)
         perfetto_sdk_exists = detect_perfetto_sdk()
