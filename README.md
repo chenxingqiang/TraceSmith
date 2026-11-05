@@ -1063,14 +1063,14 @@ ascend_ctx.emitGpuZones(events);  // Batch convert to timeline
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ CPU Timeline                                             │
+│ CPU Timeline                                            │
 │ ████ submit ████████████████████ submit ████            │
 ├─────────────────────────────────────────────────────────┤
-│ Ascend 910B NPU                                          │
-│     ▓▓▓▓▓▓▓▓ AscendMatMul    ▓▓▓▓▓▓ AscendConv2D       │
+│ Ascend 910B NPU                                         │
+│     ▓▓▓▓▓▓▓▓ AscendMatMul    ▓▓▓▓▓▓ AscendConv2D        │
 ├─────────────────────────────────────────────────────────┤
-│ MetaX C500 GPU                                           │
-│   ▓▓▓▓ MetaXGEMM     ▓▓▓▓▓▓▓▓▓▓▓▓ MetaXReduce         │
+│ MetaX C500 GPU                                          │
+│   ▓▓▓▓ MetaXGEMM     ▓▓▓▓▓▓▓▓▓▓▓▓ MetaXReduce           │
 └─────────────────────────────────────────────────────────┘
 ```
 
